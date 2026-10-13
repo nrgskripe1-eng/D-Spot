@@ -1,4 +1,4 @@
-import com.android.build.gradle.internal.tasks.CompileArtProfileTask
+﻿import com.android.build.gradle.internal.tasks.CompileArtProfileTask
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,7 +8,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "org.simpmusic.lastfm"
+        namespace = "com.mika.dspot.lastfm"
         compileSdk = 37
         minSdk = 26
     }

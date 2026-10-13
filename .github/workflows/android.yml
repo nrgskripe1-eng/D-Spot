@@ -1,4 +1,4 @@
-name: Build release APK (FOSS)
+﻿name: Build release APK (FOSS)
 on:
   workflow_dispatch:
   push:
@@ -88,7 +88,7 @@ jobs:
           name: app
           path: androidApp/build/outputs/apk/release/*-signed.apk
 
-  # SimpMusic for vivo (vivoAndroidApp, com.spotify.music), same Full build as above.
+  # D-Spot for vivo (vivoAndroidApp, com.spotify.music), same Full build as above.
   build-vivo:
     runs-on: ubuntu-latest
     steps:

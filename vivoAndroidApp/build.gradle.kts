@@ -1,6 +1,6 @@
-import java.util.Properties
+﻿import java.util.Properties
 
-// SimpMusic for vivo: androidApp's sources, shipped under a package vivo's Origin Island follows.
+// D-Spot for vivo: androidApp's sources, shipped under a package vivo's Origin Island follows.
 // vivo's island and music widget only follow apps on vivo's own list of package names, and a normal
 // app cannot add itself to that list. This module builds androidApp unchanged under one of the listed
 // names. That name must stay in Config.OFFICIAL_PACKAGE_NAMES, and the APK must be signed with our key,
@@ -23,7 +23,7 @@ plugins {
 val androidAppDir = rootProject.file("androidApp")
 
 android {
-    namespace = "com.maxrave.simpmusic"
+    namespace = "com.mika.dspot"
     compileSdk = 37
 
     defaultConfig {
@@ -168,7 +168,7 @@ dependencies {
 
 // Only the Full build is shipped for vivo, so androidApp's FOSS-only Sentry meta cleanup is not repeated.
 sentry {
-    org.set("simpmusic")
+    org.set("dspot")
     projectName.set("android")
     ignoredBuildTypes.set(setOf("debug"))
     autoInstallation.enabled = false

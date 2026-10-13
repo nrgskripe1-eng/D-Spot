@@ -1,4 +1,4 @@
-# SimpMusic Contributor Covenant Code of Conduct
+﻿# D-Spot Contributor Covenant Code of Conduct
 
 ## Our Pledge
 

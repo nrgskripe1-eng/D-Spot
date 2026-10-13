@@ -1,4 +1,4 @@
-- Hỗ trợ Android 14
+﻿- Hỗ trợ Android 14
 - Hỗ trợ Android Auto
 - Dịch lời bài hát cho người dùng đã đăng nhập Musixmatch
 - Thêm tính năng "Thay đổi nhà cung cấp lời bài hát chính" (YouTube Transcript hoặc Musixmatch)
@@ -9,4 +9,4 @@
 - Cải thiện dữ liệu cá nhân hóa cho người dùng "Gửi lại cho Google"
 - Giao diện người dùng và hiệu ứng tốt hơn
 - Thêm các ngôn ngữ Phần Lan, Tây Ban Nha, Pháp, Ba Lan, Bồ Đào Nha, Thổ Nhĩ Kỳ
-- Sửa một số lỗi (Kiểm tra https://github.com/maxrave-dev/SimpMusic/commit/233a7245ce912d95d50913248f6d4d8ae315cfda)
+- Sửa một số lỗi (Kiểm tra https://github.com/Mika/D-Spot/commit/233a7245ce912d95d50913248f6d4d8ae315cfda)

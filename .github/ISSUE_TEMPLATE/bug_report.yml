@@ -1,5 +1,5 @@
-name: Bug report
-description: Report a reproducible issue in SimpMusic
+﻿name: Bug report
+description: Report a reproducible issue in D-Spot
 labels: [ "bug:unconfirmed" ]
 
 body:
@@ -22,7 +22,7 @@ body:
     id: latest_release
     attributes:
       label: Latest Release
-      description: Check the [Releases page](https://github.com/maxrave-dev/SimpMusic/releases) — this may already be fixed.
+      description: Check the [Releases page](https://github.com/Mika/D-Spot/releases) — this may already be fixed.
       options:
         - label: I confirm I am on the latest release and the problem still happens.
           required: true

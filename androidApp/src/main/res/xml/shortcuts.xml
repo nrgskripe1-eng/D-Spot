@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:shortcutId="home"
@@ -6,9 +6,9 @@
         android:icon="@drawable/round_home_24"
         android:shortcutShortLabel="@string/home">
         <intent
-            android:targetClass="com.maxrave.simpmusic.MainActivity"
-            android:targetPackage="com.maxrave.simpmusic"
-            android:action="com.maxrave.simpmusic.action.HOME" />
+            android:targetClass="com.mika.dspot.MainActivity"
+            android:targetPackage="com.mika.dspot"
+            android:action="com.mika.dspot.action.HOME" />
     </shortcut>
     <shortcut
         android:shortcutId="search"
@@ -16,9 +16,9 @@
         android:icon="@drawable/round_search_24"
         android:shortcutShortLabel="@string/search">
         <intent
-            android:targetClass="com.maxrave.simpmusic.MainActivity"
-            android:targetPackage="com.maxrave.simpmusic"
-            android:action="com.maxrave.simpmusic.action.SEARCH" />
+            android:targetClass="com.mika.dspot.MainActivity"
+            android:targetPackage="com.mika.dspot"
+            android:action="com.mika.dspot.action.SEARCH" />
     </shortcut>
     <shortcut
         android:shortcutId="library"
@@ -26,8 +26,8 @@
         android:icon="@drawable/round_library_music_24"
         android:shortcutShortLabel="@string/library">
         <intent
-            android:targetClass="com.maxrave.simpmusic.MainActivity"
-            android:targetPackage="com.maxrave.simpmusic"
-            android:action="com.maxrave.simpmusic.action.LIBRARY" />
+            android:targetClass="com.mika.dspot.MainActivity"
+            android:targetPackage="com.mika.dspot"
+            android:action="com.mika.dspot.action.LIBRARY" />
     </shortcut>
 </shortcuts>

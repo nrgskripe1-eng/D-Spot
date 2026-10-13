@@ -1,4 +1,4 @@
-*.iml
+﻿*.iml
 .gradle
 /local.properties
 /.idea/caches
@@ -18,7 +18,7 @@ crowdin.yml
 # Kotlin 2.0
 .kotlin/
 .idea
-/simpmusic.jks
+/dspot.jks
 /ffmpeg-kit/build/
 
 #dev files
