@@ -292,7 +292,7 @@
     <string name="older_first">Спочатку старіші</string>
     <string name="newer_first">Спочатку новіші</string>
     <string name="added_date">Дата додавання</string>
-    <string name="credit_app">Простий музичний застосунок з використанням YouTube Music для бекенду \n\nD-Spot - це проєкт з відкритим вихідним кодом для потокової передачі музики з YouTube та YouTube Music без реклами та відстеження. D-Spot надає багато можливостей:\n\n - Потокова музика\n - Синхронізовані тексти\n - Персоналізація даних\n - тощо... \n\nD-Spot завжди безкоштовний і без реклами\n\nСтворено з ❤️ від Tuan Minh Nguyen Duc (Mika)</string>
+    <string name="credit_app">Простий музичний застосунок з використанням YouTube Music для бекенду \n\nD-Spot - це застосунок для потокової передачі музики з YouTube та YouTube Music без реклами та відстеження. D-Spot надає багато можливостей:\n\n - Потокова музика\n - Синхронізовані тексти\n - Персоналізація даних\n - тощо... \n\nD-Spot завжди безкоштовний і без реклами\n\nСтворено з ❤️ від Mika</string>
     <string name="issue_tracker">Відстежувач випусків</string>
     <string name="featured_playlists">Рекомендовані плейлисти</string>
     <string name="featured_inArtist">Рекомендовано</string>

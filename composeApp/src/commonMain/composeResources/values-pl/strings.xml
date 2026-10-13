@@ -276,7 +276,7 @@
     <string name="older_first">Najpierw starsze</string>
     <string name="newer_first">Najpierw nowsze</string>
     <string name="added_date">Dodana data</string>
-    <string name="credit_app">Prosta aplikacja muzyczna wykorzystująca YouTube Music jako backend\n\nD-Spot to projekt open source służący do strumieniowego przesyłania muzyki z serwisów YouTube i YouTube Music bez reklam i śledzenia. D-Spot oferuje wiele funkcji:\n\n - Strumieniowe przesyłanie muzyki \n - Zsynchronizowane teksty piosenek\n - Personalizację danych\n - itp. \n\nD-Spot jest zawsze bezpłatny i nie zawiera reklam\n\nStworzony z ❤️ przez Tuan Minh Nguyen Duc (Mika)</string>
+    <string name="credit_app">Prosta aplikacja muzyczna wykorzystująca YouTube Music jako backend\n\nD-Spot to aplikacja służąca do strumieniowego przesyłania muzyki z serwisów YouTube i YouTube Music bez reklam i śledzenia. D-Spot oferuje wiele funkcji:\n\n - Strumieniowe przesyłanie muzyki \n - Zsynchronizowane teksty piosenek\n - Personalizację danych\n - itp. \n\nD-Spot jest zawsze bezpłatny i nie zawiera reklam\n\nStworzony z ❤️ przez Mika</string>
     <string name="issue_tracker">Lista problemow</string>
     <string name="featured_playlists">Polecane playlisty</string>
     <string name="featured_inArtist">Polecane</string>

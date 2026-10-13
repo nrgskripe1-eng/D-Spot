@@ -290,7 +290,7 @@
     <string name="older_first">Ältere zuerst</string>
     <string name="newer_first">Neue zuerst</string>
     <string name="added_date">Datum hinzugefügt</string>
-    <string name="credit_app">Eine einfache Musik-App mit YouTube Music als Backend \n\nD-Spot ist ein Open-Source-Projekt zum Streamen von Musik von YouTube und YouTube Music ohne Werbung und Tracking. D-Spot bietet viele Funktionen:\n\n - Musik streamen \n - Synchronisierte Liedtexte\n - Daten personalisieren\n - etc… \n\nD-Spot ist immer kostenlos und ohne Werbung\n\nErstellen Sie mit ❤️ von Tuan Minh Nguyen Duc (Mika)</string>
+    <string name="credit_app">Eine einfache Musik-App mit YouTube Music als Backend \n\nD-Spot ist eine App zum Streamen von Musik von YouTube und YouTube Music ohne Werbung und Tracking. D-Spot bietet viele Funktionen:\n\n - Musik streamen \n - Synchronisierte Liedtexte\n - Daten personalisieren\n - etc… \n\nD-Spot ist immer kostenlos und ohne Werbung\n\nErstellt mit ❤️ von Mika</string>
     <string name="issue_tracker">Issue-Tracker</string>
     <string name="featured_playlists">Empfohlene Playlists</string>
     <string name="featured_inArtist">Zu hören in</string>

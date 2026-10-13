@@ -87,6 +87,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -196,17 +197,33 @@ sentry {
     if (isFullBuild) {
         val token =
             try {
-                println("Full build detected, enabling Sentry Auth Token")
-                val properties = Properties()
-                properties.load(rootProject.file("local.properties").inputStream())
-                properties.getProperty("SENTRY_AUTH_TOKEN")
+                val envToken = System.getenv("SENTRY_AUTH_TOKEN")
+                if (!envToken.isNullOrBlank()) {
+                    println("SENTRY_AUTH_TOKEN found in environment variables")
+                    envToken
+                } else {
+                    println("Full build detected, checking local.properties for Sentry Auth Token")
+                    val properties = Properties()
+                    val localPropsFile = rootProject.file("local.properties")
+                    if (localPropsFile.exists()) {
+                        properties.load(localPropsFile.inputStream())
+                    }
+                    properties.getProperty("SENTRY_AUTH_TOKEN")
+                }
             } catch (e: Exception) {
-                println("Failed to load SENTRY_AUTH_TOKEN from local.properties: ${e.message}")
+                println("Failed to load SENTRY_AUTH_TOKEN: ${e.message}")
                 null
             }
-        authToken.set(token ?: "")
-        includeProguardMapping.set(true)
-        autoUploadProguardMapping.set(true)
+        if (!token.isNullOrBlank()) {
+            authToken.set(token)
+            includeProguardMapping.set(true)
+            autoUploadProguardMapping.set(true)
+            println("Sentry ProGuard mapping upload enabled")
+        } else {
+            println("SENTRY_AUTH_TOKEN not found in environment or local.properties. Disabling ProGuard mapping upload.")
+            includeProguardMapping.set(false)
+            autoUploadProguardMapping.set(false)
+        }
     } else {
         includeProguardMapping.set(false)
         autoUploadProguardMapping.set(false)

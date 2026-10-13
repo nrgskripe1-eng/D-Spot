@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.service.rss
+package com.mika.dspot.service.rss
 
 import android.content.Context
 import android.util.Xml
@@ -78,9 +78,12 @@ class RssFeedNotifyWork(
                     }
                 }
                 Result.success()
+            } catch (e: java.net.UnknownHostException) {
+                Logger.d(TAG, "doWork: host unavailable (${e.message}), skipping")
+                Result.success()
             } catch (e: Exception) {
-                Logger.e(TAG, "doWork failed: ${e.message}")
-                Result.retry()
+                Logger.w(TAG, "doWork skipped: ${e.message}")
+                Result.success()
             }
         }
 

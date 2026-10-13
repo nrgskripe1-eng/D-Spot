@@ -97,6 +97,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 File(androidAppDir, "proguard-rules.pro"),
@@ -175,16 +176,29 @@ sentry {
     if (isFullBuild) {
         val token =
             try {
-                val properties = Properties()
-                properties.load(rootProject.file("local.properties").inputStream())
-                properties.getProperty("SENTRY_AUTH_TOKEN")
+                val envToken = System.getenv("SENTRY_AUTH_TOKEN")
+                if (!envToken.isNullOrBlank()) {
+                    envToken
+                } else {
+                    val properties = Properties()
+                    val localPropsFile = rootProject.file("local.properties")
+                    if (localPropsFile.exists()) {
+                        properties.load(localPropsFile.inputStream())
+                    }
+                    properties.getProperty("SENTRY_AUTH_TOKEN")
+                }
             } catch (e: Exception) {
-                println("Failed to load SENTRY_AUTH_TOKEN from local.properties: ${e.message}")
+                println("Failed to load SENTRY_AUTH_TOKEN: ${e.message}")
                 null
             }
-        authToken.set(token ?: "")
-        includeProguardMapping.set(true)
-        autoUploadProguardMapping.set(true)
+        if (!token.isNullOrBlank()) {
+            authToken.set(token)
+            includeProguardMapping.set(true)
+            autoUploadProguardMapping.set(true)
+        } else {
+            includeProguardMapping.set(false)
+            autoUploadProguardMapping.set(false)
+        }
     } else {
         includeProguardMapping.set(false)
         autoUploadProguardMapping.set(false)

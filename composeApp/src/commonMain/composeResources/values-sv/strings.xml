@@ -289,7 +289,7 @@
     <string name="older_first">Äldre först</string>
     <string name="newer_first">Nyare först</string>
     <string name="added_date">Datum då den lades till</string>
-    <string name="credit_app">En enkel musikapp som använder YouTube Music som datakälla \n\nD-Spot är ett projekt med öppen källkod för att strömma musik från YouTube och YouTube Music utan annonser och spårning. D-Spot har många funktioner:\n\n - Strömma musik \n - Synkroniserade låttexter\n - Personanpassade data\n - med mera … \n\nD-Spot är alltid gratis och utan annonser\n\nSkapad med ❤️ av Tuan Minh Nguyen Duc (Mika)</string>
+    <string name="credit_app">En enkel musikapp som använder YouTube Music som datakälla \n\nD-Spot är en app för att strömma musik från YouTube och YouTube Music utan annonser och spårning. D-Spot har många funktioner:\n\n - Strömma musik \n - Synkroniserade låttexter\n - Personanpassade data\n - med mera … \n\nD-Spot är alltid gratis och utan annonser\n\nSkapad med ❤️ av Mika</string>
     <string name="issue_tracker">Ärendehantering</string>
     <string name="featured_playlists">Utvalda spellistor</string>
     <string name="featured_inArtist">Medverkar på</string>
