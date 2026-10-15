@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.home
+package com.mika.dspot.ui.screen.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -138,6 +138,9 @@ import com.mika.dspot.ui.icon.PeopleAlt
 import com.mika.dspot.ui.icon.PlaylistAdd
 import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.home.AppLogDestination
+import com.mika.dspot.ui.navigation.destination.home.AudioCutterDestination
+import com.mika.dspot.ui.navigation.destination.home.ChangelogDestination
+import com.mika.dspot.ui.navigation.destination.home.DuplicateDetectorDestination
 import com.mika.dspot.ui.navigation.destination.home.CreditDestination
 import com.mika.dspot.ui.navigation.destination.login.DiscordLoginDestination
 import com.mika.dspot.ui.navigation.destination.login.LastfmLoginDestination
@@ -186,6 +189,24 @@ import dspot.composeapp.generated.resources.headers_json
 import dspot.composeapp.generated.resources.invalid_json_format
 import dspot.composeapp.generated.resources.invalid_url_format
 import dspot.composeapp.generated.resources.not_set
+import dspot.composeapp.generated.resources.changelog
+import dspot.composeapp.generated.resources.changelog_description
+import dspot.composeapp.generated.resources.duplicate_detector
+import dspot.composeapp.generated.resources.duplicate_detector_description
+import dspot.composeapp.generated.resources.shake_to_shuffle
+import dspot.composeapp.generated.resources.shake_to_shuffle_description
+import dspot.composeapp.generated.resources.yt_playlist_sync
+import dspot.composeapp.generated.resources.yt_playlist_sync_description
+import dspot.composeapp.generated.resources.audio_cutter
+import dspot.composeapp.generated.resources.audio_cutter_description
+import dspot.composeapp.generated.resources.earphone_customizer
+import dspot.composeapp.generated.resources.earphone_customizer_description
+import dspot.composeapp.generated.resources.waveform_progress
+import dspot.composeapp.generated.resources.waveform_progress_description
+import dspot.composeapp.generated.resources.lockscreen_player
+import dspot.composeapp.generated.resources.lockscreen_player_description
+import dspot.composeapp.generated.resources.animated_canvas
+import dspot.composeapp.generated.resources.animated_canvas_description
 import dspot.composeapp.generated.resources.about_us
 import dspot.composeapp.generated.resources.add_an_account
 import dspot.composeapp.generated.resources.ai
@@ -622,6 +643,9 @@ fun SettingScreen(
     var showYouTubeAccountDialog by rememberSaveable {
         mutableStateOf(false)
     }
+    var settingSearchQuery by rememberSaveable {
+        mutableStateOf("")
+    }
     var showLoginSyncDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -694,6 +718,39 @@ fun SettingScreen(
                             val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
                             layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
                         },
+                )
+                // Search bar for settings
+                androidx.compose.material3.OutlinedTextField(
+                    value = settingSearchQuery,
+                    onValueChange = { settingSearchQuery = it },
+                    placeholder = { Text(stringResource(Res.string.search)) },
+                    leadingIcon = {
+                        androidx.compose.material3.Icon(
+                            imageVector = SimpIcons.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    trailingIcon = {
+                        if (settingSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { settingSearchQuery = "" }) {
+                                androidx.compose.material3.Icon(
+                                    imageVector = SimpIcons.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 )
                 // Above every section, and inside item 0 rather than an item of its own, for the
                 // glow reason above.
@@ -1364,6 +1421,20 @@ fun SettingScreen(
                         }
                     }
                 }
+                var lockscreenPlayerEnabled by remember { mutableStateOf(true) }
+                SettingItem(
+                    title = stringResource(Res.string.lockscreen_player),
+                    subtitle = stringResource(Res.string.lockscreen_player_description),
+                    smallSubtitle = true,
+                    switch = (lockscreenPlayerEnabled to { lockscreenPlayerEnabled = it }),
+                )
+                var animatedCanvasEnabled by remember { mutableStateOf(true) }
+                SettingItem(
+                    title = stringResource(Res.string.animated_canvas),
+                    subtitle = stringResource(Res.string.animated_canvas_description),
+                    smallSubtitle = true,
+                    switch = (animatedCanvasEnabled to { animatedCanvasEnabled = it }),
+                )
             }
         }
         if (getPlatform() == Platform.Android) {
@@ -1588,9 +1659,29 @@ fun SettingScreen(
                             switch = ((crossfadeSkipAlbum) to { viewModel.setCrossfadeSkipAlbum(it) }),
                             isEnable = !castState.isRemote,
                         )
-//                        }
                     }
                 }
+                var shakeToShuffleEnabled by remember { mutableStateOf(false) }
+                SettingItem(
+                    title = stringResource(Res.string.shake_to_shuffle),
+                    subtitle = stringResource(Res.string.shake_to_shuffle_description),
+                    smallSubtitle = true,
+                    switch = (shakeToShuffleEnabled to { shakeToShuffleEnabled = it }),
+                )
+                var earphoneControlsEnabled by remember { mutableStateOf(true) }
+                SettingItem(
+                    title = stringResource(Res.string.earphone_customizer),
+                    subtitle = stringResource(Res.string.earphone_customizer_description),
+                    smallSubtitle = true,
+                    switch = (earphoneControlsEnabled to { earphoneControlsEnabled = it }),
+                )
+                var waveformProgressEnabled by remember { mutableStateOf(true) }
+                SettingItem(
+                    title = stringResource(Res.string.waveform_progress),
+                    subtitle = stringResource(Res.string.waveform_progress_description),
+                    smallSubtitle = true,
+                    switch = (waveformProgressEnabled to { waveformProgressEnabled = it }),
+                )
             }
         }
         // Deliberately not part of "storage" further down, which is Android-only: tracking and the
@@ -2668,6 +2759,29 @@ fun SettingScreen(
                         }
                     },
                 )
+                SettingItem(
+                    title = stringResource(Res.string.duplicate_detector),
+                    subtitle = stringResource(Res.string.duplicate_detector_description),
+                    onClick = {
+                        navController.navigate(DuplicateDetectorDestination)
+                    },
+                )
+                SettingItem(
+                    title = stringResource(Res.string.yt_playlist_sync),
+                    subtitle = stringResource(Res.string.yt_playlist_sync_description),
+                    onClick = {
+                        coroutineScope.launch {
+                            importLauncher.launch()
+                        }
+                    },
+                )
+                SettingItem(
+                    title = stringResource(Res.string.audio_cutter),
+                    subtitle = stringResource(Res.string.audio_cutter_description),
+                    onClick = {
+                        navController.navigate(AudioCutterDestination)
+                    },
+                )
             }
         }
         item(key = "about_us") {
@@ -2677,6 +2791,13 @@ fun SettingScreen(
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
                     onClick = {
                         navController.navigate(CreditDestination)
+                    },
+                )
+                SettingItem(
+                    title = stringResource(Res.string.changelog),
+                    subtitle = stringResource(Res.string.changelog_description),
+                    onClick = {
+                        navController.navigate(ChangelogDestination)
                     },
                 )
                 SettingItem(
