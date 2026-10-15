@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.theme
+package com.mika.dspot.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -115,6 +115,18 @@ private fun ColorScheme.withNeutralLightSurfaces(): ColorScheme =
         inverseOnSurface = Color(0xFFF1F1F1),
     )
 
+private fun ColorScheme.withPureBlackSurfaces(): ColorScheme =
+    copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceDim = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color(0xFF0A0A0A),
+        surfaceContainer = Color(0xFF121212),
+        surfaceContainerHigh = Color(0xFF181818),
+        surfaceContainerHighest = Color(0xFF222222),
+    )
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AppTheme(
@@ -148,7 +160,7 @@ fun AppTheme(
                 isDark = isDark,
                 isAmoled = isDark,
                 style = PaletteStyle.TonalSpot,
-                modifyColorScheme = { cs -> if (isDark) cs else cs.withNeutralLightSurfaces() },
+                modifyColorScheme = { cs -> if (isDark) cs.withPureBlackSurfaces() else cs.withNeutralLightSurfaces() },
             )
     // Immersive screens stay dark even at light theme (see [ForceDarkContent]). Resolve their scheme
     // once here instead of letting every such subtree build a palette of its own.
@@ -168,6 +180,7 @@ fun AppTheme(
         colorScheme = colorScheme,
         content = {
             CompositionLocalProvider(
+                LocalSpacing provides Spacing(),
                 LocalRippleConfiguration provides SoftRippleConfiguration,
                 LocalContentColor provides colorScheme.onSurfaceVariant,
                 LocalAppColors provides if (isDark) DarkAppColors else LightAppColors,
@@ -236,6 +249,7 @@ fun ForceDarkContent(content: @Composable () -> Unit) {
         colorScheme = darkScheme,
         content = {
             CompositionLocalProvider(
+                LocalSpacing provides Spacing(),
                 LocalForceDarkText provides true,
                 LocalIsDarkTheme provides true,
                 LocalContentColor provides darkScheme.onSurfaceVariant,
