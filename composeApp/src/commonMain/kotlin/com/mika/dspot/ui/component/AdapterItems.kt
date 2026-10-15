@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -807,9 +807,9 @@ fun QuickPicksItem(
                 modifier =
                     Modifier
                         .align(Alignment.CenterVertically)
-                        .size(44.dp)
+                        .size(56.dp)
                         .clip(
-                            RoundedCornerShape(10),
+                            RoundedCornerShape(12.dp),
                         ),
             )
             Column(
