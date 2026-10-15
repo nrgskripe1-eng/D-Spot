@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.home
+package com.mika.dspot.ui.screen.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -48,6 +48,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -145,7 +147,9 @@ import com.mika.dspot.ui.component.homeCardAspectRatio
 import com.mika.dspot.ui.component.rememberHolderPainter
 import com.mika.dspot.ui.icon.Groups
 import com.mika.dspot.ui.icon.History
+import com.mika.dspot.ui.icon.MoreVert
 import com.mika.dspot.ui.icon.Notifications
+import com.mika.dspot.ui.icon.PlayArrow
 import com.mika.dspot.ui.icon.Settings
 import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
@@ -217,6 +221,9 @@ import dspot.composeapp.generated.resources.relax
 import dspot.composeapp.generated.resources.romance
 import dspot.composeapp.generated.resources.sad
 import dspot.composeapp.generated.resources.sleep
+import dspot.composeapp.generated.resources.listen_together
+import dspot.composeapp.generated.resources.recently_added
+import dspot.composeapp.generated.resources.settings
 import dspot.composeapp.generated.resources.top_artists
 import dspot.composeapp.generated.resources.warning
 import dspot.composeapp.generated.resources.welcome_back
@@ -1007,9 +1014,10 @@ fun HomeScreen(
                     modifier =
                         Modifier
                             .horizontalScroll(chipRowState)
-                            .padding(vertical = 8.dp, horizontal = 15.dp)
+                            .padding(vertical = 8.dp)
+                            .padding(start = 16.dp, end = 24.dp)
                             .background(Color.Transparent),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     listOfHomeChip.forEach { id ->
                         val isSelected =
@@ -1097,16 +1105,58 @@ fun HomeTopAppBar(navController: NavController) {
             }
         },
         actions = {
+            var menuExpanded by remember { mutableStateOf(false) }
             RippleIconButton(imageVector = SimpIcons.Notifications, tint = MaterialTheme.colorScheme.onBackground) {
                 navController.navigate(NotificationDestination)
             }
-            RippleIconButton(imageVector = SimpIcons.History, tint = MaterialTheme.colorScheme.onBackground) {
-                navController.navigate(RecentlySongsDestination)
-            }
-            // Fourth button, immediately before Settings — the position the design canvas fixes.
-            ListenTogetherIconButton { navController.navigate(ListenTogetherDestination) }
-            RippleIconButton(imageVector = SimpIcons.Settings, tint = MaterialTheme.colorScheme.onBackground) {
-                navController.navigate(SettingsDestination)
+            Box {
+                RippleIconButton(imageVector = SimpIcons.MoreVert, tint = MaterialTheme.colorScheme.onBackground) {
+                    menuExpanded = true
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.recently_added)) },
+                        onClick = {
+                            menuExpanded = false
+                            navController.navigate(RecentlySongsDestination)
+                        },
+                        leadingIcon = {
+                            androidx.compose.material3.Icon(
+                                imageVector = SimpIcons.History,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.listen_together)) },
+                        onClick = {
+                            menuExpanded = false
+                            navController.navigate(ListenTogetherDestination)
+                        },
+                        leadingIcon = {
+                            androidx.compose.material3.Icon(
+                                imageVector = SimpIcons.Groups,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.settings)) },
+                        onClick = {
+                            menuExpanded = false
+                            navController.navigate(SettingsDestination)
+                        },
+                        leadingIcon = {
+                            androidx.compose.material3.Icon(
+                                imageVector = SimpIcons.Settings,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
             }
         },
         colors =
@@ -1229,20 +1279,32 @@ fun QuickPicks(
                 )
             }
             if (homeItem.playAllEndpoint != null) {
-                TextButton(
+                androidx.compose.material3.FilledTonalButton(
                     onClick = { viewModel.playAll(homeItem) },
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                     colors =
-                        ButtonDefaults
-                            .textButtonColors()
-                            .copy(contentColor = MaterialTheme.colorScheme.onSurface),
+                        androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                 ) {
-                    Text(stringResource(Res.string.play_all), style = typo().bodySmall)
+                    androidx.compose.material3.Icon(
+                        imageVector = SimpIcons.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                    )
+                    Text(
+                        stringResource(Res.string.play_all),
+                        style = typo().labelSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    )
                 }
             }
         }
         LazyHorizontalGrid(
             rows = GridCells.Fixed(4),
-            modifier = Modifier.height(256.dp),
+            modifier = Modifier.height(290.dp),
             state = lazyListState,
             flingBehavior = snapperFlingBehavior,
         ) {
