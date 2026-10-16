@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="Song_and_artist_name">Song • %1$s</string>
     <string name="playlist_and_author">Playlist • %1$s</string>
@@ -133,6 +133,26 @@
     <string name="restore_your_saved_data">Restore your saved data</string>
     <string name="about_us">About us</string>
     <string name="version">Version</string>
+    <string name="changelog">Changelog</string>
+    <string name="changelog_description">See what\'s new in each update</string>
+    <string name="duplicate_detector">Duplicate Song Detector</string>
+    <string name="duplicate_detector_description">Find and clean up duplicate tracks across playlists</string>
+    <string name="yt_playlist_sync">Anonymous YouTube Sync</string>
+    <string name="yt_playlist_sync_description">Import any public YouTube playlist anonymously</string>
+    <string name="shake_to_shuffle">Shake to Shuffle</string>
+    <string name="shake_to_shuffle_description">Shake phone during playback to skip to a random song</string>
+    <string name="pure_black_theme">Pure Black AMOLED Theme</string>
+    <string name="pure_black_theme_description">True #000000 background for OLED battery savings</string>
+    <string name="earphone_customizer">Earphone Button Controls</string>
+    <string name="earphone_customizer_description">Double-click next, triple-click favorite song</string>
+    <string name="waveform_progress">Signal Bar Waveform Bar</string>
+    <string name="waveform_progress_description">Live dynamic audio-reactive progress bar</string>
+    <string name="audio_cutter">Ringtone &amp; Audio Cutter</string>
+    <string name="audio_cutter_description">Trim downloaded tracks to make custom ringtones</string>
+    <string name="lockscreen_player">Minimalist Lockscreen</string>
+    <string name="lockscreen_player_description">Full-screen ambient album art display on lockscreen</string>
+    <string name="animated_canvas">Apple Music Animated Canvas</string>
+    <string name="animated_canvas_description">Smooth ambient glowing backdrop behind artwork</string>
     <string name="github">Github</string>
     <string name="mika_dev">Mika</string>
     <string name="follow_me_on_x">Follow me on X</string>

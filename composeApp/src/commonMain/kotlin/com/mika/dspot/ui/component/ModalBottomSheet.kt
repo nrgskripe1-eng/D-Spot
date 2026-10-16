@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -2168,6 +2168,27 @@ fun PlaybackSpeedPitchBottomSheet(
                             )
                         }
                     }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                ) {
+                    androidx.compose.material3.FilterChip(
+                        selected = (playbackSpeed == 1.0f && pitch == 0),
+                        onClick = { onSet(1.0f, 0) },
+                        label = { Text("Normal", style = typo().labelSmall) },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = (playbackSpeed == 1.25f && pitch == 3),
+                        onClick = { onSet(1.25f, 3) },
+                        label = { Text("⚡ Nightcore", style = typo().labelSmall) },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = (playbackSpeed == 0.85f && pitch == -2),
+                        onClick = { onSet(0.85f, -2) },
+                        label = { Text("🌙 Slowed", style = typo().labelSmall) },
+                    )
                 }
                 EndOfModalBottomSheet()
             }

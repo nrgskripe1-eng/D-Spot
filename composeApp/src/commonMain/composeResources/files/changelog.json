@@ -1,0 +1,55 @@
+[
+  {
+    "version": "1.0.0",
+    "date": "2026-10-01",
+    "changes": [
+      { "type": "new", "text": "Initial release of D-Spot" },
+      { "type": "new", "text": "Stream music from YouTube and YouTube Music" },
+      { "type": "new", "text": "Synced lyrics support" },
+      { "type": "new", "text": "Offline download for songs" },
+      { "type": "new", "text": "Personalized listening history" }
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-10-08",
+    "changes": [
+      { "type": "new", "text": "Now Playing — Apple Music style layout" },
+      { "type": "new", "text": "Blog notifications via RSS feed" },
+      { "type": "improvement", "text": "Faster search results loading" },
+      { "type": "improvement", "text": "Better offline mode handling" },
+      { "type": "fix", "text": "Fixed crash on playlist import" }
+    ]
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-10-13",
+    "changes": [
+      { "type": "new", "text": "Changelog screen — now you know what changed!" },
+      { "type": "new", "text": "Mood-based song discovery" },
+      { "type": "new", "text": "Listen Together — share sessions with friends" },
+      { "type": "improvement", "text": "Notification error handling improved" },
+      { "type": "improvement", "text": "Settings screen visual polish" },
+      { "type": "fix", "text": "Fixed RSS feed UnknownHostException on no internet" },
+      { "type": "fix", "text": "Fixed remote config 404 errors" }
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-10-14",
+    "changes": [
+      { "type": "new", "text": "⚡ Nightcore & Slowed Audio Presets — One-tap speed & pitch presets" },
+      { "type": "new", "text": "🔍 Duplicate Song Detector — Find and clean up duplicated songs in playlists" },
+      { "type": "new", "text": "🖤 Pure Black AMOLED Theme — True #000000 background for OLED battery savings" },
+      { "type": "new", "text": "⏱️ Sleep Timer with Gentle Audio Fade-Out — Silences music smoothly before pausing" },
+      { "type": "new", "text": "📳 Shake to Shuffle — Shake phone during playback to skip to a random song" },
+      { "type": "new", "text": "🔗 Anonymous YouTube Playlist Sync — Seamless public playlist URL import" },
+      { "type": "new", "text": "✂️ Ringtone & Audio Cutter Tool — Trim downloaded tracks into custom ringtones" },
+      { "type": "new", "text": "🎧 Earphone Button Controls — Custom media button double/triple click triggers" },
+      { "type": "new", "text": "📊 Signal Bar Waveform Bar — Dynamic audio-reactive progress bar" },
+      { "type": "new", "text": "🎨 Apple Music Animated Canvas — Smooth ambient glowing backdrop behind artwork" },
+      { "type": "new", "text": "🔒 Minimalist Lockscreen Player — Ambient full-bleed lockscreen art presentation" },
+      { "type": "improvement", "text": "Enhanced audio rendering performance & DSP clarity" }
+    ]
+  }
+]
