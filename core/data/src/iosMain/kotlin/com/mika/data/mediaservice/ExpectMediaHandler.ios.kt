@@ -69,7 +69,6 @@ import platform.MediaPlayer.MPNowPlayingInfoCenter
 import platform.MediaPlayer.MPNowPlayingInfoPropertyElapsedPlaybackTime
 import platform.MediaPlayer.MPNowPlayingInfoPropertyPlaybackRate
 import platform.MediaPlayer.MPRemoteCommandCenter
-import platform.MediaPlayer.MPRemoteCommandHandlerStatus
 
 /**
  * iOS native AVQueuePlayer wrapper implementing MediaPlayerInterface.
@@ -398,31 +397,31 @@ class IosMediaPlayerHandlerImpl(
         center.playCommand.setEnabled(true)
         center.playCommand.addTargetWithHandler { _ ->
             player.play()
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
 
         center.pauseCommand.setEnabled(true)
         center.pauseCommand.addTargetWithHandler { _ ->
             player.pause()
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
 
         center.togglePlayPauseCommand.setEnabled(true)
         center.togglePlayPauseCommand.addTargetWithHandler { _ ->
             if (player.isPlaying) player.pause() else player.play()
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
 
         center.nextTrackCommand.setEnabled(true)
         center.nextTrackCommand.addTargetWithHandler { _ ->
             player.seekToNext()
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
 
         center.previousTrackCommand.setEnabled(true)
         center.previousTrackCommand.addTargetWithHandler { _ ->
             player.seekToPrevious()
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
 
         center.changePlaybackPositionCommand.setEnabled(true)
@@ -431,19 +430,30 @@ class IosMediaPlayerHandlerImpl(
             posEvent?.positionTime?.let { seconds ->
                 player.seekTo((seconds * 1000).toLong())
             }
-            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
+            0
         }
     }
 
     // Playback control
     override suspend fun onPlayerEvent(playerEvent: PlayerEvent) {
         when (playerEvent) {
-            is PlayerEvent.PlayPause -> if (player.isPlaying) player.pause() else player.play()
-            is PlayerEvent.SeekToNext -> player.seekToNext()
-            is PlayerEvent.SeekToPrevious -> player.seekToPrevious()
-            is PlayerEvent.SeekTo -> player.seekTo(playerEvent.position)
-            is PlayerEvent.Stop -> player.stop()
-            else -> {}
+            PlayerEvent.PlayPause -> if (player.isPlaying) player.pause() else player.play()
+            PlayerEvent.Next -> player.seekToNext()
+            PlayerEvent.Previous -> player.seekToPrevious()
+            PlayerEvent.SkipToPrevious -> player.seekToPreviousMediaItem()
+            PlayerEvent.Backward -> player.seekBack()
+            PlayerEvent.Forward -> player.seekForward()
+            PlayerEvent.Stop -> player.stop()
+            is PlayerEvent.UpdateProgress -> {
+                val dur = player.duration
+                if (dur > 0) {
+                    player.seekTo((dur * playerEvent.newProgress).toLong())
+                }
+            }
+            is PlayerEvent.UpdateVolume -> player.volume = playerEvent.newVolume
+            PlayerEvent.ToggleLike -> toggleLike()
+            PlayerEvent.Shuffle -> shufflePlaylist()
+            PlayerEvent.Repeat -> {}
         }
     }
 
