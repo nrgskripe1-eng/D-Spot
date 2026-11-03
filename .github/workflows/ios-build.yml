@@ -13,10 +13,9 @@ jobs:
     runs-on: macos-14 # Gumagamit ng Apple Silicon (M1/M2) runner sa GitHub Cloud
 
     steps:
-      - name: Checkout Repository with Submodules
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 1
 
       - name: Set up JDK 17
