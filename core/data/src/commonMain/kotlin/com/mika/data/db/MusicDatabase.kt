@@ -102,6 +102,7 @@ import com.mika.domain.data.entities.analytics.PlaybackEventEntity
         AutoMigration(24, 27),
     ],
 )
+@ConstructedBy(MusicDatabaseConstructor::class)
 @TypeConverters(Converters::class)
 abstract class MusicDatabase : RoomDatabase() {
     abstract fun getDatabaseDao(): DatabaseDao
