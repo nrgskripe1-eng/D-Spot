@@ -51,12 +51,12 @@ internal class SongRepositoryImpl(
     override fun getAllSongs(limit: Int): Flow<List<SongEntity>> =
         flow {
             emit(localDataSource.getAllSongs(limit))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun setInLibrary(
         videoId: String,
         inLibrary: LocalDateTime,
-    ) = withContext(Dispatchers.IO) { localDataSource.setInLibrary(videoId, inLibrary) }
+    ) = withContext(Dispatchers.Default) { localDataSource.setInLibrary(videoId, inLibrary) }
 
     override fun getSongsByListVideoId(listVideoId: List<String>): Flow<List<SongEntity>> =
         flow {
@@ -66,7 +66,7 @@ internal class SongRepositoryImpl(
             val songs = localDataSource.getSongByListVideoIdFull(listVideoId)
             val byId = songs.associateBy { it.videoId }
             emit(listVideoId.mapNotNull { byId[it] })
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getDownloadedSongs(): Flow<List<SongEntity>?> =
         flow {
@@ -75,7 +75,7 @@ internal class SongRepositoryImpl(
                     localDataSource.getDownloadedSongs(limit, offset)
                 },
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getDownloadingSongs(): Flow<List<SongEntity>?> =
         flow {
@@ -84,7 +84,7 @@ internal class SongRepositoryImpl(
                     localDataSource.getDownloadingSongs(limit, offset)
                 },
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getPreparingSongs(): Flow<List<SongEntity>> =
         flow {
@@ -93,7 +93,7 @@ internal class SongRepositoryImpl(
                     localDataSource.getPreparingSongs(limit, offset)
                 },
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getDownloadedVideoIdListFromListVideoIdAsFlow(listVideoId: List<String>) =
         localDataSource.getDownloadedVideoIdListFromListVideoIdAsFlow(listVideoId)
@@ -105,10 +105,10 @@ internal class SongRepositoryImpl(
                     localDataSource.getLikedSongs(limit, offset)
                 },
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun downloadAllLikedSongs(): Int =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             val pending =
                 getFullDataFromDB { limit, offset ->
                     localDataSource.getLikedSongs(limit, offset)
@@ -130,7 +130,7 @@ internal class SongRepositoryImpl(
      * then the satellite rows that were already orphaned before any of this ran.
      */
     override suspend fun clearHistoryAndOrphanedSongs(): Int =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             persistLiveQueueBeforeSweep()
             localDataSource.deleteAllPlaybackEvents()
             val artists = localDataSource.deleteUnfollowedArtists()
@@ -189,36 +189,36 @@ internal class SongRepositoryImpl(
     override fun getCanvasSong(max: Int): Flow<List<SongEntity>> =
         flow {
             emit(localDataSource.getCanvasSong(max))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getSongById(id: String): Flow<SongEntity?> =
         flow {
             emit(localDataSource.getSong(id))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getSongAsFlow(id: String) = localDataSource.getSongAsFlow(id)
 
     override fun getLikedSongsByArtist(channelId: String): Flow<List<SongEntity>> = localDataSource.getLikedSongsByArtist(channelId)
 
-    override fun insertSong(songEntity: SongEntity): Flow<Long> = flow<Long> { emit(localDataSource.insertSong(songEntity)) }.flowOn(Dispatchers.IO)
+    override fun insertSong(songEntity: SongEntity): Flow<Long> = flow<Long> { emit(localDataSource.insertSong(songEntity)) }.flowOn(Dispatchers.Default)
 
     override fun updateThumbnailsSongEntity(
         thumbnail: String,
         videoId: String,
-    ): Flow<Int> = flow { emit(localDataSource.updateThumbnailsSongEntity(thumbnail, videoId)) }.flowOn(Dispatchers.IO)
+    ): Flow<Int> = flow { emit(localDataSource.updateThumbnailsSongEntity(thumbnail, videoId)) }.flowOn(Dispatchers.Default)
 
     override fun updateVideoTypeSongEntity(
         videoType: String,
         videoId: String,
-    ): Flow<Int> = flow { emit(localDataSource.updateVideoTypeSongEntity(videoType, videoId)) }.flowOn(Dispatchers.IO)
+    ): Flow<Int> = flow { emit(localDataSource.updateVideoTypeSongEntity(videoType, videoId)) }.flowOn(Dispatchers.Default)
 
     override suspend fun updateListenCount(videoId: String) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.updateListenCount(videoId)
         }
 
     override suspend fun resetTotalPlayTime(videoId: String) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.resetTotalPlayTime(videoId)
         }
 
@@ -300,7 +300,7 @@ internal class SongRepositoryImpl(
     ) = localDataSource.getRecentSongs(limit, offset)
 
     override suspend fun insertSongInfo(songInfo: SongInfoEntity) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.insertSongInfo(songInfo)
         }
 
@@ -309,17 +309,17 @@ internal class SongRepositoryImpl(
 
     override suspend fun recoverQueue(temp: List<Track>) {
         val queueEntity = QueueEntity(listTrack = temp)
-        withContext(Dispatchers.IO) { localDataSource.recoverQueue(queueEntity) }
+        withContext(Dispatchers.Default) { localDataSource.recoverQueue(queueEntity) }
     }
 
     override suspend fun removeQueue() {
-        withContext(Dispatchers.IO) { localDataSource.deleteQueue() }
+        withContext(Dispatchers.Default) { localDataSource.deleteQueue() }
     }
 
     override suspend fun getSavedQueue(): Flow<List<QueueEntity>?> =
         flow {
             emit(localDataSource.getQueue())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     /**
      * With "Play audio version instead of MV in radio" on, a radio plays each recording as a song:
@@ -425,7 +425,7 @@ internal class SongRepositoryImpl(
                         }
                 }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getSongInfo(videoId: String): Flow<SongInfoEntity?> =
         flow {
@@ -461,7 +461,7 @@ internal class SongRepositoryImpl(
                         emit(getSongInfoEntity(videoId).lastOrNull())
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getLikeStatus(videoId: String): Flow<Boolean> =
         flow {
@@ -492,7 +492,7 @@ internal class SongRepositoryImpl(
                         }
                 }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun removeFromYouTubeLiked(mediaId: String?): Flow<Int> =
         flow {
@@ -509,7 +509,7 @@ internal class SongRepositoryImpl(
                         }
                 }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun downloadToFile(
         track: Track,
@@ -561,7 +561,7 @@ internal class SongRepositoryImpl(
                         emit(Resource.Error<Pair<List<Track>, String?>>(exception.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getRadioFromEndpoint(endpoint: YouTubeWatchEndpoint): Flow<Resource<Pair<List<Track>, String?>>> =
         flow {

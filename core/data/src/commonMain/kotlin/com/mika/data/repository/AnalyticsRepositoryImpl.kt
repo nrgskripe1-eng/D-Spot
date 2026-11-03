@@ -45,7 +45,7 @@ internal class AnalyticsRepositoryImpl(
                     listenedSecond,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getPlaybackEventsByOffset(
         offset: Int,
@@ -53,7 +53,7 @@ internal class AnalyticsRepositoryImpl(
     ): Flow<List<PlaybackEventEntity>> =
         flow {
             emit(analyticsDatasource.getPlaybackEventsByOffset(offset, limit))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getPlaybackEventsByOffsetAndTimestamp(
         offset: Int,
@@ -62,10 +62,10 @@ internal class AnalyticsRepositoryImpl(
     ): Flow<List<PlaybackEventEntity>> =
         flow {
             emit(analyticsDatasource.getPlaybackEventsByOffsetAndTimestamp(offset, limit, cutoffTimestamp))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun deleteOldPlaybackEvents(cutoffTimestamp: LocalDateTime) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             analyticsDatasource.deleteOldPlaybackEvents(cutoffTimestamp)
         }
 
@@ -74,7 +74,7 @@ internal class AnalyticsRepositoryImpl(
     override suspend fun queryTopPlayedSongsLastXDays(x: Int): Flow<List<TopPlayedTracks>> =
         flow {
             emit(analyticsDatasource.queryTopPlayedSongsLastXDays(x))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopPlayedSongsInRange(
         startTimestamp: LocalDateTime,
@@ -87,12 +87,12 @@ internal class AnalyticsRepositoryImpl(
                     endTimestamp,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopArtistsLastXDays(x: Int): Flow<List<TopPlayedArtist>> =
         flow {
             emit(analyticsDatasource.queryTopArtistsLastXDays(x))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopArtistsInRange(
         startTimestamp: LocalDateTime,
@@ -105,7 +105,7 @@ internal class AnalyticsRepositoryImpl(
                     endTimestamp,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopArtistsWithTimeInRange(
         startTimestamp: LocalDateTime,
@@ -118,12 +118,12 @@ internal class AnalyticsRepositoryImpl(
                     endTimestamp,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopAlbumsLastXDays(x: Int): Flow<List<TopPlayedAlbum>> =
         flow {
             emit(analyticsDatasource.queryTopAlbumsLastXDays(x))
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun queryTopAlbumsInRange(
         startTimestamp: LocalDateTime,
@@ -136,22 +136,22 @@ internal class AnalyticsRepositoryImpl(
                     endTimestamp,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getTotalPlaybackEventCount(): Flow<Long> =
         flow {
             emit(analyticsDatasource.getTotalPlaybackEventCount())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getTotalEventArtistCount(): Flow<Long> =
         flow {
             emit(analyticsDatasource.getTotalEventArtistCount())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getTotalListeningTimeInSeconds(): Flow<Long> =
         flow {
             emit(analyticsDatasource.getTotalListeningTimeInSeconds())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun getPlaybackEventCountInRange(
         startTimestamp: LocalDateTime,
@@ -164,14 +164,14 @@ internal class AnalyticsRepositoryImpl(
                     endTimestamp,
                 ),
             )
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     @OptIn(ExperimentalTime::class)
     override suspend fun getPeriodStats(
         startTimestamp: LocalDateTime,
         endTimestamp: LocalDateTime,
     ): AnalyticsPeriodStats =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             val samples = analyticsDatasource.getPlaybackSamplesInRange(startTimestamp, endTimestamp)
             if (samples.isEmpty()) return@withContext AnalyticsPeriodStats()
 

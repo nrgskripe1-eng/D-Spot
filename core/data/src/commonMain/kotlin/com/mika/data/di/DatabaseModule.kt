@@ -34,7 +34,7 @@ val databaseModule =
                 get<Converters>()
             )
                 .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
+                .setQueryCoroutineContext(Dispatchers.Default)
                 .build()
         }
         // DatabaseDao

@@ -208,7 +208,7 @@ internal class HomeRepositoryImpl(
                         emit(Resource.Error<Pair<String?, List<HomeItem>>>(error.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getHomeDataContinue(
         continueParam: String,
@@ -239,7 +239,7 @@ internal class HomeRepositoryImpl(
             }.onFailure {
                 emit(Resource.Error<Pair<String?, List<HomeItem>>>(it.message.toString()))
             }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.Default)
 
     override fun getNewRelease(
         newReleaseString: String,
@@ -253,7 +253,7 @@ internal class HomeRepositoryImpl(
                 }.onFailure { error ->
                     emit(Resource.Error<List<HomeItem>>(error.message.toString()))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getChartData(countryCode: String): Flow<Resource<Chart>> =
         flow {
@@ -280,7 +280,7 @@ internal class HomeRepositoryImpl(
                         emit(Resource.Error<Chart>(error.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getMoodAndMomentsData(): Flow<Resource<Mood>> =
         flow {
@@ -326,7 +326,7 @@ internal class HomeRepositoryImpl(
                         }
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getMoodCategoryArtwork(params: String): Flow<String?> =
         flow {
@@ -356,7 +356,7 @@ internal class HomeRepositoryImpl(
                     ),
                 )
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     private suspend fun readMoodArtworkCache(): Map<String, MoodArtwork> =
         dataStoreManager.moodArtworkCache
@@ -382,7 +382,7 @@ internal class HomeRepositoryImpl(
                         emit(Resource.Error<MoodsMomentObject>(e.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getGenreData(params: String): Flow<Resource<GenreObject>> =
         flow {
@@ -402,7 +402,7 @@ internal class HomeRepositoryImpl(
                         emit(Resource.Error<GenreObject>(e.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getBrowsePage(
         browseId: String,
@@ -435,5 +435,5 @@ internal class HomeRepositoryImpl(
                 }.onFailure { e ->
                     emit(Resource.Error<BrowsePage>(e.message.toString()))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 }

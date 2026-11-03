@@ -92,7 +92,7 @@ class LyricsRomanizerRepositoryImpl(
     // either — a failure is logged, and Japanese lines are shown as written.
     private val scope =
         CoroutineScope(
-            SupervisorJob() + Dispatchers.IO +
+            SupervisorJob() + Dispatchers.Default +
                 CoroutineExceptionHandler { _, failure ->
                     Logger.e(TAG, "Japanese dictionary: unexpected failure", failure)
                 },

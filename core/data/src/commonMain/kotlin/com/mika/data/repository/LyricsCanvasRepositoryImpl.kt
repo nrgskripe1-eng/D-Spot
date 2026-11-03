@@ -67,27 +67,27 @@ internal class LyricsCanvasRepositoryImpl(
     private val amArtworkInFlight = mutableSetOf<String>()
     private val amArtworkLock = Mutex()
 
-    override fun getSavedLyrics(videoId: String): Flow<LyricsEntity?> = flow { emit(localDataSource.getSavedLyrics(videoId)) }.flowOn(Dispatchers.IO)
+    override fun getSavedLyrics(videoId: String): Flow<LyricsEntity?> = flow { emit(localDataSource.getSavedLyrics(videoId)) }.flowOn(Dispatchers.Default)
 
     override suspend fun insertLyrics(lyricsEntity: LyricsEntity) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.insertLyrics(lyricsEntity)
         }
 
     override suspend fun insertTranslatedLyrics(translatedLyrics: TranslatedLyricsEntity) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.insertTranslatedLyrics(translatedLyrics)
         }
 
     override fun getSavedTranslatedLyrics(
         videoId: String,
         language: String,
-    ): Flow<TranslatedLyricsEntity?> = flow { emit(localDataSource.getTranslatedLyrics(videoId, language)) }.flowOn(Dispatchers.IO)
+    ): Flow<TranslatedLyricsEntity?> = flow { emit(localDataSource.getTranslatedLyrics(videoId, language)) }.flowOn(Dispatchers.Default)
 
     override suspend fun removeTranslatedLyrics(
         videoId: String,
         language: String,
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.Default) {
         localDataSource.removeTranslatedLyrics(videoId, language)
     }
 
@@ -110,7 +110,7 @@ internal class LyricsCanvasRepositoryImpl(
                         emit(Resource.Error<Pair<Lyrics, Lyrics?>>(e.message.toString()))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getCanvas(
         dataStoreManager: DataStoreManager,
@@ -238,7 +238,7 @@ internal class LyricsCanvasRepositoryImpl(
                     }
                 }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     /**
      * Animated album artwork from the hidden AM catalog. It fills exactly the slot a Spotify canvas
@@ -365,7 +365,7 @@ internal class LyricsCanvasRepositoryImpl(
             } finally {
                 amArtworkLock.withLock { amArtworkInFlight -= videoId }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     /** Returns true when this call took ownership of [videoId]; false when a search is already out. */
     private suspend fun claimAmArtwork(videoId: String): Boolean =
@@ -376,14 +376,14 @@ internal class LyricsCanvasRepositoryImpl(
     override suspend fun updateCanvasUrl(
         videoId: String,
         canvasUrl: String,
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.Default) {
         localDataSource.updateCanvasUrl(videoId, canvasUrl)
     }
 
     override suspend fun updateCanvasThumbUrl(
         videoId: String,
         canvasThumbUrl: String,
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.Default) {
         localDataSource.updateCanvasThumbUrl(videoId, canvasThumbUrl)
     }
 
@@ -542,7 +542,7 @@ internal class LyricsCanvasRepositoryImpl(
                     it.printStackTrace()
                     emit(Resource.Error<Lyrics>("Not found"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getBetterLyrics(
         artist: String,
@@ -586,7 +586,7 @@ internal class LyricsCanvasRepositoryImpl(
                     it.printStackTrace()
                     emit(Resource.Error<Lyrics>("BetterLyrics search failed"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getArtistEditorial(artistName: String): Flow<Resource<ArtistEditorial>> =
         flow {
@@ -635,7 +635,7 @@ internal class LyricsCanvasRepositoryImpl(
                 }.onFailure {
                     emit(Resource.Error<ArtistEditorial>(it.message ?: "Artist search failed"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     /**
      * Resolve the artist's animated artwork down to the two cuts the header can actually use.
@@ -681,7 +681,7 @@ internal class LyricsCanvasRepositoryImpl(
                         emit(Resource.Error<Lyrics>("Translation failed"))
                     }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     // D-Spot Lyrics
     private val simpMusicLyricsTag = "DSpotLyricsRepository"
@@ -733,7 +733,7 @@ internal class LyricsCanvasRepositoryImpl(
                     logDSpotLyricsFailure("Get Lyrics Error", it)
                     emit(Resource.Error<Lyrics>(it.message ?: "Failed to get lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getDSpotTranslatedLyrics(
         videoId: String,
@@ -761,7 +761,7 @@ internal class LyricsCanvasRepositoryImpl(
                     logDSpotLyricsFailure("Get Translated Lyrics Error", it)
                     emit(Resource.Error<Lyrics>(it.message ?: "Failed to get translated lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun voteDSpotLyrics(
         lyricsId: String,
@@ -777,7 +777,7 @@ internal class LyricsCanvasRepositoryImpl(
                     Logger.e(simpMusicLyricsTag, "Vote Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun voteDSpotTranslatedLyrics(
         translatedLyricsId: String,
@@ -793,7 +793,7 @@ internal class LyricsCanvasRepositoryImpl(
                     Logger.e(simpMusicLyricsTag, "Vote Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote translated lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun insertDSpotLyrics(
         dataStoreManager: DataStoreManager,
@@ -845,7 +845,7 @@ internal class LyricsCanvasRepositoryImpl(
                     Logger.e(simpMusicLyricsTag, "Insert Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun insertDSpotTranslatedLyrics(
         dataStoreManager: DataStoreManager,
@@ -878,7 +878,7 @@ internal class LyricsCanvasRepositoryImpl(
                     Logger.e(simpMusicLyricsTag, "Insert Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert translated lyrics"))
                 }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 }
 
 private const val AM_ARTWORK_TAG = "AMArtwork"

@@ -128,7 +128,7 @@ internal class CommonRepositoryImpl(
                         enabled to baseData.copy(username = username, password = password)
                     }.distinctUntilChanged().collectLatest { (usingProxy, data) ->
                         if (usingProxy) {
-                            withContext(Dispatchers.IO) {
+                            withContext(Dispatchers.Default) {
                                 // Set SOCKS proxy authenticator if credentials are provided
                                 if (data.type == DataStoreManager.ProxyType.PROXY_TYPE_SOCKS &&
                                     data.username.isNotEmpty() && data.password.isNotEmpty()
@@ -312,7 +312,7 @@ internal class CommonRepositoryImpl(
     override fun getAllRecentData(): Flow<List<RecentlyType>> =
         flow {
             emit(localDataSource.getAllRecentData())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override fun getLibraryOverview(): Flow<LibraryOverview> =
         combine(
@@ -326,7 +326,7 @@ internal class CommonRepositoryImpl(
         ) { favorite, followed, mostPlayed, downloaded ->
             LibraryOverview(favorite, followed, mostPlayed, downloaded)
         }.distinctUntilChanged()
-            .flowOn(Dispatchers.IO)
+            .flowOn(Dispatchers.Default)
 
     private fun collectionPreview(
         count: Flow<Int>,
@@ -335,22 +335,22 @@ internal class CommonRepositoryImpl(
 
     // Notifications
     override suspend fun insertNotification(notificationEntity: NotificationEntity) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.insertNotification(notificationEntity)
         }
 
     override suspend fun getAllNotifications(): Flow<List<NotificationEntity>?> =
         flow {
             emit(localDataSource.getAllNotification())
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 
     override suspend fun isNotificationExists(link: String): Boolean =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.countNotificationByLink(link) > 0
         }
 
     override suspend fun deleteNotification(id: Long) =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             localDataSource.deleteNotification(id)
         }
 
@@ -377,7 +377,7 @@ internal class CommonRepositoryImpl(
         url: String,
         packageName: String,
     ): CookieItem =
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.Default) {
             return@withContext getCookies(
                 url,
                 packageName,

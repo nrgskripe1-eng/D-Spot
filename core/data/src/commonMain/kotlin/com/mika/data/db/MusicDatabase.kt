@@ -1,4 +1,4 @@
-﻿package com.mika.data.db
+package com.mika.data.db
 
 import DatabaseDao
 import androidx.room.AutoMigration
@@ -130,4 +130,6 @@ expect fun getDatabaseBuilder(converters: Converters): RoomDatabase.Builder<Musi
 
 expect fun getDatabasePath(): String
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect object MusicDatabaseConstructor : RoomDatabaseConstructor<MusicDatabase>
+expect object MusicDatabaseConstructor : RoomDatabaseConstructor<MusicDatabase> {
+    override fun initialize(): MusicDatabase
+}

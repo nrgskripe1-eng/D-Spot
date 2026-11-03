@@ -103,7 +103,7 @@ internal class ImportRepositoryImpl(
                 Logger.e(TAG, "import: failed while writing - ${throwable.message}")
                 emit(ImportProgress.Error(throwable.message ?: invalidFileMessage))
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.Default)
 }
 
 /**
