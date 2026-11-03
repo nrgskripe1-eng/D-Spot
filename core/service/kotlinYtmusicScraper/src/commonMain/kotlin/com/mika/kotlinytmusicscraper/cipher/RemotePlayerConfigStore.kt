@@ -1,4 +1,4 @@
-package com.mika.kotlinytmusicscraper.cipher
+﻿package com.mika.kotlinytmusicscraper.cipher
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
@@ -42,33 +42,33 @@ class RemotePlayerConfigStore(
     private val refreshMutex = Mutex()
     private val legacyTimestampCache = LinkedHashMap<String, CachedLegacyTimestamp>()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var configs: Map<String, RemotePlayerConfigParser.HardcodedPlayerConfig> = emptyMap()
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var configSourceUrl: String? = null
 
     /** Advances whenever a newly fetched or cached table changes the active config set. */
-    @Volatile
+    @kotlin.concurrent.Volatile
     internal var configEpoch: Long = 0L
         private set
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastRefreshAttemptSourceUrl: String? = null
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastRefreshAttemptAtMs: Long = 0L
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastUnknownHashRefreshSourceUrl: String? = null
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastUnknownHashRefreshAtMs: Long = 0L
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastStreamRejectionRefreshSourceUrl: String? = null
 
-    @Volatile
+    @kotlin.concurrent.Volatile
     private var lastStreamRejectionRefreshAtMs: Long = 0L
 
     private data class CachedLegacyTimestamp(
