@@ -65,6 +65,9 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            freeCompilerArgs += listOf(
+                "-Xdisable-phases=Devirtualization,EscapeAnalysis"
+            )
         }
     }
 
