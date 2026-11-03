@@ -1,4 +1,6 @@
-<div align="center"> <img src="https://raw.githubusercontent.com/Mika/D-Spot/dev/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>D-Spot</h1>  
+<div align="center">
+  <img src="https://i.ibb.co/Xry5tVbZ/feature-Graphic.png" alt="D-Spot Feature Graphic" width="100%">
+</div>
 A FOSS YouTube Music client for Android and Desktop with many features from<br>Spotify, SponsorBlock, ReturnYouTubeDislike using Compose Multiplatform to develop.
 <br> 
 <br>
