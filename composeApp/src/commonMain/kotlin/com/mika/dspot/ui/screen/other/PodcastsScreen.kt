@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import com.mika.dspot.ui.component.rememberHolderPainter
 import com.mika.dspot.expect.ui.toImageBitmap
 import androidx.compose.ui.layout.ContentScale

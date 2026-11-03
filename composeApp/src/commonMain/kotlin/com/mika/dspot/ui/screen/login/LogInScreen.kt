@@ -1,4 +1,4 @@
-package com.mika.dspot.ui.screen.login
+﻿package com.mika.dspot.ui.screen.login
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -119,7 +119,7 @@ fun LoginScreen(
                                 devLoginSheet = false
                             },
                             onDone = { cookie ->
-                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.Default) {
                                     val success = settingsViewModel.addAccount(cookie)
                                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                         if (success) {
@@ -141,7 +141,7 @@ fun LoginScreen(
                     url.startsWith("https://music.youtube.com") ||
                     url.startsWith("http://music.youtube.com")
                 if (isYouTubeMusic) {
-                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.Default) {
                         var cookieStr = ""
                         repeat(5) { attempt ->
                             cookieStr = createWebViewCookieManager().getCookie(url)

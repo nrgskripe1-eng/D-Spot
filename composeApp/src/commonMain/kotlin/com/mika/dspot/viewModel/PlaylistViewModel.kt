@@ -1,4 +1,4 @@
-@file:Suppress("ktlint:standard:no-wildcard-imports")
+﻿@file:Suppress("ktlint:standard:no-wildcard-imports")
 
 package com.mika.dspot.viewModel
 
@@ -98,7 +98,7 @@ class PlaylistViewModel(
     init {
         viewModelScope.launch {
             val listTrackStringJob =
-                launch(Dispatchers.IO) {
+                launch(Dispatchers.Default) {
                     downloadState
                         .collectLatest { state ->
                             newUpdateJob?.cancel()

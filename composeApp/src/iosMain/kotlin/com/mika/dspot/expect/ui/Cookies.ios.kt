@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.cValue
+import platform.CoreGraphics.CGRectZero
+import platform.CoreGraphics.CGRect
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequest
 import platform.WebKit.WKHTTPCookieStore
@@ -76,7 +79,7 @@ actual fun PlatformWebView(
         UIKitView(
             factory = {
                 val config = WKWebViewConfiguration()
-                val webView = WKWebView(frame = platform.CoreGraphics.CGRectZero, configuration = config)
+                val webView = WKWebView(frame = cValue<CGRect> { }, configuration = config)
                 webView.navigationDelegate = WKNavigationDelegate(onFinished = { url ->
                     state.value = WebViewState.Finished
                     onPageFinished(url)
@@ -113,7 +116,7 @@ actual fun DiscordWebView(
         UIKitView(
             factory = {
                 val config = WKWebViewConfiguration()
-                val webView = WKWebView(frame = platform.CoreGraphics.CGRectZero, configuration = config)
+                val webView = WKWebView(frame = cValue<CGRect> { }, configuration = config)
 
                 // Navigation delegate: when we land on /app, inject JS to extract token.
                 webView.navigationDelegate = object : NSObject(), WKNavigationDelegateProtocol {

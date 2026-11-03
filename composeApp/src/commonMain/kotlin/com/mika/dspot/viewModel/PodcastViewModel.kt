@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.viewModel
+package com.mika.dspot.viewModel
 
 import androidx.lifecycle.viewModelScope
 import com.mika.common.Config
@@ -256,7 +256,7 @@ class PodcastViewModel(
         viewModelScope.launch {
             podcastRepository.updatePodcastInLibraryNow(id).collectLatest {
                 // Podcast đã được cập nhật trong thư viện
-                log("Podcast $id updated in library at ${System.currentTimeMillis()}")
+                log("Podcast $id updated in library at ${kotlin.time.Clock.System.now().toEpochMilliseconds()}")
             }
         }
     }

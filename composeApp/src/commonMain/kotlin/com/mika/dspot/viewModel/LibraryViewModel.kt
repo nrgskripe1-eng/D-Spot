@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.viewModel
+package com.mika.dspot.viewModel
 
 import androidx.lifecycle.viewModelScope
 import com.mika.common.Config
@@ -183,9 +183,9 @@ class LibraryViewModel(
                     }.let {
                         temp.remove(it)
                     }
-                temp.removeIf { it is SongEntity && it.inLibrary == Config.REMOVED_SONG_DATE_TIME }
+                temp.removeAll { it is SongEntity && it.inLibrary == Config.REMOVED_SONG_DATE_TIME }
                 if (dataStoreManager.loggedIn.first() == DataStoreManager.TRUE) {
-                    temp.removeIf { it is PlaylistEntity && it.id == "LM" }
+                    temp.removeAll { it is PlaylistEntity && it.id == "LM" }
                     temp.add(
                         PlaylistEntity(
                             title = getString(Res.string.youtube_liked_music),

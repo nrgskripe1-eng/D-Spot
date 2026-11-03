@@ -110,6 +110,7 @@ kotlin {
             implementation(libs.zxing.core)
         }
         commonMain.dependencies {
+            implementation(libs.okio)
             implementation(libs.runtime)
             implementation(libs.foundation)
             implementation(libs.compose.material3)

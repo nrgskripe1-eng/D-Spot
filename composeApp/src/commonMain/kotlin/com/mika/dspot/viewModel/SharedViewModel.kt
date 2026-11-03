@@ -125,7 +125,8 @@ import dspot.composeapp.generated.resources.synced
 import dspot.composeapp.generated.resources.syncing
 import dspot.composeapp.generated.resources.updated
 import dspot.composeapp.generated.resources.vote_submitted
-import java.io.FileOutputStream
+import com.mika.data.io.fileSystem
+import okio.Path.Companion.toPath
 import kotlin.math.abs
 import kotlin.reflect.KClass
 
@@ -1149,7 +1150,7 @@ class SharedViewModel(
             val updateChannel = dataStoreManager.updateChannel.first()
             dataStoreManager.putString(
                 "CheckForUpdateAt",
-                System.currentTimeMillis().toString(),
+                kotlin.time.Clock.System.now().toEpochMilliseconds().toString(),
             )
             if (updateChannel == DataStoreManager.GITHUB) {
                 updateRepository.checkForGithubReleaseUpdate().collectLatest { response ->
@@ -2035,13 +2036,16 @@ class SharedViewModel(
         viewModelScope.launch {
             nowPlayingState.value?.track?.let { track ->
                 val bytesArray = bitmap.toByteArray()
-                try {
-                    val fileOutputStream = FileOutputStream("$path.jpg")
-                    fileOutputStream.write(bytesArray)
-                    fileOutputStream.close()
-                    Logger.d(tag, "Thumbnail saved to $path.jpg")
-                } catch (e: Exception) {
-                    throw RuntimeException(e)
+                if (bytesArray != null) {
+                    try {
+                        val filePath = "$path.jpg".toPath()
+                        fileSystem().write(filePath) {
+                            write(bytesArray)
+                        }
+                        Logger.d(tag, "Thumbnail saved to $path.jpg")
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
+                    }
                 }
                 songRepository
                     .downloadToFile(

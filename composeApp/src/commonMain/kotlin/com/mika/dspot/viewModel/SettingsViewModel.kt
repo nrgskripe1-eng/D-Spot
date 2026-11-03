@@ -1186,7 +1186,7 @@ class SettingsViewModel(
     fun setSponsorBlockCategories(list: ArrayList<String>) {
         log("setSponsorBlockCategories: $list", LogLevel.WARN)
         viewModelScope.launch {
-            runBlocking(Dispatchers.IO) {
+            runBlocking(Dispatchers.Default) {
                 dataStoreManager.setSponsorBlockCategories(list)
             }
             getSponsorBlockCategories()
@@ -1313,7 +1313,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             runCatching {
                 makeToast(getString(Res.string.backup_in_progress))
-                withContext(Dispatchers.IO) {
+                withContext(Dispatchers.Default) {
                     backupNative(commonRepository, uri, backupDownloaded.value)
                 }
             }.onSuccess {
@@ -1332,7 +1332,7 @@ class SettingsViewModel(
     fun restore(uri: Uri) {
         viewModelScope.launch {
             makeToast(getString(Res.string.restore_in_progress))
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.Default) {
                 runCatching {
                     restoreNative(commonRepository, uri) {
                         getData()

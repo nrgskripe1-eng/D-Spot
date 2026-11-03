@@ -1,4 +1,4 @@
-package com.mika.dspot.ui.screen.home
+﻿package com.mika.dspot.ui.screen.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -468,9 +468,9 @@ import dspot.composeapp.generated.resources.youtube_account
 import dspot.composeapp.generated.resources.youtube_subtitle_language
 import dspot.composeapp.generated.resources.youtube_subtitle_language_message
 import dspot.composeapp.generated.resources.youtube_transcript
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -634,10 +634,7 @@ fun SettingScreen(
                 return@derivedStateOf runBlocking {
                     getString(
                         Res.string.last_checked_at,
-                        DateTimeFormatter
-                            .ofPattern("yyyy-MM-dd HH:mm:ss")
-                            .withZone(ZoneId.systemDefault())
-                            .format(Instant.ofEpochMilli(lastCheckLong)),
+                        run { val ldt = kotlinx.datetime.Instant.fromEpochMilliseconds(lastCheckLong).toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()); "${ldt.year}-${ldt.monthNumber.toString().padStart(2,'0')}-${ldt.dayOfMonth.toString().padStart(2,'0')} ${ldt.hour.toString().padStart(2,'0')}:${ldt.minute.toString().padStart(2,'0')}:${ldt.second.toString().padStart(2,'0')}" },
                     )
                 }
             }
@@ -2757,10 +2754,7 @@ fun SettingScreen(
                                     if (autoBackupLastTime == 0L) {
                                         stringResource(Res.string.never)
                                     } else {
-                                        DateTimeFormatter
-                                            .ofPattern("yyyy-MM-dd HH:mm:ss")
-                                            .withZone(ZoneId.systemDefault())
-                                            .format(Instant.ofEpochMilli(autoBackupLastTime))
+                                        run { val ldt = kotlinx.datetime.Instant.fromEpochMilliseconds(autoBackupLastTime).toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()); "${ldt.year}-${ldt.monthNumber.toString().padStart(2,'0')}-${ldt.dayOfMonth.toString().padStart(2,'0')} ${ldt.hour.toString().padStart(2,'0')}:${ldt.minute.toString().padStart(2,'0')}:${ldt.second.toString().padStart(2,'0')}" }
                                     },
                             )
                         }

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -11,12 +11,26 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
-import java.text.Bidi
+
+/** Pure-Kotlin RTL base-direction detection: true if text base direction is LTR. */
+private fun isTextBaseLtr(text: String): Boolean {
+    for (ch in text) {
+        val code = ch.code
+        // Arabic, Hebrew, Syriac, Thaana, Samaritan, Mandaic, etc.
+        if (code in 0x0590..0x08FF || code in 0xFB1D..0xFDFF || code in 0xFE70..0xFEFF) {
+            return false
+        }
+        if ((code in 0x0041..0x005A) || (code in 0x0061..0x007A) || (code in 0x00C0..0x02AF)) {
+            return true
+        }
+    }
+    return true // default LTR
+}
 
 @Composable
 internal fun rememberLyricLayoutDirection(text: String): LayoutDirection =
     remember(text) {
-        if (Bidi(text, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT).baseIsLeftToRight()) LayoutDirection.Ltr else LayoutDirection.Rtl
+        if (isTextBaseLtr(text)) LayoutDirection.Ltr else LayoutDirection.Rtl
     }
 
 /**

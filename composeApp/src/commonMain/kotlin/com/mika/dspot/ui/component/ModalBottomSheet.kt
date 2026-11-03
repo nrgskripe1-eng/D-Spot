@@ -2110,8 +2110,9 @@ fun PlaybackSpeedPitchBottomSheet(
                             tint = rememberSurfaceDarkColors().subtitle,
                         )
                     }
+                        val speed10 = (playbackSpeed * 10).toInt()
                     Text(
-                        text = "x${String.format("%.1f", playbackSpeed)}",
+                        text = "x${speed10 / 10}.${speed10 % 10}",
                         style = typo().titleMedium,
                         color = rememberSurfaceDarkColors().subtitle,
                         modifier = Modifier.widthIn(min = 60.dp),

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.utils
+package com.mika.dspot.utils
 
 import com.mika.dspot.BuildKonfig
 
@@ -11,12 +11,12 @@ object VersionManager {
                 try {
                     BuildKonfig.versionName
                 } catch (_: Exception) {
-                    String()
+                    ""
                 }
         }
     }
 
-    fun getVersionName(): String = removeDevSuffix(versionName ?: String())
+    fun getVersionName(): String = removeDevSuffix(versionName ?: "")
 
     /** True when [tag] names a release newer than this build. */
     fun isBehind(tag: String): Boolean = isNewerRelease(current = getVersionName(), tag = tag)

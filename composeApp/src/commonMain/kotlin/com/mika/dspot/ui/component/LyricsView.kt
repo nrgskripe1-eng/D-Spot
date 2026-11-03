@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.Crossfade
@@ -90,7 +90,6 @@ import com.mika.dspot.viewModel.SharedViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import java.text.Bidi
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sqrt
@@ -98,6 +97,20 @@ import kotlin.math.min
 import kotlin.math.max
 
 private const val TAG = "LyricsView"
+
+/** Pure-Kotlin word base-direction detection: true = LTR, false = RTL. */
+private fun isWordBaseLtr(text: String, rtlFallback: Boolean): Boolean {
+    for (ch in text) {
+        val code = ch.code
+        if (code in 0x0590..0x08FF || code in 0xFB1D..0xFDFF || code in 0xFE70..0xFEFF) {
+            return false
+        }
+        if ((code in 0x0041..0x005A) || (code in 0x0061..0x007A) || (code in 0x00C0..0x02AF)) {
+            return true
+        }
+    }
+    return !rtlFallback
+}
 
 // The interval the player publishes its position on, on BOTH platforms (MediaServiceHandlerImpl
 // and JvmMediaPlayerHandlerImpl both tick on `tickIntervalMs`). It is the ceiling on how far the interpolated
@@ -1080,11 +1093,10 @@ private fun AnimatedWord(
 ) {
     val wordBidi =
         remember(word, lineDirection) {
-            val fallback =
-                if (lineDirection == LayoutDirection.Rtl) Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT else Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT
-            Bidi(word, fallback)
+            val isRtlFallback = lineDirection == LayoutDirection.Rtl
+            isWordBaseLtr(word, isRtlFallback)
         }
-    val wordDirection = if (wordBidi.baseIsLeftToRight()) TextDirection.Ltr else TextDirection.Rtl
+    val wordDirection = if (wordBidi) TextDirection.Ltr else TextDirection.Rtl
     val style =
         typo().headlineLarge.copy(
             fontSize = customFontSize ?: typo().headlineLarge.fontSize,
@@ -1215,7 +1227,7 @@ private fun AnimatedWord(
                 translationY = -eased * EMP_RISE_EM * amount * fontPx
             },
     ) {
-        if (!wordBidi.isLeftToRight) {
+        if (!wordBidi) {
             // Keep Arabic shaping and combining marks intact, including RTL words in an LTR line.
             ShapedLyricsWord(
                 word = word,

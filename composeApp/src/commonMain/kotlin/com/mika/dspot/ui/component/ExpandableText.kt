@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 
 import androidx.compose.animation.animateContentSize
@@ -73,7 +73,7 @@ fun ExpandableText(
                                 text
                                     .substring(startIndex = 0, endIndex = lastCharIndex)
                                     .dropLast(showMoreText.length)
-                                    .dropLastWhile { Character.isWhitespace(it) || it == '.' }
+                                    .dropLastWhile { it.isWhitespace() || it == '.' }
                             append(adjustText)
                             withStyle(style = showMoreStyle) { append(showMoreText) }
                         }

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.utils
+package com.mika.dspot.utils
 
 import coil3.ImageLoader
 import coil3.annotation.InternalCoilApi
@@ -19,7 +19,16 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.UUID
+import kotlin.random.Random
+import kotlin.time.Clock
+
+private fun randomUuidString(): String {
+    val bytes = Random.Default.nextBytes(16)
+    bytes[6] = ((bytes[6].toInt() and 0x0f) or 0x40).toByte()
+    bytes[8] = ((bytes[8].toInt() and 0x3f) or 0x80).toByte()
+    val hex = bytes.joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
+    return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}"
+}
 
 /**
  * HTTP(S) images use cache for 24 hours, then try the network with stale-cache fallback.
@@ -31,7 +40,7 @@ import java.util.UUID
  */
 class NetworkFirstInterceptor(
     private val ttlMillis: Long = 24L * 60 * 60 * 1000,
-    private val nowMillis: () -> Long = { System.currentTimeMillis() },
+    private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val imageLoader: () -> ImageLoader,
 ) : Interceptor {
     init {
@@ -107,7 +116,7 @@ class NetworkFirstInterceptor(
 
         // Keep a successfully decoded stale image alive while refreshing. A failed refresh can
         // return it even if another request evicts its disk entry in the meantime.
-        val temporaryKey = "coil-network-first:${UUID.randomUUID()}"
+        val temporaryKey = "coil-network-first:${randomUuidString()}"
         val networkRequest = request.newBuilder()
             .memoryCachePolicy(if (request.memoryCachePolicy.writeEnabled) CachePolicy.WRITE_ONLY else CachePolicy.DISABLED)
             .diskCachePolicy(if (request.diskCachePolicy.writeEnabled) CachePolicy.WRITE_ONLY else CachePolicy.DISABLED)
@@ -153,7 +162,7 @@ class NetworkFirstInterceptor(
             throw cancelled
         } finally {
             // Cancellation must propagate, but it must not leave completed staging entries behind.
-            withContext(NonCancellable + Dispatchers.IO) {
+            withContext(NonCancellable + Dispatchers.Default) {
                 try {
                     diskCache?.remove(temporaryKey)
                 } catch (error: Exception) {
@@ -170,7 +179,7 @@ class NetworkFirstInterceptor(
     }
 
     @OptIn(InternalCoilApi::class)
-    private suspend fun readCachedAt(diskCache: DiskCache?, key: String): Long? = withContext(Dispatchers.IO) {
+    private suspend fun readCachedAt(diskCache: DiskCache?, key: String): Long? = withContext(Dispatchers.Default) {
         if (diskCache == null) return@withContext null
         try {
             diskCache.openSnapshot(key)?.use { snapshot ->
@@ -187,7 +196,7 @@ class NetworkFirstInterceptor(
         diskCache: DiskCache,
         temporaryKey: String,
         diskKey: String,
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Boolean = withContext(Dispatchers.Default) {
         try {
             val snapshot = diskCache.openSnapshot(temporaryKey) ?: return@withContext false
             snapshot.use {

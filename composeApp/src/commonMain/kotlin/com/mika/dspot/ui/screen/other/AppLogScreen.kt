@@ -167,7 +167,7 @@ fun AppLogScreen(
             if (!isPaused) {
                 val (app, errors) =
                     tailLock.withLock {
-                        withContext(Dispatchers.IO) {
+                        withContext(Dispatchers.Default) {
                             (if (appTail.poll()) appTail.lines else null) to
                                 (if (errorTail.poll()) errorTail.lines else null)
                         }

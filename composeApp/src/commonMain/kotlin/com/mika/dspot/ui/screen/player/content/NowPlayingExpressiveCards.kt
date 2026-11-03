@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.player.content
+package com.mika.dspot.ui.screen.player.content
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -843,7 +843,7 @@ internal fun ExpressiveBelowTheFold(
                         text =
                             stringResource(
                                 Res.string.view_count,
-                                "%,d".format(state.screenData.songInfoData?.viewCount),
+                                (state.screenData.songInfoData?.viewCount?.toString() ?: "0"),
                             ),
                         style = typo().labelMedium,
                         color = Color.White,

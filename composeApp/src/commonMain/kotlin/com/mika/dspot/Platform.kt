@@ -1,4 +1,4 @@
-﻿package com.mika.dspot
+package com.mika.dspot
 
 sealed class Platform {
     object Android : Platform()
@@ -8,7 +8,7 @@ sealed class Platform {
     fun osName(): String = when (this) {
         Android -> "android"
         iOS -> "iOS"
-        Desktop -> System.getProperty("os.name") ?: "jvm"
+        Desktop -> "desktop"
     }
 }
 

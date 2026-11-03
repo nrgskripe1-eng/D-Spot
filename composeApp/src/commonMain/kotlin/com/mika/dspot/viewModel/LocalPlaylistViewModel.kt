@@ -143,7 +143,7 @@ class LocalPlaylistViewModel(
                             if (downloadState == STATE_DOWNLOADED || downloadState == STATE_DOWNLOADING) {
                                 newUpdateJob?.cancel()
                                 newUpdateJob =
-                                    launch(Dispatchers.IO) {
+                                    launch(Dispatchers.Default) {
                                         localPlaylistRepository
                                             .listTrackFlow(uiState.value.id)
                                             .distinctUntilChanged()
