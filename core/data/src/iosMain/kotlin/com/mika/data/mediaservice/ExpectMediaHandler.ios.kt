@@ -1,30 +1,28 @@
 package com.mika.data.mediaservice
 
-import com.mika.common.ASC
-import com.mika.common.CUSTOM_ORDER
-import com.mika.common.DESC
-import com.mika.common.TITLE
+import com.mika.domain.data.entities.NewFormatEntity
 import com.mika.domain.data.entities.SongEntity
+import com.mika.domain.data.model.browse.album.Track
 import com.mika.domain.data.model.mediaService.SponsorSkipSegments
-import com.mika.domain.data.model.streams.YouTubeWatchEndpoint
 import com.mika.domain.data.player.AudioEffects
 import com.mika.domain.data.player.GenericCastState
 import com.mika.domain.data.player.GenericCommandButton
 import com.mika.domain.data.player.GenericMediaItem
-import com.mika.domain.data.player.GenericMediaMetadata
 import com.mika.domain.data.player.GenericPlaybackParameters
-import com.mika.domain.data.player.GenericTracks
 import com.mika.domain.data.player.PlayerConstants
 import com.mika.domain.data.player.PlayerError
-import com.mika.domain.extension.toGenericMediaItem
 import com.mika.domain.manager.DataStoreManager
+import com.mika.domain.mediaservice.handler.ControlState
 import com.mika.domain.mediaservice.handler.MediaPlayerHandler
+import com.mika.domain.mediaservice.handler.NowPlayingTrackState
+import com.mika.domain.mediaservice.handler.PlayerEvent
+import com.mika.domain.mediaservice.handler.QueueData
+import com.mika.domain.mediaservice.handler.RepeatState
+import com.mika.domain.mediaservice.handler.SimpleMediaState
+import com.mika.domain.mediaservice.handler.SleepTimerState
+import com.mika.domain.mediaservice.handler.ToastType
 import com.mika.domain.mediaservice.player.MediaPlayerInterface
-import com.mika.domain.mediaservice.state.ControlState
-import com.mika.domain.mediaservice.state.NowPlayingState
-import com.mika.domain.mediaservice.state.QueueData
-import com.mika.domain.mediaservice.state.SimpleMediaState
-import com.mika.domain.mediaservice.state.SleepTimerState
+import com.mika.domain.mediaservice.player.MediaPlayerListener
 import com.mika.domain.repository.AnalyticsRepository
 import com.mika.domain.repository.LocalPlaylistRepository
 import com.mika.domain.repository.SongRepository
@@ -70,123 +68,237 @@ import platform.MediaPlayer.MPMediaItemPropertyTitle
 import platform.MediaPlayer.MPNowPlayingInfoCenter
 import platform.MediaPlayer.MPNowPlayingInfoPropertyElapsedPlaybackTime
 import platform.MediaPlayer.MPNowPlayingInfoPropertyPlaybackRate
-import platform.MediaPlayer.MPRemoteCommandHandlerStatus
-import platform.MediaPlayer.MPRemoteCommandHandlerStatusSuccess
 import platform.MediaPlayer.MPRemoteCommandCenter
+import platform.MediaPlayer.MPRemoteCommandHandlerStatus
 
 /**
  * iOS native AVQueuePlayer wrapper implementing MediaPlayerInterface.
  */
-@OptIn(ExperimentalForeignApi::class)
 class IosAVPlayerWrapper : MediaPlayerInterface {
-    val player: AVQueuePlayer = AVQueuePlayer()
-    private val queueList = mutableListOf<GenericMediaItem>()
-    private var currentIndex = -1
+    private var player: AVQueuePlayer? = null
+    private val playlist = mutableListOf<GenericMediaItem>()
+    private var currentIndex: Int = -1
+    private val listeners = mutableListOf<MediaPlayerListener>()
 
     init {
         setupAudioSession()
+        player = AVQueuePlayer()
     }
 
     private fun setupAudioSession() {
-        val session = AVAudioSession.sharedInstance()
-        session.setCategory(AVAudioSessionCategoryPlayback, error = null)
-        session.setActive(true, error = null)
+        try {
+            val session = AVAudioSession.sharedInstance()
+            session.setCategory(AVAudioSessionCategoryPlayback, error = null)
+            session.setActive(true, error = null)
+        } catch (_: Exception) {}
     }
 
+    fun setItems(items: List<GenericMediaItem>, startIndex: Int = 0) {
+        playlist.clear()
+        playlist.addAll(items)
+        currentIndex = startIndex
+        player?.removeAllItems()
+        items.getOrNull(startIndex)?.let { item ->
+            loadUrl(item)
+        }
+    }
+
+    private fun loadUrl(mediaItem: GenericMediaItem) {
+        val uri = mediaItem.mediaMetadata.mediaUri ?: return
+        val url = NSURL.URLWithString(uri) ?: return
+        val playerItem = AVPlayerItem(uRL = url)
+        player?.removeAllItems()
+        player?.insertItem(playerItem, afterItem = null)
+    }
+
+    val durationMs: Long
+        get() {
+            val cur = player?.currentItem ?: return 0L
+            val sec = CMTimeGetSeconds(cur.duration)
+            return if (sec.isNaN() || sec.isInfinite()) 0L else (sec * 1000).toLong()
+        }
+
+    val currentPositionMs: Long
+        get() {
+            val cur = player?.currentTime() ?: return 0L
+            val sec = CMTimeGetSeconds(cur)
+            return if (sec.isNaN() || sec.isInfinite()) 0L else (sec * 1000).toLong()
+        }
+
+    // MediaPlayerInterface implementations
     override fun play() {
-        player.play()
+        player?.play()
     }
 
     override fun pause() {
-        player.pause()
+        player?.pause()
     }
 
     override fun stop() {
-        player.pause()
-        player.seekToTime(kCMTimeZero)
+        player?.pause()
+        player?.seekToTime(kCMTimeZero)
     }
 
     override fun seekTo(positionMs: Long) {
         val seconds = positionMs / 1000.0
-        val time = CMTimeMakeWithSeconds(seconds, 1000)
-        player.seekToTime(time)
+        val time = CMTimeMakeWithSeconds(seconds, preferredTimescale = 1000)
+        player?.seekToTime(time)
+    }
+
+    override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
+        if (mediaItemIndex in playlist.indices) {
+            currentIndex = mediaItemIndex
+            loadUrl(playlist[mediaItemIndex])
+            seekTo(positionMs)
+        }
+    }
+
+    override fun seekBack() {
+        seekTo(maxOf(0L, currentPositionMs - 5000))
+    }
+
+    override fun seekForward() {
+        seekTo(currentPositionMs + 5000)
     }
 
     override fun seekToNext() {
-        if (currentIndex + 1 < queueList.size) {
-            seekToItem(currentIndex + 1)
-        } else {
-            player.advanceToNextItem()
+        if (hasNextMediaItem()) {
+            currentIndex++
+            loadUrl(playlist[currentIndex])
+            play()
         }
     }
 
     override fun seekToPrevious() {
-        if (currentIndex > 0) {
-            seekToItem(currentIndex - 1)
-        } else {
-            seekTo(0)
+        if (currentPositionMs > 3000L) {
+            seekTo(0L)
+        } else if (hasPreviousMediaItem()) {
+            currentIndex--
+            loadUrl(playlist[currentIndex])
+            play()
         }
     }
 
-    fun seekToItem(index: Int) {
-        if (index in queueList.indices) {
-            currentIndex = index
-            val item = queueList[index]
-            val urlString = item.mediaMetadata.extras?.get("stream_url") ?: ""
-            if (urlString.isNotEmpty()) {
-                val nsUrl = NSURL.URLWithString(urlString)
-                if (nsUrl != null) {
-                    val playerItem = AVPlayerItem(uRL = nsUrl)
-                    player.removeAllItems()
-                    player.insertItem(playerItem, afterItem = null)
-                    player.play()
-                }
-            }
+    override fun seekToPreviousMediaItem() {
+        if (hasPreviousMediaItem()) {
+            currentIndex--
+            loadUrl(playlist[currentIndex])
+            play()
         }
     }
 
-    fun setItems(items: List<GenericMediaItem>, startIndex: Int = 0) {
-        queueList.clear()
-        queueList.addAll(items)
-        if (items.isNotEmpty()) {
-            seekToItem(startIndex)
-        } else {
-            player.removeAllItems()
-            currentIndex = -1
+    override fun prepare() {}
+
+    override fun setMediaItem(mediaItem: GenericMediaItem) {
+        setItems(listOf(mediaItem), 0)
+    }
+
+    override fun addMediaItem(mediaItem: GenericMediaItem) {
+        playlist.add(mediaItem)
+    }
+
+    override fun addMediaItem(index: Int, mediaItem: GenericMediaItem) {
+        playlist.add(index, mediaItem)
+    }
+
+    override fun removeMediaItem(index: Int) {
+        if (index in playlist.indices) {
+            playlist.removeAt(index)
         }
     }
 
-    override fun setPlaybackParameters(playbackParameters: GenericPlaybackParameters) {
-        // AVPlayer rate adjustment
+    override fun moveMediaItem(fromIndex: Int, toIndex: Int) {
+        if (fromIndex in playlist.indices && toIndex in playlist.indices) {
+            val item = playlist.removeAt(fromIndex)
+            playlist.add(toIndex, item)
+        }
+    }
+
+    override fun clearMediaItems() {
+        playlist.clear()
+        player?.removeAllItems()
+    }
+
+    override fun replaceMediaItem(index: Int, mediaItem: GenericMediaItem) {
+        if (index in playlist.indices) {
+            playlist[index] = mediaItem
+        }
+    }
+
+    override fun getMediaItemAt(index: Int): GenericMediaItem? = playlist.getOrNull(index)
+
+    override fun getCurrentMediaTimeLine(): List<GenericMediaItem> = playlist.toList()
+
+    override fun getUnshuffledIndex(shuffledIndex: Int): Int = shuffledIndex
+
+    override val isPlaying: Boolean
+        get() = player?.timeControlStatus == AVPlayerTimeControlStatusPlaying
+
+    override val currentPosition: Long
+        get() = currentPositionMs
+
+    override val duration: Long
+        get() = durationMs
+
+    override val bufferedPosition: Long
+        get() = currentPositionMs
+
+    override val bufferedPercentage: Int
+        get() = 100
+
+    override val currentMediaItem: GenericMediaItem?
+        get() = playlist.getOrNull(currentIndex)
+
+    override val currentMediaItemIndex: Int
+        get() = currentIndex
+
+    override val mediaItemCount: Int
+        get() = playlist.size
+
+    override val contentPosition: Long
+        get() = currentPositionMs
+
+    override val playbackState: Int
+        get() = PlayerConstants.STATE_READY
+
+    override fun hasNextMediaItem(): Boolean = currentIndex < playlist.size - 1
+
+    override fun hasPreviousMediaItem(): Boolean = currentIndex > 0
+
+    override var shuffleModeEnabled: Boolean = false
+    override var repeatMode: Int = PlayerConstants.REPEAT_MODE_OFF
+    override var playWhenReady: Boolean = true
+    override var playbackParameters: GenericPlaybackParameters = GenericPlaybackParameters(1f, 1f)
+    override val audioSessionId: Int = 0
+    override var volume: Float = 1f
+        set(value) {
+            field = value
+            player?.volume = value
+        }
+    override var sleepFadeFactor: Float = 1f
+    override var crossfadeSuppressed: Boolean = false
+    override var albumTrackIds: Set<String> = emptySet()
+    override var skipSilenceEnabled: Boolean = false
+
+    override fun addListener(listener: MediaPlayerListener) {
+        listeners.add(listener)
+    }
+
+    override fun removeListener(listener: MediaPlayerListener) {
+        listeners.remove(listener)
     }
 
     override fun release() {
-        player.pause()
-        player.removeAllItems()
+        player?.pause()
+        player?.removeAllItems()
+        player = null
+        listeners.clear()
     }
-
-    val currentPositionMs: Long
-        get() {
-            val seconds = CMTimeGetSeconds(player.currentTime())
-            return if (seconds.isNaN()) 0L else (seconds * 1000).toLong()
-        }
-
-    val durationMs: Long
-        get() {
-            val current = player.currentItem ?: return 0L
-            val seconds = CMTimeGetSeconds(current.duration)
-            return if (seconds.isNaN()) 0L else (seconds * 1000).toLong()
-        }
-
-    val isPlaying: Boolean
-        get() = player.timeControlStatus == AVPlayerTimeControlStatusPlaying
 }
 
 /**
- * Full iOS MediaPlayerHandler implementation using AVPlayer + MPRemoteCommandCenter.
- * Supports iOS, iPadOS lock-screen controls, and Apple CarPlay.
+ * iOS native MediaPlayerHandler implementation.
  */
-@OptIn(ExperimentalForeignApi::class)
 class IosMediaPlayerHandlerImpl(
     val dataStoreManager: DataStoreManager,
     val songRepository: SongRepository,
@@ -196,7 +308,8 @@ class IosMediaPlayerHandlerImpl(
     val coroutineScope: CoroutineScope,
 ) : MediaPlayerHandler {
 
-    val avPlayerWrapper = IosAVPlayerWrapper()
+    override val player: MediaPlayerInterface = IosAVPlayerWrapper()
+    private val avPlayerWrapper get() = player as IosAVPlayerWrapper
 
     private val _simpleMediaState = MutableStateFlow<SimpleMediaState>(SimpleMediaState.Initial)
     override val simpleMediaState: StateFlow<SimpleMediaState> = _simpleMediaState.asStateFlow()
@@ -204,58 +317,44 @@ class IosMediaPlayerHandlerImpl(
     private val _nowPlaying = MutableStateFlow<GenericMediaItem?>(null)
     override val nowPlaying: StateFlow<GenericMediaItem?> = _nowPlaying.asStateFlow()
 
-    private val _queueData = MutableStateFlow(QueueData(emptyList(), emptyList(), -1))
-    override val queueData: StateFlow<QueueData> = _queueData.asStateFlow()
+    private val _queueData = MutableStateFlow<QueueData?>(null)
+    override val queueData: StateFlow<QueueData?> = _queueData.asStateFlow()
 
     private val _controlState = MutableStateFlow(
         ControlState(
             isPlaying = false,
             isShuffle = false,
-            repeatMode = PlayerConstants.REPEAT_MODE_OFF,
-            playbackSpeed = 1f,
-            pitch = 1f,
+            repeatState = RepeatState.None,
+            isLiked = false,
+            isNextAvailable = false,
+            isPreviousAvailable = false,
+            isCrossfading = false,
+            volume = 1f,
         )
     )
     override val controlState: StateFlow<ControlState> = _controlState.asStateFlow()
 
-    private val _nowPlayingState = MutableStateFlow(
-        NowPlayingState(
-            title = "",
-            artist = "",
-            artworkUri = null,
-            duration = 0L,
-            position = 0L,
-            bufferedPosition = 0L,
-        )
-    )
-    override val nowPlayingState: StateFlow<NowPlayingState> = _nowPlayingState.asStateFlow()
+    private val _nowPlayingState = MutableStateFlow(NowPlayingTrackState.initial())
+    override val nowPlayingState: StateFlow<NowPlayingTrackState> = _nowPlayingState.asStateFlow()
 
-    private val _sleepTimerState = MutableStateFlow(SleepTimerState(false, 0L))
+    private val _sleepTimerState = MutableStateFlow(SleepTimerState(false, 0))
     override val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState.asStateFlow()
+
+    private val _skipSegments = MutableStateFlow<List<SponsorSkipSegments>?>(null)
+    override val skipSegments: StateFlow<List<SponsorSkipSegments>?> = _skipSegments.asStateFlow()
+
+    private val _format = MutableStateFlow<NewFormatEntity?>(null)
+    override val format: StateFlow<NewFormatEntity?> = _format.asStateFlow()
+
+    private val _currentSongIndex = MutableStateFlow(0)
+    override val currentSongIndex: StateFlow<Int> = _currentSongIndex.asStateFlow()
 
     private val _castState = MutableStateFlow(GenericCastState())
     override val castState: StateFlow<GenericCastState> = _castState.asStateFlow()
 
-    private val _sponsorSkipSegments = MutableStateFlow<SponsorSkipSegments?>(null)
-    override val sponsorSkipSegments: StateFlow<SponsorSkipSegments?> = _sponsorSkipSegments.asStateFlow()
-
-    private val _audioEffects = MutableStateFlow(AudioEffects())
-    override val audioEffects: StateFlow<AudioEffects> = _audioEffects.asStateFlow()
-
-    private val _customCommandButtons = MutableStateFlow<List<GenericCommandButton>>(emptyList())
-    override val customCommandButtons: StateFlow<List<GenericCommandButton>> = _customCommandButtons.asStateFlow()
-
-    private val _tracks = MutableStateFlow<GenericTracks?>(null)
-    override val tracks: StateFlow<GenericTracks?> = _tracks.asStateFlow()
-
-    private val _playbackParameters = MutableStateFlow(GenericPlaybackParameters(1f, 1f))
-    override val playbackParameters: StateFlow<GenericPlaybackParameters> = _playbackParameters.asStateFlow()
-
-    private val _playerError = MutableStateFlow<PlayerError?>(null)
-    override val playerError: StateFlow<PlayerError?> = _playerError.asStateFlow()
-
-    private val _volume = MutableStateFlow(1f)
-    override val volume: StateFlow<Float> = _volume.asStateFlow()
+    override var onUpdateNotification: (List<GenericCommandButton>) -> Unit = {}
+    override var pushPlayerError: (PlayerError) -> Unit = {}
+    override var showToast: (ToastType) -> Unit = {}
 
     private var progressJob: Job? = null
 
@@ -273,10 +372,6 @@ class IosMediaPlayerHandlerImpl(
                 val dur = avPlayerWrapper.durationMs
 
                 _controlState.value = _controlState.value.copy(isPlaying = isPlaying)
-                _nowPlayingState.value = _nowPlayingState.value.copy(
-                    position = pos,
-                    duration = dur,
-                )
 
                 _nowPlaying.value?.let { current ->
                     updateNowPlayingInfoCenter(current, pos, dur, isPlaying)
@@ -302,186 +397,162 @@ class IosMediaPlayerHandlerImpl(
 
         center.playCommand.setEnabled(true)
         center.playCommand.addTargetWithHandler { _ ->
-            play()
-            MPRemoteCommandHandlerStatusSuccess
+            player.play()
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
 
         center.pauseCommand.setEnabled(true)
         center.pauseCommand.addTargetWithHandler { _ ->
-            pause()
-            MPRemoteCommandHandlerStatusSuccess
+            player.pause()
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
 
         center.togglePlayPauseCommand.setEnabled(true)
         center.togglePlayPauseCommand.addTargetWithHandler { _ ->
-            playPause()
-            MPRemoteCommandHandlerStatusSuccess
+            if (player.isPlaying) player.pause() else player.play()
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
 
         center.nextTrackCommand.setEnabled(true)
         center.nextTrackCommand.addTargetWithHandler { _ ->
-            seekToNext()
-            MPRemoteCommandHandlerStatusSuccess
+            player.seekToNext()
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
 
         center.previousTrackCommand.setEnabled(true)
         center.previousTrackCommand.addTargetWithHandler { _ ->
-            seekToPrevious()
-            MPRemoteCommandHandlerStatusSuccess
+            player.seekToPrevious()
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
 
         center.changePlaybackPositionCommand.setEnabled(true)
         center.changePlaybackPositionCommand.addTargetWithHandler { event ->
             val posEvent = event as? MPChangePlaybackPositionCommandEvent
-            val seconds = posEvent?.positionTime ?: 0.0
-            seekTo((seconds * 1000).toLong())
-            MPRemoteCommandHandlerStatusSuccess
+            posEvent?.positionTime?.let { seconds ->
+                player.seekTo((seconds * 1000).toLong())
+            }
+            MPRemoteCommandHandlerStatus.MPRemoteCommandHandlerStatusSuccess
         }
     }
 
-    override fun play() {
-        avPlayerWrapper.play()
-    }
-
-    override fun pause() {
-        avPlayerWrapper.pause()
-    }
-
-    override fun playPause() {
-        if (avPlayerWrapper.isPlaying) pause() else play()
-    }
-
-    override fun stop() {
-        avPlayerWrapper.stop()
-    }
-
-    override fun seekTo(positionMs: Long) {
-        avPlayerWrapper.seekTo(positionMs)
-    }
-
-    override fun seekToNext() {
-        avPlayerWrapper.seekToNext()
-    }
-
-    override fun seekToPrevious() {
-        avPlayerWrapper.seekToPrevious()
-    }
-
-    override fun seekToItem(index: Int, positionMs: Long) {
-        avPlayerWrapper.seekToItem(index)
-        if (positionMs > 0) {
-            avPlayerWrapper.seekTo(positionMs)
+    // Playback control
+    override suspend fun onPlayerEvent(playerEvent: PlayerEvent) {
+        when (playerEvent) {
+            is PlayerEvent.PlayPause -> if (player.isPlaying) player.pause() else player.play()
+            is PlayerEvent.SeekToNext -> player.seekToNext()
+            is PlayerEvent.SeekToPrevious -> player.seekToPrevious()
+            is PlayerEvent.SeekTo -> player.seekTo(playerEvent.position)
+            is PlayerEvent.Stop -> player.stop()
+            else -> {}
         }
     }
 
-    override fun setMediaItem(mediaItem: GenericMediaItem, startPositionMs: Long) {
-        setMediaItemList(listOf(mediaItem), 0, startPositionMs)
-    }
-
-    override fun setMediaItemList(mediaItemList: List<GenericMediaItem>, startIndex: Int, startPositionMs: Long) {
-        avPlayerWrapper.setItems(mediaItemList, startIndex)
-        if (startPositionMs > 0) {
-            avPlayerWrapper.seekTo(startPositionMs)
-        }
-        _queueData.value = QueueData(mediaItemList, mediaItemList, startIndex)
-        val current = mediaItemList.getOrNull(startIndex)
-        _nowPlaying.value = current
-        _nowPlayingState.value = NowPlayingState(
-            title = current?.mediaMetadata?.title ?: "",
-            artist = current?.mediaMetadata?.artist ?: "",
-            artworkUri = current?.mediaMetadata?.artworkUri,
-            duration = 0L,
-            position = startPositionMs,
-            bufferedPosition = 0L,
-        )
-    }
-
-    override fun addMediaItem(mediaItem: GenericMediaItem) {
-        val current = _queueData.value.items.toMutableList()
-        current.add(mediaItem)
-        _queueData.value = _queueData.value.copy(items = current)
-    }
-
-    override fun addMediaItemList(mediaItemList: List<GenericMediaItem>) {
-        val current = _queueData.value.items.toMutableList()
-        current.addAll(mediaItemList)
-        _queueData.value = _queueData.value.copy(items = current)
-    }
-
-    override fun removeMediaItem(index: Int) {
-        val current = _queueData.value.items.toMutableList()
-        if (index in current.indices) {
-            current.removeAt(index)
-            _queueData.value = _queueData.value.copy(items = current)
-        }
-    }
-
-    override fun moveMediaItem(from: Int, to: Int) {
-        val current = _queueData.value.items.toMutableList()
-        if (from in current.indices && to in current.indices) {
-            val item = current.removeAt(from)
-            current.add(to, item)
-            _queueData.value = _queueData.value.copy(items = current)
-        }
-    }
-
-    override fun clearQueue() {
-        avPlayerWrapper.setItems(emptyList())
-        _queueData.value = QueueData(emptyList(), emptyList(), -1)
+    override fun toggleRadio() {}
+    override fun toggleLike() {}
+    override fun like(liked: Boolean) {}
+    override fun resetSongAndQueue() {
+        player.clearMediaItems()
+        _queueData.value = null
         _nowPlaying.value = null
     }
 
-    override fun setRepeatMode(repeatMode: Int) {
-        _controlState.value = _controlState.value.copy(repeatMode = repeatMode)
+    override fun sleepStart(minutes: Int) {
+        _sleepTimerState.value = SleepTimerState(isDone = false, timeRemaining = minutes * 60)
     }
 
-    override fun setShuffle(shuffle: Boolean) {
-        _controlState.value = _controlState.value.copy(isShuffle = shuffle)
+    override fun sleepStop() {
+        _sleepTimerState.value = SleepTimerState(isDone = true, timeRemaining = 0)
     }
 
-    override fun setPlaybackSpeed(speed: Float) {
-        _controlState.value = _controlState.value.copy(playbackSpeed = speed)
+    override fun removeMediaItem(position: Int) {
+        player.removeMediaItem(position)
     }
 
-    override fun setPitch(pitch: Float) {
-        _controlState.value = _controlState.value.copy(pitch = pitch)
+    override fun addMediaItem(mediaItem: GenericMediaItem, playWhenReady: Boolean) {
+        player.addMediaItem(mediaItem)
+        if (playWhenReady) player.play()
     }
 
-    override fun setSleepTimer(minutes: Int) {
-        // Sleep timer countdown
+    override fun clearMediaItems() {
+        player.clearMediaItems()
     }
 
-    override fun cancelSleepTimer() {
-        _sleepTimerState.value = SleepTimerState(false, 0L)
+    override fun addMediaItemList(mediaItemList: List<GenericMediaItem>) {
+        mediaItemList.forEach { player.addMediaItem(it) }
     }
 
-    override fun setAudioEffects(audioEffects: AudioEffects) {
-        _audioEffects.value = audioEffects
+    override fun playMediaItemInMediaSource(index: Int) {
+        player.seekTo(index, 0L)
+        player.play()
     }
 
-    override fun resetAudioEffects() {
-        _audioEffects.value = AudioEffects()
+    override fun currentSongIndex(): Int = player.currentMediaItemIndex
+    override fun currentOrderIndex(): Int = player.currentMediaItemIndex
+
+    override suspend fun swap(from: Int, to: Int) {
+        player.moveMediaItem(from, to)
     }
 
-    override fun setVolume(volume: Float) {
-        _volume.value = volume
+    override fun resetCrossfade() {}
+    override fun shufflePlaylist(randomTrackIndex: Int) {}
+    override fun loadMore() {}
+    override fun getRelated(videoId: String) {}
+    override fun setQueueData(queueData: QueueData.Data) {
+        _queueData.value = QueueData(data = queueData)
     }
 
-    override fun fastForward() {
-        seekTo(avPlayerWrapper.currentPositionMs + 10000)
+    override fun getCurrentMediaItem(): GenericMediaItem? = player.currentMediaItem
+
+    override suspend fun moveItemUp(position: Int) {
+        if (position > 0) player.moveMediaItem(position, position - 1)
     }
 
-    override fun rewind() {
-        seekTo(maxOf(0L, avPlayerWrapper.currentPositionMs - 10000))
+    override suspend fun moveItemDown(position: Int) {
+        player.moveMediaItem(position, position + 1)
     }
 
-    override fun playFromEndpoint(endpoint: YouTubeWatchEndpoint) {}
+    override suspend fun moveItemToPlayNext(position: Int) {
+        val target = player.currentMediaItemIndex + 1
+        player.moveMediaItem(position, target)
+    }
 
-    override fun sendCustomCommand(command: String, extras: Map<String, Any?>) {}
+    override fun addFirstMediaItemToIndex(mediaItem: GenericMediaItem?, index: Int) {
+        mediaItem?.let { player.addMediaItem(index, it) }
+    }
+
+    override fun reset() {
+        resetSongAndQueue()
+    }
+
+    override suspend fun load(downloaded: Int, index: Int?) {}
+    override suspend fun loadMoreCatalog(listTrack: ArrayList<Track>, isAddToQueue: Boolean) {}
+    override suspend fun updateCatalog(downloaded: Int, index: Int?): Boolean = false
+    override fun addQueueToPlayer() {}
+    override fun loadPlaylistOrAlbum(index: Int?) {}
+    override fun setCurrentSongIndex(index: Int) {
+        _currentSongIndex.value = index
+    }
+
+    override suspend fun playNext(track: Track) {}
+    override suspend fun <T> loadMediaItem(anyTrack: T, type: String, index: Int?) {}
+
+    override fun getPlayerDuration(): Long = player.duration
+    override fun getProgress(): Long = player.currentPosition
+    override fun startProgressUpdate() {}
+    override fun stopProgressUpdate() {}
+    override fun startBufferedUpdate() {}
+    override fun stopBufferedUpdate() {}
+
+    override fun mayBeNormalizeVolume() {}
+    override fun mayBeSaveRecentSong(runBlocking: Boolean) {}
+    override fun mayBeSavePlaybackState() {}
+    override fun mayBeRestoreQueue() {}
+    override suspend fun restoreQueueAndPlay(): Boolean = false
+    override fun shouldReleaseOnTaskRemoved(): Boolean = false
 
     override fun release() {
         progressJob?.cancel()
-        avPlayerWrapper.release()
+        player.release()
     }
 }
 
