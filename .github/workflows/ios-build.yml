@@ -35,8 +35,8 @@ jobs:
 
       - name: Build KMP iOS Frameworks
         run: |
-          ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --stacktrace
-          ./gradlew :composeApp:compileKotlinIosArm64 --stacktrace
+          ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache --stacktrace
+          ./gradlew :composeApp:compileKotlinIosArm64 --no-configuration-cache --stacktrace
 
       - name: Build with Xcode (Simulator Build)
         run: |

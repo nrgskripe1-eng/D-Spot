@@ -79,6 +79,7 @@ kotlin {
             implementation(libs.commons.io)
         }
         androidMain.dependencies {
+            api(libs.coil.network.okhttp)
             api(project.dependencies.platform(libs.koin.bom))
             api(libs.koin.android)
             implementation(libs.koin.androidx.compose)
@@ -122,7 +123,6 @@ kotlin {
             implementation(libs.compose.material3.adaptive)
             implementation(libs.compose.material.ripple)
 
-            implementation(libs.ui.tooling.preview)
 
             // Other module
             api(projects.common)
@@ -146,7 +146,7 @@ kotlin {
 
             // Coil
             api(libs.coil.compose)
-            api(libs.coil.network.okhttp)
+            api(libs.coil.network.ktor3)
             api(libs.kmpalette.core)
             api(libs.kmpalette.network)
             implementation(libs.materialkolor)
@@ -187,6 +187,7 @@ kotlin {
             implementation(libs.kotlin.test)
         }
         jvmMain.dependencies {
+            api(libs.coil.network.okhttp)
             // Desktop app entry (main.kt), jpackage/Conveyor
             // packaging, and tray icon live in :desktopApp per the
             // JetBrains 2026 KMP default structure. This module keeps the
@@ -199,7 +200,7 @@ kotlin {
             implementation(projects.mediaJvmUi)
             // Login sync QR code
             implementation(libs.zxing.core)
-            // JCEF – embedded Chromium browser for Desktop login (YouTube/Spotify/LastFM/Discord).
+            // JCEF â€“ embedded Chromium browser for Desktop login (YouTube/Spotify/LastFM/Discord).
             // jcefmaven auto-downloads the native CEF bundle on first run and caches it in the
             // user's home directory; subsequent startups are instant. The download only happens on
             // the desktop target; Android never sees this dependency.
@@ -218,7 +219,7 @@ kotlin {
 // linuxDebConfig{}, the custom AppImage tooling, and Conveyor packaging
 // live in :desktopApp per the JetBrains 2026 KMP default structure.
 //
-// Native-library staging (libmpv) lives here in :composeApp — see the
+// Native-library staging (libmpv) lives here in :composeApp â€” see the
 // mpv-natives block below. The layout is per-arch so Conveyor bundles only
 // the slice each per-machine installer actually needs.
 
@@ -235,7 +236,7 @@ fun downloadIfMissing(
     target.parentFile.mkdirs()
     // Use curl instead of Java's URL.openStream(): release downloads answer
     // with a redirect to a CDN, and Java's default HttpURLConnection redirect
-    // handling is fragile — on a cross-protocol redirect or an HTML error
+    // handling is fragile â€” on a cross-protocol redirect or an HTML error
     // page, openStream() silently saves the error body as the target file,
     // which only surfaces as a corrupt-archive failure later. curl's `-L`
     // follows redirects robustly across protocols + mirrors, `--fail`
@@ -246,7 +247,7 @@ fun downloadIfMissing(
         ProcessBuilder(
             "curl",
             "-fsSL",
-            // `--retry` alone does NOT retry curl exit 56 (mid-transfer receive failure) — it only
+            // `--retry` alone does NOT retry curl exit 56 (mid-transfer receive failure) â€” it only
             // retries HTTP 5xx/408/429 and connection errors. The get.videolan.org mirrors flake with
             // exit 56 mid-download, so `--retry-all-errors` is required to retry those too. Count/delay
             // bumped a bit for the occasionally-slow mirror.
@@ -267,7 +268,7 @@ fun downloadIfMissing(
 }
 
 // ===========================================================================
-// mpv natives (libmpv) — staged into mpv-natives/<os>-<arch>/ for packaging.
+// mpv natives (libmpv) â€” staged into mpv-natives/<os>-<arch>/ for packaging.
 //
 // mpv publishes no portable libmpv of its own and there is no Gradle plugin
 // that fetches one, so each OS lifts libmpv out of a prebuilt artifact that
@@ -277,9 +278,9 @@ fun downloadIfMissing(
 // already done and keep doing on every release.
 //
 //   Windows  shinchiro/mpv-winbuild-cmake `mpv-dev-<arch>.7z`
-//            → libmpv-2.dll with ffmpeg linked in. Nothing to patch.
-//   Linux    built from source in a container — see scripts/mpv-linux/.
-//            → the ONE platform with no usable upstream. Every prebuilt Linux
+//            â†’ libmpv-2.dll with ffmpeg linked in. Nothing to patch.
+//   Linux    built from source in a container â€” see scripts/mpv-linux/.
+//            â†’ the ONE platform with no usable upstream. Every prebuilt Linux
 //              mpv targets "run mpv as its own process": the AppImage ships its
 //              own glibc + loader and exports the API from a PIE *executable*,
 //              which glibc flatly refuses to dlopen, and whose glibc would
@@ -289,39 +290,39 @@ fun downloadIfMissing(
 //              glibc 2.34, so it loads in-process from Ubuntu 22.04 / Debian 11
 //              upwards.
 //   macOS    mpv's own tagged release .zip (macos-15-arm / macos-15-intel)
-//            → Contents/MacOS/mpv renamed to libmpv.dylib, its
+//            â†’ Contents/MacOS/mpv renamed to libmpv.dylib, its
 //              @executable_path/lib/... load commands rewritten to
 //              @loader_path, then re-signed ad-hoc.
 //
 // On macOS and Linux mpv links libmpv STATICALLY into the `mpv` executable, so
 // there is no shared library to copy. Those executables are PIE and export the
 // full client API (54 `mpv_*` symbols), which is why renaming them works at
-// all — and why the rename matters: JNA maps Native.load("mpv") to
+// all â€” and why the rename matters: JNA maps Native.load("mpv") to
 // libmpv.dylib / libmpv.so. Only Windows publishes a real `mpv-dev` package.
 //
-// macOS is the odd one out and deliberately so. The obvious shortcut — lifting
-// IINA.app/Contents/Frameworks straight out of IINA's .dmg — DOES NOT WORK,
+// macOS is the odd one out and deliberately so. The obvious shortcut â€” lifting
+// IINA.app/Contents/Frameworks straight out of IINA's .dmg â€” DOES NOT WORK,
 // and fails in a way worth recording so nobody retries it. In IINA 1.4.4 the
 // bundled pair is version-skewed:
 //
-//   nm -u  libmpv.2.dylib        → _pl_log_create_349   (libplacebo API 349)
-//   nm -gU libplacebo.338.dylib  → _pl_log_create_338
+//   nm -u  libmpv.2.dylib        â†’ _pl_log_create_349   (libplacebo API 349)
+//   nm -gU libplacebo.338.dylib  â†’ _pl_log_create_338
 //
 // on BOTH slices of the fat binaries, with only one libplacebo in the bundle
 // and the reference not weak ("(undefined) external ... (from libplacebo.338)").
-// dlopen() of that libmpv fails outright — verified with RTLD_NOW *and*
-// RTLD_LAZY — and libmpv has 136 undefined _pl_* symbols riding on it. Whatever
+// dlopen() of that libmpv fails outright â€” verified with RTLD_NOW *and*
+// RTLD_LAZY â€” and libmpv has 136 undefined _pl_* symbols riding on it. Whatever
 // makes IINA itself work, that closure is not self-sufficient, and MpvLibrary
 // loads with RTLD_NOW by design, so there is no flag to hide behind.
 //
 // mpv's own release zip avoids that entirely: libmpv and its closure come out
 // of one build, so they cannot be version-skewed against each other. The
-// dylibs must be re-signed ad-hoc after patching — mutating a Mach-O
+// dylibs must be re-signed ad-hoc after patching â€” mutating a Mach-O
 // invalidates its signature and macOS refuses to load an invalidly-signed
 // dylib (a hard failure on Apple Silicon). That signing step is the only
 // reason these tasks need a Mac.
 //
-// Conveyor stages one slice per machine — see the mpv-natives inputs in
+// Conveyor stages one slice per machine â€” see the mpv-natives inputs in
 // conveyor.conf.
 // ===========================================================================
 val mpvCacheDir = layout.buildDirectory.dir("mpv-cache")
@@ -330,7 +331,7 @@ val mpvCacheDir = layout.buildDirectory.dir("mpv-cache")
 // libmpv struct layouts by raw offset, so a client-API MAJOR bump means the
 // structs must be re-verified before these pins move. mpv 0.41.x is client
 // API 2.5; MpvLibrary.kt was written against 2.2 and only guards the major.
-// mpv's own tagged release — the source of the macOS slices.
+// mpv's own tagged release â€” the source of the macOS slices.
 val mpvVersion = "0.41.0"
 val mpvWinBuildTag = "20260610"
 val mpvWinBuildSuffix = "20260610-git-304426c"
@@ -398,7 +399,7 @@ fun sha256(file: java.io.File): String {
  * Rewrite every `@executable_path/lib/<name>` load-command entry to [prefix]`<name>`.
  *
  * Patches bytes instead of shelling out to `install_name_tool`, which is what keeps the macOS
- * slice buildable on ANY host — the whole point, since every other slice comes off the same
+ * slice buildable on ANY host â€” the whole point, since every other slice comes off the same
  * Linux runner.
  *
  * Safe because the replacement is always SHORTER than what it replaces (`@executable_path/lib/`
@@ -415,7 +416,7 @@ fun rewriteExecutablePathRefs(
     val needle = "@executable_path/lib/".toByteArray(Charsets.US_ASCII)
     val prefixBytes = prefix.toByteArray(Charsets.US_ASCII)
     check(prefixBytes.size <= needle.size) {
-        "prefix '$prefix' is longer than '@executable_path/lib/' — paths can only be shortened in place"
+        "prefix '$prefix' is longer than '@executable_path/lib/' â€” paths can only be shortened in place"
     }
     val data = file.readBytes()
     var rewritten = 0
@@ -459,7 +460,7 @@ fun codesignAdhoc(dir: java.io.File) {
     // invalidly-signed Mach-O, so re-signing is mandatory. `codesign` is macOS-only, which is
     // fine: these tasks build the published archives and are run on a Mac, not in CI.
     check(toolAvailable("codesign")) {
-        "codesign is required to re-sign the patched macOS slice — run this task on a Mac. " +
+        "codesign is required to re-sign the patched macOS slice â€” run this task on a Mac. " +
             "CI does not: it downloads the prebuilt archives instead."
     }
     logger.lifecycle("[mpv-multi] Ad-hoc signing ${machO.size} Mach-O files in ${dir.name}")
@@ -470,7 +471,7 @@ fun codesignAdhoc(dir: java.io.File) {
  * Stage one macOS slice straight out of mpv's own release build.
  *
  * mpv's macOS artifacts are app bundles that link libmpv STATICALLY into
- * `mpv.app/Contents/MacOS/mpv`, so there is no libmpv.dylib to copy — but that binary is a PIE
+ * `mpv.app/Contents/MacOS/mpv`, so there is no libmpv.dylib to copy â€” but that binary is a PIE
  * Mach-O exporting the whole client API (54 `_mpv_*` symbols, checked with `nm -gU`), and macOS
  * `dlopen()` accepts a PIE executable. Renaming it to `libmpv.dylib` is what lets JNA find it:
  * `Native.load("mpv")` maps to exactly that filename on macOS (NativeLibrary.mapSharedLibraryName).
@@ -497,7 +498,7 @@ fun extractMacMpvSlice(
     )
 
     // The published .zip wraps a .tar.gz, so this unpacks twice. Both steps are plain Gradle file
-    // operations — no 7z, no hdiutil, nothing host-specific.
+    // operations â€” no 7z, no hdiutil, nothing host-specific.
     val stage = cache.resolve("mac-$assetArch-extract")
     stage.deleteRecursively()
     stage.mkdirs()
@@ -538,7 +539,7 @@ fun extractMacMpvSlice(
     // names this silently rewrites nothing, signs the result, and publishes a slice whose dylibs
     // resolve against an @executable_path that means nothing under the JVM.
     check(rewritten > 0) {
-        "No @executable_path/lib/ entries found in $assetArch — mpv's macOS layout changed, " +
+        "No @executable_path/lib/ entries found in $assetArch â€” mpv's macOS layout changed, " +
             "rewriteExecutablePathRefs() needs updating before this slice can be published."
     }
     logger.lifecycle("[mpv-multi] $assetArch: rewrote $rewritten install-name entries")
@@ -572,7 +573,7 @@ fun extractWindowsMpvSlice(
     outputDir: java.io.File,
 ) {
     // `7zz` (the official 7-Zip binary) is preferred over `7z`, which on many machines is p7zip
-    // — a fork last released in 2017. shinchiro's aarch64 archive uses the ARM64 BCJ filter that
+    // â€” a fork last released in 2017. shinchiro's aarch64 archive uses the ARM64 BCJ filter that
     // 7-Zip only gained in 21.07, so p7zip fails it with "Unsupported Method : libmpv-2.dll"
     // while extracting the x86_64 one just fine. The CI image installs 7-Zip 26.x for the same
     // reason.
@@ -581,7 +582,7 @@ fun extractWindowsMpvSlice(
             ?: error(
                 "7-Zip is required to unpack shinchiro's .7z builds and must be 21.07 or newer. " +
                     "macOS: `brew install sevenzip` (provides 7zz). Ubuntu: install the official " +
-                    "7-Zip build — distro p7zip is too old for the ARM64 archive.",
+                    "7-Zip build â€” distro p7zip is too old for the ARM64 archive.",
             )
     val cache = mpvCacheDir.get().asFile
     val archive = cache.resolve("mpv-dev-$arch-$mpvWinBuildSuffix.7z")
@@ -648,7 +649,7 @@ val mpvSetupLinuxCi by tasks.registering {
         // Docker, not a host toolchain. The point of the container is the OLD base image:
         // linking against Ubuntu 22.04 pins the glibc floor at 2.34 no matter how new the
         // machine running this is. Building on the host would silently bake in that host's
-        // glibc and produce a slice that only runs on equally-new systems — the exact trap
+        // glibc and produce a slice that only runs on equally-new systems â€” the exact trap
         // the upstream AppImage fell into.
         if (!toolAvailable("docker")) {
             logger.warn(
@@ -689,7 +690,7 @@ val mpvSetupLinuxCi by tasks.registering {
                 // which is what dlopen rejects. A shared object has none.
                 (header[0x10].toInt() and 0xFF) or ((header[0x11].toInt() and 0xFF) shl 8)
             }
-        check(elfType == 3) { "libmpv.so.2 is not ET_DYN (e_type=$elfType) — it cannot be dlopen()ed" }
+        check(elfType == 3) { "libmpv.so.2 is not ET_DYN (e_type=$elfType) â€” it cannot be dlopen()ed" }
 
         val libs = outputDir.resolve("lib").listFiles()?.size ?: 0
         logger.lifecycle(
@@ -706,7 +707,7 @@ val mpvSetupLinuxCi by tasks.registering {
 // (codesign) plus 7-Zip 21.07+, patchelf and dwarfsextract. Running that in CI would drag all
 // of it onto the Ubuntu runner for artifacts that never change between commits.
 //
-// So it runs ONCE per mpv bump, on a Mac, via `mpvBundleAll` — which also packs the result into
+// So it runs ONCE per mpv bump, on a Mac, via `mpvBundleAll` â€” which also packs the result into
 // per-slice tarballs that get attached to a GitHub release. CI then calls `mpvSetupAll`, which
 // only downloads and unpacks them: no toolchain, no host requirements, same shape as the old
 // vlcSetupAll.
@@ -736,7 +737,7 @@ val mpvBundleAll by tasks.registering {
         mpvSlices.forEach { slice ->
             val sliceDir = rootDir.resolve("mpv-natives/$slice")
             check(sliceDir.isDirectory && sliceDir.listFiles()?.isNotEmpty() == true) {
-                "mpv-natives/$slice is missing or empty — cannot pack an incomplete set"
+                "mpv-natives/$slice is missing or empty â€” cannot pack an incomplete set"
             }
             runChecked(
                 "tar",
@@ -765,7 +766,7 @@ val mpvBundleAll by tasks.registering {
  *
  * Pinned in the build script on purpose, rather than read from the release's own `SHA256SUMS`
  * asset: a checksum served from the same place as the artifact catches corruption but not anyone
- * able to replace release assets — and these files are unpacked straight into the tree Conveyor
+ * able to replace release assets â€” and these files are unpacked straight into the tree Conveyor
  * signs. The release tag is mutable, so this is the only thing actually pinning what gets shipped.
  */
 val mpvNativesChecksums =
@@ -814,12 +815,12 @@ val mpvSetupAll by tasks.registering {
             runChecked("tar", "-xzf", archive.absolutePath, "-C", outputRoot.absolutePath)
             check(target.isDirectory) { "$slice missing after unpacking ${archive.name}" }
 
-            // Drop AppleDouble sidecars — this is a correctness fix, not tidiness.
+            // Drop AppleDouble sidecars â€” this is a correctness fix, not tidiness.
             //
             // Tarring a slice on macOS writes each file's xattrs out as a companion "._name"
             // entry. Conveyor then signs them as ordinary bundle members and lists all of them
             // in _CodeSignature/CodeResources. But when the user unzips the .app, macOS folds
-            // every "._name" back into the xattrs of "name" and deletes the sidecar — so the
+            // every "._name" back into the xattrs of "name" and deletes the sidecar â€” so the
             // bundle that gets launched is missing 200 files the seal still expects, and
             // Gatekeeper reports the app as "damaged and can't be opened".
             //
@@ -897,15 +898,15 @@ buildkonfig {
 //
 // 2.6.2's x64 dylib is lifted out and shipped as a jvmMain resource at the path the loader
 // already looks for. NativeLibraryLoader ends its search with
-// `getResourceAsStream("natives/<os>_<arch>/…")` on its own classloader, which sees every jar on
+// `getResourceAsStream("natives/<os>_<arch>/â€¦")` on its own classloader, which sees every jar on
 // the classpath, so no runtime code is involved. This is safe only because the two versions
 // agree on JNI: both bind through RegisterNatives in JNI_OnLoad, and 2.6.2's x64 dylib registers
 // the identical 22 methods (names, signatures, classes) as 2.7.0's arm64/linux ones, on the same
 // SQLite 3.50.1 source. The one difference is that 2.7.0 compiles in SQL math functions (log10,
-// acosh…), which no query here uses.
+// acoshâ€¦), which no query here uses.
 //
 // Before bumping `sqlite` in libs.versions.toml, diff the RegisterNatives strings again
-// (`strings -a libsqliteJni.* | grep -E '^native[A-Z]|^\(|^androidx/sqlite/'`) — or drop this
+// (`strings -a libsqliteJni.* | grep -E '^native[A-Z]|^\(|^androidx/sqlite/'`) â€” or drop this
 // block if upstream ships osx_x64 again.
 // ===========================================================================
 val sqliteIntelMacNative by tasks.registering {

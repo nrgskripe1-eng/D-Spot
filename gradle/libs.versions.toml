@@ -7,7 +7,7 @@ android = "9.4.1"
 kotlin = "2.4.20"
 serialization = "2.4.20"
 ksp = "2.3.9"
-compose-bom = "2026.09.00" # maps compose ui/foundation/runtime to 1.12.0 stable — aligns with what the m3 alpha pin already pulled (1.12.0-beta01)
+compose-bom = "2026.09.00" # maps compose ui/foundation/runtime to 1.12.0 stable â€” aligns with what the m3 alpha pin already pulled (1.12.0-beta01)
 material3-expressive = "1.5.0-alpha22" # MUST equal the androidx material3 that material3-multiplatform maps to (1.12.0-alpha03 -> 1.5.0-alpha22, read off its .module). commonMain is compiled against that one and the higher of the two wins in the APK: at alpha29 the Slider(thumb, track) overloads were gone and Now Playing died with NoSuchMethodError. Bump the two together
 constraintlayout-compose = "1.1.2"
 activity-compose = "1.13.0"
@@ -64,7 +64,7 @@ brave-newpipe = "0fcaf19ecc"
 # org.json ships with the Android SDK but is absent on JVM desktop; PipePipeExtractor references it.
 org-json = "20231013" # pin version
 pipepipe = "f8982ca9e7"
-# QuickJS binding for KMP — runs YouTube's player JS to solve sig/n challenges locally.
+# QuickJS binding for KMP â€” runs YouTube's player JS to solve sig/n challenges locally.
 quickjs = "1.0.15"
 webkit = "1.17.1"
 kermit = "2.2.0"
@@ -168,6 +168,7 @@ car-app-projected = { group = "androidx.car.app", name = "app-projected", versio
 androidx-media = { group = "androidx.media", name = "media", version.ref = "androidx-media" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil3" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil3" }
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coil3" }
 kmpalette-core = { module = "com.kmpalette:kmpalette-core", version.ref = "kmpalette" }
 kmpalette-network = { module = "com.kmpalette:extensions-network", version.ref = "kmpalette" }
 materialkolor = { module = "com.materialkolor:material-kolor", version.ref = "materialkolor" }
