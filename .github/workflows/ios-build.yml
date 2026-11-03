@@ -39,18 +39,27 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build KMP iOS Framework for Simulator
+      - name: Build for Physical iOS Device (IPA for Sideloading)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
-          ./gradlew :composeApp:linkReleaseFrameworkIosSimulatorArm64 \
-            --no-configuration-cache --stacktrace || {
-            echo "::error::Compilation failed! Checking errors below:"
-            ./gradlew :composeApp:linkReleaseFrameworkIosSimulatorArm64 \
-              --no-configuration-cache --info 2>&1 | grep -C 3 -E "e: |error:|Compilation finished with errors"
-            exit 1
-          }
-          ./gradlew --stop
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
 
-      - name: Build with Xcode (Simulator Build)
+          mkdir -p build_output/Payload
+          cp -r ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphoneos/iosApp.app build_output/Payload/
+          cd build_output
+          zip -r D-Spot.ipa Payload
+          cd ..
+
+      - name: Build for iOS Simulator (Mac VirtualBox)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
@@ -64,12 +73,16 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             build
 
-      - name: Compress App Bundle for Sideload / Simulator
-        run: |
-          cd ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphonesimulator/ || cd ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphonesimulator/
+          cd ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphonesimulator/
           zip -r iosApp-Simulator.zip iosApp.app
 
-      - name: Upload Build Artifact
+      - name: Upload IPA for iPhone (Sideloadly / AltStore)
+        uses: actions/upload-artifact@v4
+        with:
+          name: D-Spot-iOS-Device
+          path: build_output/D-Spot.ipa
+
+      - name: Upload Simulator App (VirtualBox)
         uses: actions/upload-artifact@v4
         with:
           name: iosApp-Simulator
