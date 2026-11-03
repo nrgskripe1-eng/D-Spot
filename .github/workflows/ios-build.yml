@@ -2,9 +2,9 @@ name: Build iOS App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, account-tab ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, account-tab ]
   workflow_dispatch: # Binibigyan ka ng button sa GitHub para ma-trigger ang build nang manual
 
 jobs:
