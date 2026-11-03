@@ -57,7 +57,6 @@
 				7B1E408A2B87000100000005 /* Info.plist */,
 				7B1E408B2B87000100000006 /* DSpot.entitlements */,
 			);
-			path = iosApp;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
