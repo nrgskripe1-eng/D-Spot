@@ -25,3 +25,4 @@ actual fun getPackageName(): String = ""
 actual fun getFileDir(): String = ""
 
 actual fun changeLanguageNative(code: String) {}
+
