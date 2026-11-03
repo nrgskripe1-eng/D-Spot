@@ -13,6 +13,11 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 40
 
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC"
+      _JAVA_OPTIONS: "-Xmx9216m"
+      KOTLIN_DAEMON_JVM_OPTIONS: "-Xmx9216m"
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -37,13 +42,9 @@ jobs:
       - name: Build KMP iOS Framework for Simulator
         run: |
           ./gradlew :composeApp:linkReleaseFrameworkIosSimulatorArm64 \
-            -Dorg.gradle.jvmargs="-Xmx6144m -XX:+UseParallelGC" \
-            -Pkotlin.native.jvmArgs="-Xmx7168m" \
             --no-configuration-cache --stacktrace || {
             echo "::error::Compilation failed! Checking errors below:"
             ./gradlew :composeApp:linkReleaseFrameworkIosSimulatorArm64 \
-              -Dorg.gradle.jvmargs="-Xmx6144m -XX:+UseParallelGC" \
-              -Pkotlin.native.jvmArgs="-Xmx7168m" \
               --no-configuration-cache --info 2>&1 | grep -C 3 -E "e: |error:|Compilation finished with errors"
             exit 1
           }
