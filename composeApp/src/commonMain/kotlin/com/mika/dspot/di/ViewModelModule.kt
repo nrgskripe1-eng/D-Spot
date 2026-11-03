@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.di
+package com.mika.dspot.di
 
 import com.mika.dspot.viewModel.AlbumViewModel
 import com.mika.dspot.utils.VersionManager
@@ -104,6 +104,7 @@ val viewModelModule =
         }
         viewModel {
             HomeViewModel(
+                get(),
                 get(),
                 get(),
             )
@@ -216,7 +217,7 @@ val viewModelModule =
             ListenTogetherViewModel(
                 repository = get(),
                 dataStore = get(),
-                bridge = get(),
+                bridge = get<com.mika.data.listentogether.ListenTogetherPlaybackBridge>(),
             )
         }
 

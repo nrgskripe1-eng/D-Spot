@@ -1,4 +1,4 @@
-﻿package com.mika.dspot
+package com.mika.dspot
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +39,7 @@ import com.mika.dspot.extension.DesktopWindowChrome
 import com.mika.dspot.ui.component.CustomTitleBar
 import com.mika.dspot.ui.mini_player.MiniPlayerManager
 import com.mika.dspot.ui.mini_player.MiniPlayerWindow
+import com.mika.dspot.ui.theme.desktopPanelDark
 import com.mika.dspot.ui.theme.isDarkTheme
 import com.mika.dspot.utils.ComposeResUtils
 import com.mika.dspot.utils.NetworkFirstInterceptor
@@ -80,6 +81,8 @@ import dspot.composeapp.generated.resources.quit_app
 import dspot.composeapp.generated.resources.time_out_check_internet_connection_or_change_piped_instance_in_settings
 import java.awt.Canvas
 import java.awt.Container
+import java.awt.Rectangle
+import java.awt.Toolkit
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
@@ -351,9 +354,10 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                 exitApplication()
             }
         }
-        // Windows and Linux keep the native title bar (on Linux, undecorated + transparent
-        // breaks on some distros/WMs). Only macOS draws the custom one.
-        val nativeTitleBar = !isMacOS
+        // Linux keeps the native title bar (undecorated + transparent breaks on some distros/WMs).
+        // Windows and macOS use the custom D-Spot title bar with custom window controls.
+        val isLinux = System.getProperty("os.name", "").contains("Linux", ignoreCase = true)
+        val nativeTitleBar = isLinux
         // Publish whether the custom title bar will be mounted so getScreenSizeInfo() can
         // subtract the 40dp strip it occupies above the content (see DesktopWindowChrome).
         LaunchedEffect(nativeTitleBar) {
@@ -382,6 +386,37 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                 window.addWindowFocusListener(listener)
                 onDispose {
                     window.removeWindowFocusListener(listener)
+                }
+            }
+            // For undecorated windows on Windows, AWT treats maximized placement like fullscreen
+            // (covering the taskbar). Setting window.maximizedBounds to the screen's working area
+            // (screen bounds minus insets) ensures the taskbar remains visible when maximized.
+            if (!isLinux && !isMacOS) {
+                DisposableEffect(window) {
+                    val updateMaximizedBounds = {
+                        val gc = window.graphicsConfiguration
+                        if (gc != null) {
+                            val screenBounds: Rectangle = gc.bounds
+                            val insets = Toolkit.getDefaultToolkit().getScreenInsets(gc)
+                            val maxBounds =
+                                Rectangle(
+                                    screenBounds.x + insets.left,
+                                    screenBounds.y + insets.top,
+                                    screenBounds.width - (insets.left + insets.right),
+                                    screenBounds.height - (insets.top + insets.bottom),
+                                )
+                            window.maximizedBounds = maxBounds
+                        }
+                    }
+                    updateMaximizedBounds()
+                    val compListener =
+                        object : ComponentAdapter() {
+                            override fun componentMoved(e: ComponentEvent?) = updateMaximizedBounds()
+                        }
+                    window.addComponentListener(compListener)
+                    onDispose {
+                        window.removeComponentListener(compListener)
+                    }
                 }
             }
             // AWT on GNOME/XWayland (CMP-9528): moving the window to another monitor puts the
@@ -464,7 +499,7 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         onCloseRequest = {
                             isVisible = false
                         },
-                        containerColor = if (isDark) Color.Black else Color.White,
+                        containerColor = if (isDark) desktopPanelDark else Color.White,
                         titleColor = if (isDark) Color.White else Color.Black,
                     )
                 }

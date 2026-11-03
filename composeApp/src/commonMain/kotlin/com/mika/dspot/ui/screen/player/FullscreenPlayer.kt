@@ -70,6 +70,8 @@ import com.mika.dspot.extension.lengthLabel
 import com.mika.dspot.extension.rememberIsInPipMode
 import com.mika.dspot.extension.smoothScrimBrush
 import com.mika.dspot.ui.component.NowPlayingBottomSheet
+import com.mika.dspot.ui.component.ListenTogetherIconButton
+import com.mika.dspot.ui.navigation.destination.home.ListenTogetherDestination
 import com.mika.dspot.ui.component.RippleIconButton
 import com.mika.dspot.ui.icon.ArrowBackIosNew
 import com.mika.dspot.ui.icon.Forward5
@@ -364,6 +366,9 @@ fun FullscreenPlayer(
                                 }
                             },
                             actions = {
+                                ListenTogetherIconButton {
+                                    navController.navigate(ListenTogetherDestination)
+                                }
                                 RippleIconButton(
                                     SimpIcons.MoreVert,
                                 ) {

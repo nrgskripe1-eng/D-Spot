@@ -106,6 +106,10 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.getString
 import org.koin.core.component.inject
 import com.mika.dspot.lastfm.completeLogin
+import com.mika.domain.data.model.browse.playlist.PlaylistState
+import com.mika.domain.data.model.streams.YouTubeWatchEndpoint
+import com.mika.domain.utils.LocalResource
+import com.mika.domain.utils.isRadioQueueId
 import dspot.composeapp.generated.resources.Res
 import dspot.composeapp.generated.resources.added_to_queue
 import dspot.composeapp.generated.resources.added_to_youtube_liked
@@ -113,8 +117,12 @@ import dspot.composeapp.generated.resources.error
 import dspot.composeapp.generated.resources.lastfm_login_failed
 import dspot.composeapp.generated.resources.login_success
 import dspot.composeapp.generated.resources.play_next
+import dspot.composeapp.generated.resources.playlist
 import dspot.composeapp.generated.resources.removed_from_youtube_liked
 import dspot.composeapp.generated.resources.shared
+import dspot.composeapp.generated.resources.shuffle
+import dspot.composeapp.generated.resources.synced
+import dspot.composeapp.generated.resources.syncing
 import dspot.composeapp.generated.resources.updated
 import dspot.composeapp.generated.resources.vote_submitted
 import java.io.FileOutputStream
@@ -1940,6 +1948,8 @@ class SharedViewModel(
     // Drives the Mix for you tab: YouTube hands an anonymous session no mixes at all.
     fun getYouTubeLoggedIn() = dataStoreManager.loggedIn
 
+    fun getAccountThumbUrl() = dataStoreManager.getString("AccountThumbUrl")
+
     fun getThemeMode() = dataStoreManager.themeMode
 
     fun getThemeColorSource() = dataStoreManager.themeColorSource
@@ -2197,6 +2207,115 @@ class SharedViewModel(
     fun isUserLoggedInFlow(): Flow<Boolean> = dataStoreManager.cookie.map { it.isNotEmpty() }
 
     fun isCombineFavoriteAndYTLiked(): Boolean = runBlocking { dataStoreManager.combineLocalAndYouTubeLiked.first() == TRUE }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Playlist context-menu actions — run on viewModelScope so they survive
+    // Popup dismissal (composable coroutineScope is cancelled on dismiss).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Shuffle-play a playlist or radio endpoint.
+     * Uses the shuffle endpoint when available; falls back to a regular radio call
+     * and shuffles the returned tracks locally.
+     */
+    fun shuffleFromEndpoint(
+        endpoint: YouTubeWatchEndpoint,
+        name: String,
+    ) {
+        viewModelScope.launch {
+            songRepository.getRadioFromEndpoint(endpoint).collectLatest { res ->
+                val tracks = res.data?.first
+                if (res is Resource.Success && !tracks.isNullOrEmpty()) {
+                    val shuffled = tracks.shuffled()
+                    val firstTrack = shuffled.first()
+                    setQueueData(
+                        QueueData.Data(
+                            listTracks = shuffled.toCollection(arrayListOf<Track>()),
+                            firstPlayedTrack = firstTrack,
+                            playlistId = endpoint.playlistId,
+                            playlistName = "\"$name\" ${getString(Res.string.shuffle)}",
+                            playlistType = PlaylistType.RADIO,
+                            continuation = res.data?.second,
+                        ),
+                    )
+                    loadMediaItem(firstTrack, Config.RADIO_CLICK, 0)
+                } else {
+                    makeToast(res.message ?: getString(Res.string.error))
+                }
+            }
+        }
+    }
+
+    /** Play the first tracks of a playlist as the next item(s) in the queue. */
+    fun playNextFromPlaylist(playlistId: String) {
+        viewModelScope.launch {
+            val viewStr = getString(Res.string.playlist)
+            playlistRepository.getFullPlaylistData(playlistId, viewStr).collectLatest { res ->
+                val tracks = res.data?.tracks
+                if (res is Resource.Success && !tracks.isNullOrEmpty()) {
+                    tracks.asReversed().forEach { mediaPlayerHandler.playNext(it) }
+                    makeToast(getString(Res.string.play_next))
+                } else if (res is Resource.Error) {
+                    makeToast(res.message ?: getString(Res.string.error))
+                }
+            }
+        }
+    }
+
+    /** Add all tracks of a playlist to the end of the current queue. */
+    fun addToQueueFromPlaylist(playlistId: String) {
+        viewModelScope.launch {
+            val viewStr = getString(Res.string.playlist)
+            playlistRepository.getFullPlaylistData(playlistId, viewStr).collectLatest { res ->
+                val tracks = res.data?.tracks
+                if (res is Resource.Success && !tracks.isNullOrEmpty()) {
+                    mediaPlayerHandler.loadMoreCatalog(ArrayList(tracks), isAddToQueue = true)
+                    makeToast(getString(Res.string.added_to_queue))
+                } else if (res is Resource.Error) {
+                    makeToast(res.message ?: getString(Res.string.error))
+                }
+            }
+        }
+    }
+
+    /** Sync a YouTube playlist to the local library. */
+    fun syncYouTubePlaylist(playlistId: String) {
+        viewModelScope.launch {
+            makeToast(getString(Res.string.syncing))
+            val viewStr = getString(Res.string.playlist)
+            // Fetch full tracks first
+            val fullRes = playlistRepository.getFullPlaylistData(playlistId, viewStr).firstOrNull()
+            val tracks = fullRes?.data?.tracks.orEmpty()
+            // Then fetch playlist metadata
+            playlistRepository.getPlaylistData(playlistId, viewStr).collectLatest { res ->
+                val playlistBrowse = res.data?.first ?: return@collectLatest
+                val playlistState = PlaylistState(
+                    id = playlistBrowse.id,
+                    title = playlistBrowse.title,
+                    isRadio = false,
+                    author = playlistBrowse.author,
+                    thumbnail = playlistBrowse.thumbnails.lastOrNull()?.url,
+                    description = playlistBrowse.description,
+                    trackCount = playlistBrowse.trackCount,
+                    year = playlistBrowse.year,
+                    shuffleEndpoint = playlistBrowse.shuffleEndpoint,
+                    radioEndpoint = playlistBrowse.radioEndpoint,
+                )
+                localPlaylistRepository.syncYouTubePlaylistToLocalPlaylist(
+                    playlistState,
+                    tracks,
+                    getString(Res.string.synced),
+                    getString(Res.string.error),
+                ).collect { syncRes ->
+                    when (syncRes) {
+                        is LocalResource.Success -> makeToast(syncRes.data ?: getString(Res.string.synced))
+                        is LocalResource.Error   -> makeToast(syncRes.message ?: getString(Res.string.error))
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
 }
 
 sealed class UIEvent {

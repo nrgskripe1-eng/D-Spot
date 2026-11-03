@@ -1,11 +1,15 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +36,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import com.mika.dspot.extension.DesktopWindowChrome
@@ -41,18 +48,16 @@ import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.icon.UnfoldLess
 import com.mika.dspot.ui.icon.UnfoldMore
 import com.mika.dspot.ui.theme.typo
-import com.mika.dspot.ui.theme.windowCloseButton
-import com.mika.dspot.ui.theme.windowCloseButtonHover
-import com.mika.dspot.ui.theme.windowMaximiseButton
-import com.mika.dspot.ui.theme.windowMaximiseButtonHover
-import com.mika.dspot.ui.theme.windowMinimiseButton
-import com.mika.dspot.ui.theme.windowMinimiseButtonHover
+import dspot.composeapp.generated.resources.Res
+import dspot.composeapp.generated.resources.circle_app_icon
+import org.jetbrains.compose.resources.painterResource
 import java.awt.MouseInfo
 import java.awt.Window
 
 /**
- * Custom title bar for JVM desktop application
- * Provides minimize, maximize/restore, and close buttons with drag-to-move functionality
+ * Custom modern title bar for D-Spot desktop.
+ * Replaces the generic Windows title bar with a clean D-Spot chrome.
+ * Supports window dragging, double-tap to maximize, and minimal window controls.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -62,18 +67,17 @@ fun CustomTitleBar(
     window: Window,
     onCloseRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    // Passed in rather than read from MaterialTheme: this bar is drawn outside AppTheme, so
-    // MaterialTheme here would hand back the default light scheme no matter what the user picked.
     containerColor: Color = Color.Black,
     titleColor: Color = Color.White,
 ) {
     var isMaximized by remember { mutableStateOf(windowState.placement == WindowPlacement.Maximized) }
-
-    // Track drag start position
     var dragStartX by remember { mutableStateOf(0) }
     var dragStartY by remember { mutableStateOf(0) }
 
-    // Update isMaximized when window state changes
+    val isMacOS = remember {
+        System.getProperty("os.name", "").contains("Mac", ignoreCase = true)
+    }
+
     LaunchedEffect(windowState.placement) {
         isMaximized = windowState.placement == WindowPlacement.Maximized
     }
@@ -87,7 +91,6 @@ fun CustomTitleBar(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
-                            // Double-click to maximize/restore
                             if (windowState.placement == WindowPlacement.Maximized) {
                                 windowState.placement = WindowPlacement.Floating
                             } else {
@@ -105,10 +108,8 @@ fun CustomTitleBar(
                         onDrag = { change, _ ->
                             change.consume()
                             val mouseLocation = MouseInfo.getPointerInfo().location
-                            // If maximized, restore before moving
                             if (windowState.placement == WindowPlacement.Maximized) {
                                 windowState.placement = WindowPlacement.Floating
-                                // Recalculate drag offset after restore
                                 dragStartX = (windowState.size.width.value / 2).toInt()
                                 dragStartY = 20
                             }
@@ -121,62 +122,70 @@ fun CustomTitleBar(
                 },
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Window control buttons
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Close button
-                WindowControlButton(
-                    onClick = onCloseRequest,
-                    backgroundColor = windowCloseButton,
-                    hoverColor = windowCloseButtonHover,
-                    icon = WindowControlIcon.Close,
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Minimize button
-                WindowControlButton(
-                    onClick = {
-                        windowState.isMinimized = true
-                    },
-                    backgroundColor = windowMinimiseButton,
-                    hoverColor = windowMinimiseButtonHover,
-                    icon = WindowControlIcon.Minimize,
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Maximize/Restore button
-                WindowControlButton(
-                    onClick = {
-                        if (windowState.placement == WindowPlacement.Maximized) {
-                            windowState.placement = WindowPlacement.Floating
-                        } else {
-                            windowState.placement = WindowPlacement.Maximized
-                        }
-                    },
-                    backgroundColor = windowMaximiseButton,
-                    hoverColor = windowMaximiseButtonHover,
-                    icon = if (isMaximized) WindowControlIcon.Restore else WindowControlIcon.Maximize,
-                )
+            // If macOS, show controls on left
+            if (isMacOS) {
+                Row(
+                    modifier = Modifier.padding(start = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MacWindowControlButton(
+                        onClick = onCloseRequest,
+                        backgroundColor = Color(0xFFFF605C),
+                        hoverColor = Color(0xFFE54942),
+                        icon = WindowControlIcon.Close,
+                    )
+                    MacWindowControlButton(
+                        onClick = { windowState.isMinimized = true },
+                        backgroundColor = Color(0xFFFFBD44),
+                        hoverColor = Color(0xFFE5A93D),
+                        icon = WindowControlIcon.Minimize,
+                    )
+                    MacWindowControlButton(
+                        onClick = {
+                            windowState.placement =
+                                if (isMaximized) WindowPlacement.Floating else WindowPlacement.Maximized
+                        },
+                        backgroundColor = Color(0xFF00CA4E),
+                        hoverColor = Color(0xFF00B344),
+                        icon = if (isMaximized) WindowControlIcon.Restore else WindowControlIcon.Maximize,
+                    )
+                }
             }
-            Spacer(modifier = Modifier.weight(1f))
-            // Title text (optional)
-            Text(
-                text = title,
-                style = typo().labelSmall,
-                color = titleColor,
-            )
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
+
+            // Windows / Linux: Modern right-aligned controls
+            if (!isMacOS) {
+                Row(
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DSpotWindowsControlButton(
+                        icon = WindowControlIcon.Minimize,
+                        onClick = { windowState.isMinimized = true },
+                        contentColor = titleColor,
+                    )
+                    DSpotWindowsControlButton(
+                        icon = if (isMaximized) WindowControlIcon.Restore else WindowControlIcon.Maximize,
+                        onClick = {
+                            windowState.placement =
+                                if (isMaximized) WindowPlacement.Floating else WindowPlacement.Maximized
+                        },
+                        contentColor = titleColor,
+                    )
+                    DSpotWindowsControlButton(
+                        icon = WindowControlIcon.Close,
+                        onClick = onCloseRequest,
+                        contentColor = titleColor,
+                        isClose = true,
+                    )
+                }
+            }
         }
+
     }
 }
 
@@ -189,7 +198,89 @@ private enum class WindowControlIcon {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun WindowControlButton(
+private fun DSpotWindowsControlButton(
+    icon: WindowControlIcon,
+    onClick: () -> Unit,
+    contentColor: Color,
+    isClose: Boolean = false,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+
+    val bg by animateColorAsState(
+        targetValue =
+            when {
+                isHovered && isClose -> Color(0xFFE81123)
+                isHovered -> contentColor.copy(alpha = 0.12f)
+                else -> Color.Transparent
+            },
+        animationSpec = tween(120),
+        label = "winBtnBg",
+    )
+
+    val tint by animateColorAsState(
+        targetValue =
+            when {
+                isHovered && isClose -> Color.White
+                isHovered -> contentColor
+                else -> contentColor.copy(alpha = 0.7f)
+            },
+        animationSpec = tween(120),
+        label = "winBtnTint",
+    )
+
+    Box(
+        modifier =
+            Modifier
+                .width(46.dp)
+                .fillMaxHeight()
+                .background(bg)
+                .hoverable(interactionSource)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { onClick() })
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        when (icon) {
+            WindowControlIcon.Minimize -> {
+                Icon(
+                    imageVector = SimpIcons.Remove,
+                    contentDescription = "Minimize",
+                    tint = tint,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+            WindowControlIcon.Maximize -> {
+                Icon(
+                    imageVector = SimpIcons.UnfoldMore,
+                    contentDescription = "Maximize",
+                    tint = tint,
+                    modifier = Modifier.size(15.dp).rotate(45f),
+                )
+            }
+            WindowControlIcon.Restore -> {
+                Icon(
+                    imageVector = SimpIcons.UnfoldLess,
+                    contentDescription = "Restore",
+                    tint = tint,
+                    modifier = Modifier.size(15.dp).rotate(45f),
+                )
+            }
+            WindowControlIcon.Close -> {
+                Icon(
+                    imageVector = SimpIcons.Close,
+                    contentDescription = "Close",
+                    tint = tint,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun MacWindowControlButton(
     onClick: () -> Unit,
     backgroundColor: Color,
     hoverColor: Color,
@@ -201,50 +292,28 @@ private fun WindowControlButton(
     Box(
         modifier =
             Modifier
-                .size(14.dp)
+                .size(13.dp)
                 .clip(CircleShape)
                 .background(if (isHovered) hoverColor else backgroundColor)
                 .hoverable(interactionSource)
                 .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = { onClick() },
-                    )
+                    detectTapGestures(onTap = { onClick() })
                 },
         contentAlignment = Alignment.Center,
     ) {
-        // Show icons on hover for better UX
         if (isHovered) {
-            Box(modifier = Modifier.padding(1.dp)) {
-                when (icon) {
-                    WindowControlIcon.Minimize -> {
-                        Icon(SimpIcons.Remove, tint = Color.DarkGray, contentDescription = "Minimize")
-                    }
-
-                    WindowControlIcon.Maximize -> {
-                        Icon(
-                            modifier = Modifier.rotate(45f),
-                            imageVector = SimpIcons.UnfoldMore,
-                            tint = Color.DarkGray,
-                            contentDescription = "Minimize",
-                        )
-                    }
-
-                    WindowControlIcon.Restore -> {
-                        Icon(
-                            modifier = Modifier.rotate(45f),
-                            imageVector = SimpIcons.UnfoldLess,
-                            tint = Color.DarkGray,
-                            contentDescription = "Minimize",
-                        )
-                    }
-
-                    WindowControlIcon.Close -> {
-                        Icon(
-                            imageVector = SimpIcons.Close,
-                            tint = Color.DarkGray,
-                            contentDescription = "Close",
-                        )
-                    }
+            when (icon) {
+                WindowControlIcon.Minimize -> {
+                    Icon(SimpIcons.Remove, tint = Color.DarkGray, contentDescription = "Minimize", modifier = Modifier.size(8.dp))
+                }
+                WindowControlIcon.Maximize -> {
+                    Icon(SimpIcons.UnfoldMore, tint = Color.DarkGray, contentDescription = "Maximize", modifier = Modifier.size(8.dp).rotate(45f))
+                }
+                WindowControlIcon.Restore -> {
+                    Icon(SimpIcons.UnfoldLess, tint = Color.DarkGray, contentDescription = "Restore", modifier = Modifier.size(8.dp).rotate(45f))
+                }
+                WindowControlIcon.Close -> {
+                    Icon(SimpIcons.Close, tint = Color.DarkGray, contentDescription = "Close", modifier = Modifier.size(8.dp))
                 }
             }
         }

@@ -61,9 +61,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -212,6 +216,21 @@ fun SearchScreen(
     val screenInfo = getScreenSizeInfo()
     val isMobilePortrait = getPlatform() == Platform.Android && screenInfo.wDP < screenInfo.hDP
     val moodGridColumns = if (isMobilePortrait) 2 else 4
+    val isDesktop = getPlatform() == Platform.Desktop
+
+    val activeQuery by searchViewModel.activeSearchQuery.collectAsStateWithLifecycle()
+    LaunchedEffect(activeQuery) {
+        if (activeQuery.isNotBlank() && activeQuery != searchText) {
+            searchText = activeQuery
+            isSearchSubmitted = true
+            isExpanded = false
+            searchUIType = SearchUIType.SEARCH_RESULTS
+        } else if (isDesktop && activeQuery.isBlank() && searchText.isNotEmpty()) {
+            searchText = ""
+            isSearchSubmitted = false
+            searchUIType = SearchUIType.EMPTY
+        }
+    }
 
     val hazeState = rememberHazeState()
     val suggestionsState = rememberLazyListState()
@@ -219,7 +238,11 @@ fun SearchScreen(
     val moodGridState = rememberLazyGridState()
     val resultsState = rememberLazyListState()
     var searchBarHeightPx by remember { mutableIntStateOf(0) }
-    val searchBarHeight = with(LocalDensity.current) { searchBarHeightPx.toDp() }
+    val searchBarHeight = if (isDesktop) {
+        if (searchUIType == SearchUIType.SEARCH_RESULTS) 56.dp else 12.dp
+    } else {
+        with(LocalDensity.current) { searchBarHeightPx.toDp() }
+    }
     val isContentAtTop by remember {
         derivedStateOf {
             when (searchUIType) {
@@ -276,6 +299,24 @@ fun SearchScreen(
     val currentVideoId by searchViewModel.nowPlayingVideoId.collectAsStateWithLifecycle()
     val chipRowState = rememberScrollState()
     val pullToRefreshState = rememberPullToRefreshState()
+    val searchRefreshScope = rememberCoroutineScope()
+    val onSearchRefresh: () -> Unit = {
+        val query = searchText.trim()
+        if (query.isNotEmpty()) {
+            isSearchSubmitted = true
+            searchViewModel.insertSearchHistory(query)
+            when (searchScreenState.searchType) {
+                SearchType.ALL -> searchViewModel.searchAll(query)
+                SearchType.SONGS -> searchViewModel.searchSongs(query)
+                SearchType.VIDEOS -> searchViewModel.searchVideos(query)
+                SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
+                SearchType.ARTISTS -> searchViewModel.searchArtists(query)
+                SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
+                SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
+                SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
+            }
+        }
+    }
 
     val onMoreClick: (SongEntity) -> Unit = { song ->
         sheetSong = song
@@ -694,25 +735,35 @@ fun SearchScreen(
                     // Content area — chips now live in the blurred bar block above.
                     Column(modifier = Modifier.fillMaxSize()) {
                         PullToRefreshBox(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(isDesktop, isContentAtTop) {
+                                        if (isDesktop) {
+                                            awaitPointerEventScope {
+                                                var overscrollAccumulator = 0f
+                                                while (true) {
+                                                    val event = awaitPointerEvent()
+                                                    if (event.type == PointerEventType.Scroll) {
+                                                        val scrollDelta = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                                        if (scrollDelta < 0f && resultsState.firstVisibleItemIndex == 0 && resultsState.firstVisibleItemScrollOffset == 0) {
+                                                            overscrollAccumulator += -scrollDelta
+                                                            if (overscrollAccumulator > 3f && uiState !is SearchScreenUIState.Loading) {
+                                                                overscrollAccumulator = 0f
+                                                                searchRefreshScope.launch {
+                                                                    onSearchRefresh()
+                                                                }
+                                                            }
+                                                        } else {
+                                                            overscrollAccumulator = 0f
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
                             state = pullToRefreshState,
-                            onRefresh = {
-                                val query = searchText.trim()
-                                if (query.isNotEmpty()) {
-                                    isSearchSubmitted = true
-                                    searchViewModel.insertSearchHistory(query)
-                                    when (searchScreenState.searchType) {
-                                        SearchType.ALL -> searchViewModel.searchAll(query)
-                                        SearchType.SONGS -> searchViewModel.searchSongs(query)
-                                        SearchType.VIDEOS -> searchViewModel.searchVideos(query)
-                                        SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
-                                        SearchType.ARTISTS -> searchViewModel.searchArtists(query)
-                                        SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
-                                        SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
-                                        SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
-                                    }
-                                }
-                            },
+                            onRefresh = onSearchRefresh,
                             isRefreshing = uiState is SearchScreenUIState.Loading,
                             indicator = {
                                 PullToRefreshDefaults.Indicator(
@@ -1024,126 +1075,128 @@ fun SearchScreen(
                 windowInsets = WindowInsets(0),
             )
         }
-        // Search Bar with Animated Placeholder
-        SearchBar(
-            inputField = {
-                SearchBarDefaults.InputField(
-                    query = searchText,
-                    onQueryChange = { newText ->
-                        searchText = newText
-                    },
-                    onSearch = { query ->
-                        // A pasted YouTube link is a destination, not a query. Translating it into
-                        // the app's own deep link hands it to the same intent flow that handles
-                        // shared links, so it plays or opens straight away instead of being
-                        // searched for as text. Anything else falls through to a normal search.
-                        val deepLink = query.toAppDeepLinkOrNull()
-                        if (deepLink != null) {
-                            focusManager.clearFocus()
-                            sharedViewModel.setIntent(GenericIntent(data = deepLink))
-                        } else if (query.isNotEmpty()) {
-                            isSearchSubmitted = true
-                            focusManager.clearFocus()
-                            searchViewModel.insertSearchHistory(query)
-                            when (searchScreenState.searchType) {
-                                SearchType.ALL -> searchViewModel.searchAll(query)
-                                SearchType.SONGS -> searchViewModel.searchSongs(query)
-                                SearchType.VIDEOS -> searchViewModel.searchVideos(query)
-                                SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
-                                SearchType.ARTISTS -> searchViewModel.searchArtists(query)
-                                SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
-                                SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
-                                SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
+        if (!isDesktop) {
+            // Search Bar with Animated Placeholder (Mobile only - desktop uses top navigation search bar)
+            SearchBar(
+                inputField = {
+                    SearchBarDefaults.InputField(
+                        query = searchText,
+                        onQueryChange = { newText ->
+                            searchText = newText
+                        },
+                        onSearch = { query ->
+                            // A pasted YouTube link is a destination, not a query. Translating it into
+                            // the app's own deep link hands it to the same intent flow that handles
+                            // shared links, so it plays or opens straight away instead of being
+                            // searched for as text. Anything else falls through to a normal search.
+                            val deepLink = query.toAppDeepLinkOrNull()
+                            if (deepLink != null) {
+                                focusManager.clearFocus()
+                                sharedViewModel.setIntent(GenericIntent(data = deepLink))
+                            } else if (query.isNotEmpty()) {
+                                isSearchSubmitted = true
+                                focusManager.clearFocus()
+                                searchViewModel.insertSearchHistory(query)
+                                when (searchScreenState.searchType) {
+                                    SearchType.ALL -> searchViewModel.searchAll(query)
+                                    SearchType.SONGS -> searchViewModel.searchSongs(query)
+                                    SearchType.VIDEOS -> searchViewModel.searchVideos(query)
+                                    SearchType.ALBUMS -> searchViewModel.searchAlbums(query)
+                                    SearchType.ARTISTS -> searchViewModel.searchArtists(query)
+                                    SearchType.PLAYLISTS -> searchViewModel.searchPlaylists(query)
+                                    SearchType.FEATURED_PLAYLISTS -> searchViewModel.searchFeaturedPlaylist(query)
+                                    SearchType.PODCASTS -> searchViewModel.searchPodcast(query)
+                                }
                             }
-                        }
-                    },
-                    expanded = false,
-                    onExpandedChange = {},
-                    enabled = true,
-                    placeholder = {
-                        // Animated placeholder text
-                        AnimatedContent(
-                            targetState = currentPlaceholderIndex,
-                            transitionSpec = {
-                                (
-                                    fadeIn(animationSpec = tween(500)) +
-                                        slideInVertically { height -> height }
-                                ).togetherWith(
-                                    fadeOut(animationSpec = tween(500)) +
-                                        slideOutVertically { height -> -height },
+                        },
+                        expanded = false,
+                        onExpandedChange = {},
+                        enabled = true,
+                        placeholder = {
+                            // Animated placeholder text
+                            AnimatedContent(
+                                targetState = currentPlaceholderIndex,
+                                transitionSpec = {
+                                    (
+                                        fadeIn(animationSpec = tween(500)) +
+                                            slideInVertically { height -> height }
+                                    ).togetherWith(
+                                        fadeOut(animationSpec = tween(500)) +
+                                            slideOutVertically { height -> -height },
+                                    )
+                                },
+                                label = "placeholder_animation",
+                            ) { index ->
+                                Text(
+                                    text = placeholderTexts[index],
+                                    style = typo().labelMedium,
                                 )
-                            },
-                            label = "placeholder_animation",
-                        ) { index ->
-                            Text(
-                                text = placeholderTexts[index],
-                                style = typo().labelMedium,
-                            )
-                        }
-                    },
-                    leadingIcon = {
-                        Crossfade(
-                            targetState = isSearchPanelVisible,
-                            modifier = Modifier.size(48.dp),
-                            animationSpec = tween(200),
-                            label = "search_back_icon",
-                        ) { showBack ->
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (showBack) {
-                                    IconButton(
-                                        onClick = dismissSearchPanel,
-                                        enabled = isSearchPanelVisible,
-                                    ) {
+                            }
+                        },
+                        leadingIcon = {
+                            Crossfade(
+                                targetState = isSearchPanelVisible,
+                                modifier = Modifier.size(48.dp),
+                                animationSpec = tween(200),
+                                label = "search_back_icon",
+                            ) { showBack ->
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (showBack) {
+                                        IconButton(
+                                            onClick = dismissSearchPanel,
+                                            enabled = isSearchPanelVisible,
+                                        ) {
+                                            Icon(
+                                                imageVector = SimpIcons.ArrowBackIosNew,
+                                                contentDescription = "Back",
+                                            )
+                                        }
+                                    } else {
                                         Icon(
-                                            imageVector = SimpIcons.ArrowBackIosNew,
-                                            contentDescription = "Back",
+                                            imageVector = SimpIcons.Search,
+                                            contentDescription = "Search",
                                         )
                                     }
-                                } else {
+                                }
+                            }
+                        },
+                        trailingIcon = {
+                            // X button only shows when there's text
+                            if (searchText.isNotEmpty()) {
+                                IconButton(
+                                    modifier = Modifier.clip(CircleShape),
+                                    onClick = {
+                                        searchText = ""
+                                        isSearchSubmitted = false
+                                    },
+                                ) {
                                     Icon(
-                                        imageVector = SimpIcons.Search,
-                                        contentDescription = "Search",
+                                        imageVector = SimpIcons.Close,
+                                        contentDescription = "Clear search",
                                     )
                                 }
                             }
-                        }
-                    },
-                    trailingIcon = {
-                        // X button only shows when there's text
-                        if (searchText.isNotEmpty()) {
-                            IconButton(
-                                modifier = Modifier.clip(CircleShape),
-                                onClick = {
-                                    searchText = ""
-                                    isSearchSubmitted = false
-                                },
-                            ) {
-                                Icon(
-                                    imageVector = SimpIcons.Close,
-                                    contentDescription = "Clear search",
-                                )
-                            }
-                        }
-                    },
-                )
-            },
-            expanded = false,
-            onExpandedChange = {},
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .onFocusChanged {
-                        isFocused = it.isFocused
-                    }.padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(24.dp),
-            // See the note on SongSelectionTopAppBar above — the Column owns the status-bar inset.
-            windowInsets = WindowInsets(0),
-            content = {},
-        )
+                        },
+                    )
+                },
+                expanded = false,
+                onExpandedChange = {},
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .onFocusChanged {
+                            isFocused = it.isFocused
+                        }.padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(24.dp),
+                // See the note on SongSelectionTopAppBar above — the Column owns the status-bar inset.
+                windowInsets = WindowInsets(0),
+                content = {},
+            )
+        }
                 // Filter chips ride along inside the blurred block instead of sitting in the
                 // results branch. That way searchBarHeight covers them too, results scroll
                 // underneath the whole thing, and the glass has something to blur.

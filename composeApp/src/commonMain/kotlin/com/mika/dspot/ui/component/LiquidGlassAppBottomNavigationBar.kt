@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -14,10 +14,12 @@ import com.mika.dspot.ui.navigation.destination.home.AnalyticsDestination
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
 import com.mika.dspot.ui.navigation.destination.library.MixForYouDestination
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
 import com.mika.dspot.ui.navigation.destination.search.SearchDestination
 import com.mika.dspot.viewModel.SharedViewModel
 import org.jetbrains.compose.resources.StringResource
 import dspot.composeapp.generated.resources.Res
+import dspot.composeapp.generated.resources.account
 import dspot.composeapp.generated.resources.analytics
 import dspot.composeapp.generated.resources.home
 import dspot.composeapp.generated.resources.library
@@ -107,6 +109,15 @@ sealed class BottomNavScreen(
                 imageVector = SimpIcons.Sensors,
                 contentDescription = null,
             )
+        },
+    )
+
+    data object Account : BottomNavScreen(
+        ordinal = 5,
+        destination = AccountDestination,
+        title = Res.string.account,
+        icon = {
+            AccountTabIcon()
         },
     )
 }

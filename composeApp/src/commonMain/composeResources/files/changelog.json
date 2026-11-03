@@ -51,5 +51,15 @@
       { "type": "new", "text": "🔒 Minimalist Lockscreen Player — Ambient full-bleed lockscreen art presentation" },
       { "type": "improvement", "text": "Enhanced audio rendering performance & DSP clarity" }
     ]
+  },
+  {
+    "version": "1.3.1",
+    "date": "2026-10-16",
+    "changes": [
+      { "type": "new", "text": "🖤 AMOLED Theme Mode — Dedicated Pure Black (#000000) option added to Theme settings" },
+      { "type": "new", "text": "🌍 Chart Region Selector — Quick-switch top chart regions right from the home top bar" },
+      { "type": "improvement", "text": "🔎 In-Settings Search — Instantly filter and find any configuration option" },
+      { "type": "improvement", "text": "✨ Modern Home Redesign — Refined QuickPicks layout, hero artwork, and navigation polish" }
+    ]
   }
 ]

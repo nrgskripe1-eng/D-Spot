@@ -153,7 +153,7 @@
     <string name="albums_inArtist">Alben</string>
     <string name="singles_inArtist">Singles</string>
     <string name="fans_might_also_like_inArtist">Das könnte Fans auch gefallen</string>
-    <string name="crash_log">SimpMusik ist abgestürzt. Entschuldigung für dieses Problem.\nCrash-Log an den Entwickler senden</string>
+    <string name="crash_log">D-Spot ist abgestürzt. Entschuldigung für dieses Problem.\nCrash-Log an den Entwickler senden</string>
     <string name="crash">Absturz</string>
     <string name="send">Senden</string>
     <string name="mail_subject">Absturz melden</string>

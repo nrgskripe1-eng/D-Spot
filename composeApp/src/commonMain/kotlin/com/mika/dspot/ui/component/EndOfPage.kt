@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +25,7 @@ fun EndOfPage(withoutCredit: Boolean = false) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(280.dp),
+                .height(180.dp),
         contentAlignment = Alignment.TopCenter,
     ) {
         if (!withoutCredit) {

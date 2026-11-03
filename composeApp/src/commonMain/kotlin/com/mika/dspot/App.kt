@@ -1,4 +1,4 @@
-﻿package com.mika.dspot
+package com.mika.dspot
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -75,8 +75,10 @@ import com.mika.dspot.expect.ui.rememberBackdrop
 import com.mika.dspot.extension.copy
 import com.mika.dspot.ui.component.AppBottomNavigationBar
 import com.mika.dspot.ui.component.AppNavigationRail
+import com.mika.dspot.ui.component.DesktopTopNavigationBar
 import com.mika.dspot.ui.component.LiquidGlassAppBottomNavigationBar
 import com.mika.dspot.ui.component.LocalAppDialogOpen
+import com.mika.dspot.ui.component.LocalNavController
 import com.mika.dspot.ui.component.LocalNowPlayingOpen
 import com.mika.dspot.ui.component.LocalUserStarted
 import com.mika.dspot.ui.icon.ArrowForwardIos
@@ -154,6 +156,7 @@ fun App(
 
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
+    val nowPlayingScreenData by viewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
     val updateData by viewModel.updateResponse.collectAsStateWithLifecycle()
     val intent by viewModel.intent.collectAsStateWithLifecycle()
     val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
@@ -446,40 +449,6 @@ fun App(
             it.hasRoute(FullscreenDestination::class) || it.hasRoute(WrappedDestination::class)
         } == true
     }
-    LaunchedEffect(showAnalyticsTab) {
-        // Turning tracking off removes the Analytics tab, so leaving the user standing on it would
-        // strand them on a screen no tab points at anymore.
-        if (!showAnalyticsTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(AnalyticsDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-    }
-    LaunchedEffect(showMixForYouTab) {
-        // Same for signing out of YouTube: the Mix for you tab goes away, so nobody may be left
-        // standing on a screen that has no mixes to show and no tab pointing at it.
-        if (!showMixForYouTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(MixForYouDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-    }
     var isScrolledToTop by rememberSaveable {
         mutableStateOf(false)
     }
@@ -604,7 +573,8 @@ fun App(
                     Row(
                         Modifier.fillMaxSize(),
                     ) {
-                        if (isTablet && !isInFullscreen) {
+                        // Desktop uses a horizontal top nav bar instead of a sidebar rail.
+                        if (isTablet && !isInFullscreen && !isDesktopShell) {
                             AppNavigationRail(
                                 navController = navController,
                                 showAnalyticsTab = showAnalyticsTab,
@@ -624,54 +594,69 @@ fun App(
                                 .then(
                                     if (isDesktopShell) {
                                         Modifier
-                                            .padding(8.dp)
-                                            .clip(RoundedCornerShape(12.dp))
                                             .background(desktopPanel)
                                     } else {
                                         Modifier
                                     },
                                 ),
                         ) {
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .then(
-                                        // Desktop is unconditional: the floating capsule player is ALWAYS
-                                        // liquid glass there, and glass with no recorded source draws as
-                                        // plain transparency. Gating the source on the setting while the
-                                        // capsule ignored it was exactly the nested-flag split that kept
-                                        // the capsule see-through.
-                                        if ((isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop) &&
-                                            isTablet &&
-                                            !isInFullscreen
-                                        ) {
-                                            Modifier.layerBackdrop(backdrop)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ).hazeSource(hazeState),
+                            Column(
+                                Modifier.fillMaxSize(),
                             ) {
-                                CompositionLocalProvider(
-                                    LocalAppDialogOpen provides appDialogOpen,
-                                    LocalNowPlayingOpen provides isShowNowPlaylistScreen,
-                                    LocalUserStarted provides userStarted,
-                                ) {
-                                    AppNavigationGraph(
-                                        innerPadding = innerPadding,
+                                // Desktop top nav bar — shown instead of the sidebar rail.
+                                if (isDesktopShell && !isInFullscreen) {
+                                    DesktopTopNavigationBar(
                                         navController = navController,
-                                        hideNavBar = {
-                                            isNavBarVisible = false
-                                        },
-                                        showNavBar = {
-                                            isNavBarVisible = true
-                                        },
-                                        showNowPlayingSheet = {
-                                            isShowNowPlaylistScreen = true
-                                        },
-                                        onScrolling = {
-                                            isScrolledToTop = it
-                                        },
-                                    )
+                                        thumbnailUrl = nowPlayingScreenData.thumbnailURL,
+                                        showAnalyticsTab = showAnalyticsTab,
+                                        showMixForYouTab = showMixForYouTab,
+                                    ) { klass ->
+                                        viewModel.reloadDestination(klass)
+                                    }
+                                }
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .weight(1f)
+                                        .then(
+                                            // Desktop is unconditional: the floating capsule player is ALWAYS
+                                            // liquid glass there, and glass with no recorded source draws as
+                                            // plain transparency. Gating the source on the setting while the
+                                            // capsule ignored it was exactly the nested-flag split that kept
+                                            // the capsule see-through.
+                                            if ((isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop) &&
+                                                isTablet &&
+                                                !isInFullscreen
+                                            ) {
+                                                Modifier.layerBackdrop(backdrop)
+                                            } else {
+                                                Modifier
+                                            },
+                                        ).hazeSource(hazeState),
+                                ) {
+                                    CompositionLocalProvider(
+                                        LocalAppDialogOpen provides appDialogOpen,
+                                        LocalNavController provides navController,
+                                        LocalNowPlayingOpen provides isShowNowPlaylistScreen,
+                                        LocalUserStarted provides userStarted,
+                                    ) {
+                                        AppNavigationGraph(
+                                            innerPadding = innerPadding,
+                                            navController = navController,
+                                            hideNavBar = {
+                                                isNavBarVisible = false
+                                            },
+                                            showNavBar = {
+                                                isNavBarVisible = true
+                                            },
+                                            showNowPlayingSheet = {
+                                                isShowNowPlaylistScreen = true
+                                            },
+                                            onScrolling = {
+                                                isScrolledToTop = it
+                                            },
+                                        )
+                                    }
                                 }
                             }
                             this@Row.AnimatedVisibility(
@@ -695,21 +680,9 @@ fun App(
                                                 bottom = 4.dp,
                                             )
                                     } else {
-                                        // Floating capsule, Apple Music style: a fixed size so it never
-                                        // stretches to the window width, and no haze at all — the capsule
-                                        // paints its own liquid glass. Layering haze underneath blurs the
-                                        // same pixels twice and reads as a dark smear, not glass.
-                                        // padding BEFORE height: the other way round the bottom margin
-                                        // eats into the 72dp and the capsule ends up 52dp tall.
-                                        // 60dp is the floor for this layout: the content row is centred
-                                        // on the capsule's axis and the 16dp progress box hangs off the
-                                        // bottom, so the height has to cover the taller of the artwork
-                                        // (32dp) and the two text lines (~33dp), plus that 16dp, plus a
-                                        // gap. Going lower means shrinking the artwork again.
                                         Modifier
                                             .wrapContentWidth()
                                             .padding(bottom = 20.dp)
-                                            .height(60.dp)
                                     },
                                     backdrop = backdrop,
                                     navController = navController,

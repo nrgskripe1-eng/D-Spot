@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.other
+package com.mika.dspot.ui.screen.other
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -48,6 +48,7 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.mika.dspot.extension.cleanBrandText
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -443,7 +444,7 @@ fun PlaylistScreen(
                                                         horizontalAlignment = Alignment.CenterHorizontally,
                                                     ) {
                                                         Text(
-                                                            text = data.title,
+                                                            text = data.title.cleanBrandText(),
                                                             style = typo().titleLarge,
                                                             color = Color.White,
                                                             maxLines = 2,
@@ -470,7 +471,7 @@ fun PlaylistScreen(
                                                                 },
                                                             ) {
                                                                 Text(
-                                                                    text = data.author.name,
+                                                                    text = data.author.name.cleanBrandText(),
                                                                     style = typo().titleSmall,
                                                                     color = Color.White,
                                                                     textAlign = TextAlign.Center,
@@ -606,14 +607,14 @@ fun PlaylistScreen(
                                                             modifier = Modifier.weight(1f),
                                                         ) {
                                                             Text(
-                                                                text = data.title,
+                                                                text = data.title.cleanBrandText(),
                                                                 style = typo().headlineSmall,
                                                                 color = Color.White,
                                                                 maxLines = 2,
                                                             )
                                                             Spacer(modifier = Modifier.height(4.dp))
                                                             Text(
-                                                                text = data.author.name,
+                                                                text = data.author.name.cleanBrandText(),
                                                                 style = typo().titleMedium,
                                                                 // The app accent, standing in for the brand red
                                                                 // Apple uses on this line.
@@ -1333,7 +1334,7 @@ fun PlaylistScreen(
                             ),
                         title = {
                             Text(
-                                text = data.title,
+                                text = data.title.cleanBrandText(),
                                 style = typo().titleMedium,
                                 maxLines = 1,
                                 modifier =

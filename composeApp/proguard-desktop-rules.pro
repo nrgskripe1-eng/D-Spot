@@ -106,7 +106,7 @@
 -keep class com.mika.domain.data.model.** { *; }
 -keep class com.mohamedrejeb.ksoup.html.** { *; }
 -keep class org.schabi.newpipe.extractor.downloader.** { *; }
--keep class dev.maxrave.pipepipe.extractor.downloader.** { *; }
+-keep class dev.mika.pipepipe.extractor.downloader.** { *; }
 
 # Koin
 -keep class org.koin.core.** { *; }
@@ -192,7 +192,7 @@
 #}
 ## Rules for NewPipeExtractor
 -keep class org.schabi.newpipe.extractor.timeago.patterns.** { *; }
--keep class dev.maxrave.pipepipe.extractor.timeago.patterns.** { *; }
+-keep class dev.mika.pipepipe.extractor.timeago.patterns.** { *; }
 -keep class org.mozilla.javascript.** { *; }
 -dontwarn org.mozilla.javascript.tools.**
 # Please add these rules to your existing keep rules in order to suppress warning
@@ -308,8 +308,8 @@
 ## Rules for NewPipeExtractor
 -keep class org.schabi.newpipe.extractor.** { *; }
 -keep class org.schabi.newpipe.extractor.timeago.patterns.** { *; }
--keep class dev.maxrave.pipepipe.extractor.** { *; }
--keep class dev.maxrave.pipepipe.extractor.timeago.patterns.** { *; }
+-keep class dev.mika.pipepipe.extractor.** { *; }
+-keep class dev.mika.pipepipe.extractor.timeago.patterns.** { *; }
 -keep class org.mozilla.javascript.** { *; }
 -keep class org.mozilla.classfile.ClassFileWriter
 -dontwarn org.mozilla.javascript.tools.**

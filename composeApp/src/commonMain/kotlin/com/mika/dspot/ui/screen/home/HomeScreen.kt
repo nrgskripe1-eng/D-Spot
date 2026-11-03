@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,6 +73,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -82,6 +85,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -158,6 +165,8 @@ import com.mika.dspot.ui.navigation.destination.home.MoodDestination
 import com.mika.dspot.ui.navigation.destination.home.NotificationDestination
 import com.mika.dspot.ui.navigation.destination.home.RecentlySongsDestination
 import com.mika.dspot.ui.navigation.destination.home.SettingsDestination
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
+import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.mika.dspot.ui.navigation.destination.list.ArtistDestination
 import com.mika.dspot.ui.navigation.destination.list.PodcastDestination
@@ -272,6 +281,7 @@ fun HomeScreen(
     val newRelease by viewModel.newRelease.collectAsStateWithLifecycle()
     val chart by viewModel.chart.collectAsStateWithLifecycle()
     val moodMomentAndGenre by viewModel.exploreMoodItem.collectAsStateWithLifecycle()
+    val moodArtwork by viewModel.moodArtwork.collectAsStateWithLifecycle()
     val chartLoading by viewModel.loadingChart.collectAsStateWithLifecycle()
     val loading by viewModel.loading.collectAsStateWithLifecycle()
     var accountShow by rememberSaveable {
@@ -443,23 +453,22 @@ fun HomeScreen(
         remember {
             derivedStateOf {
                 homeListState != ListState.PAGINATION_EXHAUST &&
+                    !scrollState.isScrollInProgress &&
                     (
                         scrollState.layoutInfo.visibleItemsInfo
                             .lastOrNull()
                             ?.index ?: -9
-                    ) >= (scrollState.layoutInfo.totalItemsCount - 1)
+                    ) >= (scrollState.layoutInfo.totalItemsCount - 3)
             }
         }
 
-    LaunchedEffect(key1 = shouldStartPaginate.value) {
-        Logger.d("HomeScreen", "shouldStartPaginate: ${shouldStartPaginate.value}")
-        Logger.d("HomeScreen", "homeListState: $homeListState")
-        Logger.d("HomeScreen", "Continuation: $continuation")
-        if (shouldStartPaginate.value && homeListState == ListState.IDLE) {
-            viewModel.getContinueHomeItem(
-                continuation,
-            )
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Triple(shouldStartPaginate.value, homeListState, continuation) }
+            .collect { (shouldPaginate, state, cont) ->
+                if (shouldPaginate && state == ListState.IDLE && !cont.isNullOrEmpty()) {
+                    viewModel.getContinueHomeItem(cont)
+                }
+            }
     }
 
 //    if (shouldShowGetDataSyncIdBottomSheet) {
@@ -700,6 +709,7 @@ fun HomeScreen(
     }
 
     Box {
+        val isDesktop = getPlatform() == Platform.Desktop
         PullToRefreshBox(
             modifier =
                 Modifier
@@ -708,22 +718,24 @@ fun HomeScreen(
             onRefresh = onRefresh,
             isRefreshing = isRefreshing,
             indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(
-                                top =
-                                    with(LocalDensity.current) {
-                                        topAppBarHeightPx.toDp()
-                                    },
-                            ),
-                    containerColor = PullToRefreshDefaults.indicatorContainerColor,
-                    color = PullToRefreshDefaults.indicatorColor,
-                    maxDistance = PullToRefreshDefaults.PositionalThreshold,
-                )
+                if (!isDesktop) {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullToRefreshState,
+                        isRefreshing = isRefreshing,
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(
+                                    top =
+                                        with(LocalDensity.current) {
+                                            topAppBarHeightPx.toDp()
+                                        },
+                                ),
+                        containerColor = PullToRefreshDefaults.indicatorContainerColor,
+                        color = PullToRefreshDefaults.indicatorColor,
+                        maxDistance = PullToRefreshDefaults.PositionalThreshold,
+                    )
+                }
             },
         ) {
             Crossfade(targetState = loading, label = "Home Shimmer") { loading ->
@@ -741,12 +753,13 @@ fun HomeScreen(
                         )
                         return@Crossfade
                     }
+                    val isDesktopLayout = getPlatform() == Platform.Desktop
                     LazyColumn(
                         state = scrollState,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isDesktopLayout) 24.dp else 12.dp),
                     ) {
-                        itemsIndexed(homeData, key = { _, item ->
-                            item.hashCode().toString() + (mainHomeThumbnail ?: "nothumb")
+                        itemsIndexed(homeData, key = { index, item ->
+                            "home_item_${item.title}_$index"
                         }) { index, item ->
                             Box {
                                 if (index == 0) {
@@ -776,7 +789,7 @@ fun HomeScreen(
                                 Column(
                                     modifier =
                                         Modifier
-                                            .padding(horizontal = 15.dp),
+                                            .padding(horizontal = if (isDesktop) 24.dp else 15.dp),
                                 ) {
                                     if (index == 0) {
                                         Spacer(
@@ -848,56 +861,68 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        item {
+                        item(key = "paginating_spinner") {
+                            val isExhausted = homeListState == ListState.PAGINATION_EXHAUST
                             AnimatedVisibility(
-                                homeListState == ListState.PAGINATING,
-                                enter = expandVertically() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
+                                visible = !isExhausted,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
                             ) {
-                                CenterLoadingBox(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(200.dp),
-                                )
-                            }
-                        }
-                        if (homeListState == ListState.PAGINATION_EXHAUST) {
-                            items(newRelease, key = { it.hashCode() }) {
-                                AnimatedVisibility(
-                                    visible = newRelease.isNotEmpty(),
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .padding(horizontal = 15.dp),
+                                    AnimatedVisibility(
+                                        homeListState == ListState.PAGINATING,
+                                        enter = fadeIn(),
+                                        exit = fadeOut(),
                                     ) {
-                                        HomeItem(
-                                            navController = navController,
-                                            data = it,
+                                        CenterLoadingBox(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(200.dp),
                                         )
                                     }
                                 }
                             }
-                            item {
-                                AnimatedVisibility(
-                                    visible = moodMomentAndGenre != null,
-                                ) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .padding(horizontal = 15.dp),
-                                    ) {
-                                        moodMomentAndGenre?.let {
-                                            MoodMomentAndGenre(
-                                                mood = it,
-                                                navController = navController,
-                                            )
-                                        }
+                        }
+                        itemsIndexed(newRelease, key = { index, releaseItem -> "new_release_${releaseItem.title}_$index" }) { _, releaseItem ->
+                            AnimatedVisibility(
+                                visible = homeListState == ListState.PAGINATION_EXHAUST && newRelease.isNotEmpty(),
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                            ) {
+                                Box(modifier = Modifier.padding(horizontal = 15.dp)) {
+                                    HomeItem(navController = navController, data = releaseItem)
+                                }
+                            }
+                        }
+                        item(key = "mood_moment_genre") {
+                            AnimatedVisibility(
+                                visible = homeListState == ListState.PAGINATION_EXHAUST && moodMomentAndGenre != null,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                            ) {
+                                Box(modifier = Modifier.padding(horizontal = 15.dp)) {
+                                    moodMomentAndGenre?.let {
+                                        MoodMomentAndGenre(
+                                            mood = it,
+                                            navController = navController,
+                                            moodArtwork = moodArtwork,
+                                            onRequestArtwork = viewModel::loadMoodArtwork,
+                                        )
                                     }
                                 }
                             }
-                            item {
+                        }
+                        item(key = "chart_section") {
+                            AnimatedVisibility(
+                                visible = homeListState == ListState.PAGINATION_EXHAUST,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                            ) {
                                 Column(
                                     Modifier
                                         .padding(vertical = 10.dp)
@@ -918,9 +943,7 @@ fun HomeScreen(
                                             ) {
                                                 viewModel.exploreChart(
                                                     CHART_SUPPORTED_COUNTRY.items[
-                                                        CHART_SUPPORTED_COUNTRY.itemsData.indexOf(
-                                                            it,
-                                                        ),
+                                                        CHART_SUPPORTED_COUNTRY.itemsData.indexOf(it),
                                                     ],
                                                 )
                                             }
@@ -940,17 +963,16 @@ fun HomeScreen(
                                             }
                                         } else {
                                             CenterLoadingBox(
-                                                modifier =
-                                                    Modifier
-                                                        .fillMaxWidth()
-                                                        .height(400.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(400.dp),
                                             )
                                         }
                                     }
                                 }
                             }
                         }
-                        item {
+                        item(key = "end_of_page") {
                             EndOfPage()
                         }
                     }
@@ -989,73 +1011,266 @@ fun HomeScreen(
                             topAppBarHeightPx = coordinates.size.height
                         },
             ) {
-                AnimatedVisibility(
-                    visible = isScrollingUp,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically(),
-                ) {
-                    HomeTopAppBar(navController)
+                if (getPlatform() != Platform.Desktop) {
+                    AnimatedVisibility(
+                        visible = isScrollingUp,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        HomeTopAppBar(navController)
+                    }
+                    AnimatedVisibility(
+                        visible = !isScrollingUp,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Spacer(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(
+                                        WindowInsets.statusBars,
+                                    ),
+                        )
+                    }
                 }
-                AnimatedVisibility(
-                    visible = !isScrollingUp,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically(),
-                ) {
-                    Spacer(
+                if (isDesktop) {
+                    // Desktop: pill nav (Home / Library / Account) on the left,
+                    // mood filter chips on the right — separated by a flexible spacer.
+                    Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .windowInsetsPadding(
-                                    WindowInsets.statusBars,
-                                ),
-                    )
-                }
-                Row(
-                    modifier =
-                        Modifier
-                            .horizontalScroll(chipRowState)
-                            .padding(vertical = 8.dp)
-                            .padding(start = 16.dp, end = 24.dp)
-                            .background(Color.Transparent),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    listOfHomeChip.forEach { id ->
-                        val isSelected =
-                            when (params) {
-                                HOME_PARAMS_RELAX -> id == Res.string.relax
-                                HOME_PARAMS_SLEEP -> id == Res.string.sleep
-                                HOME_PARAMS_ENERGIZE -> id == Res.string.energize
-                                HOME_PARAMS_SAD -> id == Res.string.sad
-                                HOME_PARAMS_ROMANCE -> id == Res.string.romance
-                                HOME_PARAMS_FEEL_GOOD -> id == Res.string.feel_good
-                                HOME_PARAMS_WORKOUT -> id == Res.string.workout
-                                HOME_PARAMS_PARTY -> id == Res.string.party
-                                HOME_PARAMS_COMMUTE -> id == Res.string.commute
-                                HOME_PARAMS_FOCUS -> id == Res.string.focus
-                                else -> id == Res.string.all
-                            }
-                        Chip(
-                            isAnimated = loading,
-                            isSelected = isSelected,
-                            text = stringResource(id),
+                                .padding(vertical = 8.dp)
+                                .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Pill navigation tabs
+                        Row(
+                            modifier =
+                                Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Color(0xFF13141A))
+                                    .padding(3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            when (id) {
-                                Res.string.all -> viewModel.setParams(null)
-                                Res.string.relax -> viewModel.setParams(HOME_PARAMS_RELAX)
-                                Res.string.sleep -> viewModel.setParams(HOME_PARAMS_SLEEP)
-                                Res.string.energize -> viewModel.setParams(HOME_PARAMS_ENERGIZE)
-                                Res.string.sad -> viewModel.setParams(HOME_PARAMS_SAD)
-                                Res.string.romance -> viewModel.setParams(HOME_PARAMS_ROMANCE)
-                                Res.string.feel_good -> viewModel.setParams(HOME_PARAMS_FEEL_GOOD)
-                                Res.string.workout -> viewModel.setParams(HOME_PARAMS_WORKOUT)
-                                Res.string.party -> viewModel.setParams(HOME_PARAMS_PARTY)
-                                Res.string.commute -> viewModel.setParams(HOME_PARAMS_COMMUTE)
-                                Res.string.focus -> viewModel.setParams(HOME_PARAMS_FOCUS)
+                            DesktopNavPill(
+                                label = "Home",
+                                selected = true,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        if (scrollState.firstVisibleItemIndex > 0 || scrollState.firstVisibleItemScrollOffset > 0) {
+                                            scrollState.animateScrollToItem(0)
+                                        }
+                                        onRefresh()
+                                    }
+                                },
+                            )
+                            DesktopNavPill(
+                                label = "Library",
+                                selected = false,
+                                onClick = {
+                                    navController.navigate(LibraryDestination) {
+                                        popUpTo(HomeDestination) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            )
+                            val accountAvatar = accountInfo?.second
+                            val accountName = accountInfo?.first
+                            DesktopNavPill(
+                                label = if (!accountName.isNullOrEmpty()) accountName else "Account",
+                                selected = false,
+                                leadingContent = {
+                                    if (!accountAvatar.isNullOrEmpty()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalPlatformContext.current)
+                                                .data(accountAvatar)
+                                                .diskCachePolicy(CachePolicy.ENABLED)
+                                                .diskCacheKey(accountAvatar)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(18.dp)
+                                                .clip(CircleShape),
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    navController.navigate(AccountDestination) {
+                                        popUpTo(HomeDestination) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        // Mood / filter chips (horizontally scrollable)
+                        Row(
+                            modifier =
+                                Modifier
+                                    .horizontalScroll(chipRowState)
+                                    .background(Color.Transparent),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            listOfHomeChip.forEach { id ->
+                                val isSelected =
+                                    when (params) {
+                                        HOME_PARAMS_RELAX -> id == Res.string.relax
+                                        HOME_PARAMS_SLEEP -> id == Res.string.sleep
+                                        HOME_PARAMS_ENERGIZE -> id == Res.string.energize
+                                        HOME_PARAMS_SAD -> id == Res.string.sad
+                                        HOME_PARAMS_ROMANCE -> id == Res.string.romance
+                                        HOME_PARAMS_FEEL_GOOD -> id == Res.string.feel_good
+                                        HOME_PARAMS_WORKOUT -> id == Res.string.workout
+                                        HOME_PARAMS_PARTY -> id == Res.string.party
+                                        HOME_PARAMS_COMMUTE -> id == Res.string.commute
+                                        HOME_PARAMS_FOCUS -> id == Res.string.focus
+                                        else -> id == Res.string.all
+                                    }
+                                Chip(
+                                    isAnimated = loading,
+                                    isSelected = isSelected,
+                                    text = stringResource(id),
+                                ) {
+                                    when (id) {
+                                        Res.string.all -> viewModel.setParams(null)
+                                        Res.string.relax -> viewModel.setParams(HOME_PARAMS_RELAX)
+                                        Res.string.sleep -> viewModel.setParams(HOME_PARAMS_SLEEP)
+                                        Res.string.energize -> viewModel.setParams(HOME_PARAMS_ENERGIZE)
+                                        Res.string.sad -> viewModel.setParams(HOME_PARAMS_SAD)
+                                        Res.string.romance -> viewModel.setParams(HOME_PARAMS_ROMANCE)
+                                        Res.string.feel_good -> viewModel.setParams(HOME_PARAMS_FEEL_GOOD)
+                                        Res.string.workout -> viewModel.setParams(HOME_PARAMS_WORKOUT)
+                                        Res.string.party -> viewModel.setParams(HOME_PARAMS_PARTY)
+                                        Res.string.commute -> viewModel.setParams(HOME_PARAMS_COMMUTE)
+                                        Res.string.focus -> viewModel.setParams(HOME_PARAMS_FOCUS)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Non-desktop: original horizontally scrollable chip row
+                    Row(
+                        modifier =
+                            Modifier
+                                .horizontalScroll(chipRowState)
+                                .padding(vertical = 8.dp)
+                                .padding(start = 16.dp, end = 24.dp)
+                                .background(Color.Transparent),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Chip(
+                            isAnimated = false,
+                            isSelected = false,
+                            text = stringResource(Res.string.recently_added),
+                        ) {
+                            navController.navigate(RecentlySongsDestination)
+                        }
+                        listOfHomeChip.forEach { id ->
+                            val isSelected =
+                                when (params) {
+                                    HOME_PARAMS_RELAX -> id == Res.string.relax
+                                    HOME_PARAMS_SLEEP -> id == Res.string.sleep
+                                    HOME_PARAMS_ENERGIZE -> id == Res.string.energize
+                                    HOME_PARAMS_SAD -> id == Res.string.sad
+                                    HOME_PARAMS_ROMANCE -> id == Res.string.romance
+                                    HOME_PARAMS_FEEL_GOOD -> id == Res.string.feel_good
+                                    HOME_PARAMS_WORKOUT -> id == Res.string.workout
+                                    HOME_PARAMS_PARTY -> id == Res.string.party
+                                    HOME_PARAMS_COMMUTE -> id == Res.string.commute
+                                    HOME_PARAMS_FOCUS -> id == Res.string.focus
+                                    else -> id == Res.string.all
+                                }
+                            Chip(
+                                isAnimated = loading,
+                                isSelected = isSelected,
+                                text = stringResource(id),
+                            ) {
+                                when (id) {
+                                    Res.string.all -> viewModel.setParams(null)
+                                    Res.string.relax -> viewModel.setParams(HOME_PARAMS_RELAX)
+                                    Res.string.sleep -> viewModel.setParams(HOME_PARAMS_SLEEP)
+                                    Res.string.energize -> viewModel.setParams(HOME_PARAMS_ENERGIZE)
+                                    Res.string.sad -> viewModel.setParams(HOME_PARAMS_SAD)
+                                    Res.string.romance -> viewModel.setParams(HOME_PARAMS_ROMANCE)
+                                    Res.string.feel_good -> viewModel.setParams(HOME_PARAMS_FEEL_GOOD)
+                                    Res.string.workout -> viewModel.setParams(HOME_PARAMS_WORKOUT)
+                                    Res.string.party -> viewModel.setParams(HOME_PARAMS_PARTY)
+                                    Res.string.commute -> viewModel.setParams(HOME_PARAMS_COMMUTE)
+                                    Res.string.focus -> viewModel.setParams(HOME_PARAMS_FOCUS)
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun DesktopNavPill(
+    label: String,
+    selected: Boolean,
+    leadingContent: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val bgColor by animateColorAsState(
+        targetValue =
+            when {
+                selected -> Color.White
+                isHovered -> MaterialTheme.colorScheme.surfaceContainerHighest
+                else -> Color.Transparent
+            },
+        animationSpec = tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "pillBg",
+    )
+    val textColor by animateColorAsState(
+        targetValue =
+            when {
+                selected -> Color(0xFF0C0C0F)
+                isHovered -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        animationSpec = tween(180),
+        label = "pillText",
+    )
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(17.dp))
+                .background(bgColor)
+                .hoverable(interactionSource)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                ).padding(horizontal = 14.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            leadingContent?.invoke()
+            Text(
+                text = label,
+                style = typo().labelMedium.copy(
+                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                    fontSize = 13.sp,
+                ),
+                color = textColor,
+            )
         }
     }
 }
@@ -1105,58 +1320,14 @@ fun HomeTopAppBar(navController: NavController) {
             }
         },
         actions = {
-            var menuExpanded by remember { mutableStateOf(false) }
+            ListenTogetherIconButton {
+                navController.navigate(ListenTogetherDestination)
+            }
             RippleIconButton(imageVector = SimpIcons.Notifications, tint = MaterialTheme.colorScheme.onBackground) {
                 navController.navigate(NotificationDestination)
             }
-            Box {
-                RippleIconButton(imageVector = SimpIcons.MoreVert, tint = MaterialTheme.colorScheme.onBackground) {
-                    menuExpanded = true
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.recently_added)) },
-                        onClick = {
-                            menuExpanded = false
-                            navController.navigate(RecentlySongsDestination)
-                        },
-                        leadingIcon = {
-                            androidx.compose.material3.Icon(
-                                imageVector = SimpIcons.History,
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.listen_together)) },
-                        onClick = {
-                            menuExpanded = false
-                            navController.navigate(ListenTogetherDestination)
-                        },
-                        leadingIcon = {
-                            androidx.compose.material3.Icon(
-                                imageVector = SimpIcons.Groups,
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.settings)) },
-                        onClick = {
-                            menuExpanded = false
-                            navController.navigate(SettingsDestination)
-                        },
-                        leadingIcon = {
-                            androidx.compose.material3.Icon(
-                                imageVector = SimpIcons.Settings,
-                                contentDescription = null,
-                            )
-                        },
-                    )
-                }
+            RippleIconButton(imageVector = SimpIcons.Settings, tint = MaterialTheme.colorScheme.onBackground) {
+                navController.navigate(SettingsDestination)
             }
         },
         colors =
@@ -1302,10 +1473,27 @@ fun QuickPicks(
                 }
             }
         }
+        val isDesktop = getPlatform() == Platform.Desktop
+        val columnWidth =
+            if (isPortrait) {
+                widthDp
+            } else if (isDesktop) {
+                // On wide desktop screens, comfortably fit 3 or 4 columns (approx 320.dp - 360.dp each)
+                // without stretching single lines or wrapping awkwardly.
+                val available = (widthDp - 32.dp).coerceAtLeast(300.dp)
+                val targetCols = (available / 340.dp).toInt().coerceIn(2, 4)
+                (available / targetCols).coerceIn(300.dp, 380.dp)
+            } else {
+                minOf(widthDp, LandscapeGridItemMaxWidth + 30.dp)
+            }
+
+        Spacer(Modifier.height(12.dp))
         LazyHorizontalGrid(
             rows = GridCells.Fixed(4),
             modifier = Modifier.height(290.dp),
             state = lazyListState,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             flingBehavior = snapperFlingBehavior,
         ) {
             items(homeItem.contents, key = { it.hashCode() }) {
@@ -1333,7 +1521,7 @@ fun QuickPicks(
                             bottomSheetShow = true
                         },
                         data = it,
-                        widthDp = if (isPortrait) widthDp else minOf(widthDp, LandscapeGridItemMaxWidth + 30.dp),
+                        widthDp = columnWidth,
                     )
                 }
             }
@@ -1350,11 +1538,21 @@ fun QuickPicks(
 fun MoodMomentAndGenre(
     mood: Mood,
     navController: NavController,
+    moodArtwork: Map<String, String> = emptyMap(),
+    onRequestArtwork: (String) -> Unit = {},
 ) {
-    Column(
-        Modifier
-            .padding(vertical = 8.dp),
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
     ) {
+        // Responsive column count: 4 on wide, 3 mid, 2 narrow.
+        // Computed synchronously from BoxWithConstraints maxWidth, ensuring rock-solid layout height.
+        val columns = when {
+            maxWidth >= 600.dp -> 4
+            maxWidth >= 400.dp -> 3
+            else -> 2
+        }
+
+        Column(Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(Res.string.let_s_pick_a_playlist_for_you),
             style = typo().bodyMedium,
@@ -1364,8 +1562,6 @@ fun MoodMomentAndGenre(
         // index) mislabelled every row as soon as a signed-in account got an extra
         // "For you" section, and hid the real Genres section altogether.
         mood.sections.forEach { section ->
-            val gridState = rememberLazyGridState()
-            val flingBehavior = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = gridState))
             Text(
                 text = section.title,
                 style = typo().headlineMedium,
@@ -1376,32 +1572,46 @@ fun MoodMomentAndGenre(
                         .fillMaxWidth()
                         .padding(vertical = 5.dp),
             )
-            LazyHorizontalGrid(
-                rows = GridCells.Fixed(3),
-                modifier = Modifier.height(210.dp),
-                state = gridState,
-                flingBehavior = flingBehavior,
-            ) {
-                items(section.items, key = { it.params }) { item ->
-                    MoodMomentAndGenreHomeItem(
-                        title = item.title,
-                        stripeColor = item.stripeColor,
+            // Manual grid: chunked rows so we avoid nested lazy lists inside the parent LazyColumn.
+            val rows = section.items.chunked(columns)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                rows.forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        navController.navigate(
-                            MoodDestination(
-                                item.params,
-                            ),
-                        )
+                        row.forEach { item ->
+                            // LaunchedEffect fires once per item when it first enters composition
+                            // (i.e., when it scrolls into view) — this IS the lazy request dedup.
+                            LaunchedEffect(item.params) {
+                                onRequestArtwork(item.params)
+                            }
+                            Box(Modifier.weight(1f)) {
+                                MoodMomentAndGenreHomeItem(
+                                    title = item.title,
+                                    stripeColor = item.stripeColor,
+                                    artworkUrl = moodArtwork[item.params],
+                                    fillMaxWidth = true,
+                                ) {
+                                    navController.navigate(
+                                        MoodDestination(
+                                            item.params,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        // Pad the last row so incomplete rows don't stretch tiles.
+                        repeat(columns - row.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
             }
-            HorizontalScrollBar(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                scrollState = gridState,
-                flingBehavior = flingBehavior,
-            )
+            Spacer(Modifier.height(8.dp))
         }
     }
+}
 }
 
 @Composable
@@ -1429,22 +1639,14 @@ fun ChartData(
     chart: Chart,
     navController: NavController,
 ) {
-    var gridWidthDp by remember {
-        mutableStateOf(0.dp)
-    }
-    val density = LocalDensity.current
-
     val lazyListState2 = rememberLazyGridState()
     val snapperFlingBehavior2 = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = lazyListState2))
     val isPortrait = getScreenSizeInfo().let { it.wDP < it.hDP }
 
-    Column(
-        Modifier.onGloballyPositioned { coordinates ->
-            with(density) {
-                gridWidthDp = (coordinates.size.width).toDp()
-            }
-        },
-    ) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gridWidthDp = maxWidth
+
+        Column(Modifier.fillMaxWidth()) {
         chart.listChartItem.forEach { item ->
             Text(
                 text = item.title,
@@ -1554,4 +1756,5 @@ fun ChartData(
             )
         }
     }
+}
 }

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,18 +61,13 @@ fun MoodCategoryCard(
                     val radius = size.height * 0.09f
                     val centerX = size.width - radius * 2f
                     val centerY = radius * 2f
-                    drawCircle(
-                        center = Offset(centerX, centerY),
-                        color = Color.White,
-                        radius = radius,
-                    )
                     val badgeSize = size.copy(width = radius * 3f, height = radius * 3f)
                     translate(
                         left = centerX - badgeSize.width / 2f,
                         top = centerY - badgeSize.height / 2f,
                     ) {
                         with(badge) {
-                            draw(badgeSize, alpha = 0.2f)
+                            draw(badgeSize, alpha = 0.85f, colorFilter = ColorFilter.tint(Color.White))
                         }
                     }
                 }.clickable(onClick = onClick),

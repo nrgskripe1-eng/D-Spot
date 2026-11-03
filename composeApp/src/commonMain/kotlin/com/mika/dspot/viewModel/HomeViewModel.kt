@@ -1,6 +1,7 @@
-﻿package com.mika.dspot.viewModel
+package com.mika.dspot.viewModel
 
 import androidx.lifecycle.viewModelScope
+import com.mika.common.CHART_SUPPORTED_COUNTRY
 import com.mika.common.SELECTED_LANGUAGE
 import com.mika.common.SUPPORTED_LANGUAGE
 import com.mika.domain.data.entities.SongEntity
@@ -14,6 +15,7 @@ import com.mika.domain.repository.HomeRepository
 import com.mika.domain.utils.Resource
 import com.mika.logger.Logger
 import com.mika.dspot.viewModel.base.BaseViewModel
+import androidx.compose.ui.text.intl.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,10 +37,20 @@ import dspot.composeapp.generated.resources.new_release
 import dspot.composeapp.generated.resources.song
 import dspot.composeapp.generated.resources.view_count
 
+import com.mika.common.Config
+import com.mika.domain.data.entities.PlaylistEntity
+import com.mika.domain.data.type.RecentlyType
+import com.mika.domain.repository.CommonRepository
+import com.mika.domain.utils.isRadioPlaylistId
+
 class HomeViewModel(
     private val dataStoreManager: DataStoreManager,
     private val homeRepository: HomeRepository,
+    private val commonRepository: CommonRepository,
 ) : BaseViewModel() {
+    private val _recentlyPlayed = MutableStateFlow<List<RecentlyType>>(emptyList())
+    val recentlyPlayed: StateFlow<List<RecentlyType>> = _recentlyPlayed
+
     private val _homeItemList: MutableStateFlow<List<HomeItem>> =
         MutableStateFlow(arrayListOf())
     val homeItemList: StateFlow<List<HomeItem>> = _homeItemList
@@ -68,6 +81,11 @@ class HomeViewModel(
     private var regionCode: String = ""
     private var language: String = ""
 
+    // Non-null when the selected region returned no data and we fell back to Global.
+    // Holds the display name of the country that had no data.
+    private val _chartFallbackCountry: MutableStateFlow<String?> = MutableStateFlow(null)
+    val chartFallbackCountry: StateFlow<String?> = _chartFallbackCountry
+
     private val _songEntity: MutableStateFlow<SongEntity?> = MutableStateFlow(null)
     val songEntity: StateFlow<SongEntity?> = _songEntity
 
@@ -86,6 +104,11 @@ class HomeViewModel(
     private val _mainHomeThumbnail: MutableStateFlow<String?> = MutableStateFlow(null)
     val mainHomeThumbnail: StateFlow<String?> = _mainHomeThumbnail
 
+    /** Cover art per mood/genre category params, filled in lazily as tiles enter the viewport. */
+    private val _moodArtwork: MutableStateFlow<Map<String, String>> = MutableStateFlow(emptyMap())
+    val moodArtwork: StateFlow<Map<String, String>> get() = _moodArtwork.asStateFlow()
+    private val requestedMoodArtwork = mutableSetOf<String>()
+
     init {
         if (runBlocking { dataStoreManager.cookie.first() }.isEmpty() &&
             runBlocking {
@@ -96,8 +119,15 @@ class HomeViewModel(
         }
         homeJob = Job()
         viewModelScope.launch {
-            regionCodeChart.value = dataStoreManager.chartKey.first()
-            exploreChart(regionCodeChart.value ?: "ZZ")
+            val savedKey = dataStoreManager.chartKey.first()
+            val initialRegion = if (savedKey.isEmpty()) {
+                // User has never explicitly chosen a region — auto-detect from device locale.
+                resolveDefaultChartRegion()
+            } else {
+                savedKey
+            }
+            regionCodeChart.value = initialRegion
+            exploreChart(initialRegion)
             language = dataStoreManager.getString(SELECTED_LANGUAGE).first()
                 ?: SUPPORTED_LANGUAGE.codes.first()
             //  refresh when region change
@@ -168,6 +198,21 @@ class HomeViewModel(
             job5.join()
             job6.join()
         }
+        viewModelScope.launch {
+            dataStoreManager.localTrackingEnabled.collectLatest { tracking ->
+                if (tracking == DataStoreManager.FALSE) {
+                    _recentlyPlayed.value = emptyList()
+                } else {
+                    commonRepository.getAllRecentData().collectLatest { data ->
+                        val temp = data.toMutableList()
+                        temp.removeAll { it is PlaylistEntity && it.id.isRadioPlaylistId() }
+                        temp.removeAll { it is SongEntity && it.inLibrary == Config.REMOVED_SONG_DATE_TIME }
+                        temp.reverse()
+                        _recentlyPlayed.value = temp.take(10)
+                    }
+                }
+            }
+        }
     }
 
     fun doneShowLogInAlert(neverShowAgain: Boolean = false) {
@@ -175,6 +220,21 @@ class HomeViewModel(
             _showLogInAlert.update { false }
             if (neverShowAgain) {
                 dataStoreManager.setShouldShowLogInRequiredAlert(false)
+            }
+        }
+    }
+
+    /**
+     * Resolve the cover for one mood/genre category. Only one request per [params] is ever made —
+     * [requestedMoodArtwork] dedupes re-entries as a tile scrolls in and out of view.
+     */
+    fun loadMoodArtwork(params: String) {
+        if (!requestedMoodArtwork.add(params)) return
+        viewModelScope.launch {
+            homeRepository.getMoodCategoryArtwork(params).collect { url ->
+                if (url != null) {
+                    _moodArtwork.update { it + (params to url) }
+                }
             }
         }
     }
@@ -328,23 +388,73 @@ class HomeViewModel(
     fun exploreChart(region: String) {
         viewModelScope.launch {
             loadingChart.value = true
+            _chartFallbackCountry.value = null
             homeRepository
                 .getChartData(
                     region,
                 ).collect { values ->
-                    regionCodeChart.value = region
-                    dataStoreManager.setChartKey(region)
                     when (values) {
                         is Resource.Success -> {
-                            _chart.value = values.data
+                            if (values.data != null) {
+                                _chart.value = values.data
+                                regionCodeChart.value = region
+                                dataStoreManager.setChartKey(region)
+                            } else {
+                                // No chart data for this region — fall back to Global
+                                fallbackToGlobal(region)
+                            }
                         }
 
                         else -> {
-                            _chart.value = null
+                            // Error or empty — fall back to Global if not already ZZ
+                            if (region != "ZZ") {
+                                fallbackToGlobal(region)
+                            } else {
+                                _chart.value = null
+                                regionCodeChart.value = region
+                                dataStoreManager.setChartKey(region)
+                            }
                         }
                     }
                     loadingChart.value = false
                 }
+        }
+    }
+
+    private suspend fun fallbackToGlobal(failedRegion: String) {
+        // Look up the display name for the failed region
+        val idx = CHART_SUPPORTED_COUNTRY.items.indexOf(failedRegion)
+        val countryName = if (idx >= 0) CHART_SUPPORTED_COUNTRY.itemsData[idx] else failedRegion
+        _chartFallbackCountry.value = countryName
+
+        homeRepository
+            .getChartData("ZZ")
+            .collect { fallbackValues ->
+                when (fallbackValues) {
+                    is Resource.Success -> {
+                        _chart.value = fallbackValues.data
+                    }
+                    else -> {
+                        _chart.value = null
+                    }
+                }
+                regionCodeChart.value = "ZZ"
+                dataStoreManager.setChartKey("ZZ")
+            }
+    }
+
+    /**
+     * Resolves the default chart region from the device locale.
+     * Priority: device country (if YouTube Music has a chart for it) → PH → ZZ.
+     */
+    private fun resolveDefaultChartRegion(): String {
+        val tag = Locale.current.toLanguageTag() // e.g. "en-US", "fil-PH"
+        val deviceCountry = tag.substringAfter('-', "").uppercase().takeIf { it.length == 2 } ?: ""
+        val supportedCountries = CHART_SUPPORTED_COUNTRY.items
+        return when {
+            deviceCountry.isNotEmpty() && deviceCountry in supportedCountries -> deviceCountry
+            "PH" in supportedCountries -> "PH"
+            else -> "ZZ"
         }
     }
 

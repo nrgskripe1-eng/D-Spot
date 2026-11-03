@@ -1,4 +1,4 @@
-﻿@file:Suppress("ktlint:standard:no-wildcard-imports")
+@file:Suppress("ktlint:standard:no-wildcard-imports")
 
 package com.mika.dspot.viewModel
 
@@ -26,6 +26,7 @@ import com.mika.domain.utils.toListVideoId
 import com.mika.domain.utils.toPlaylistEntity
 import com.mika.domain.utils.toSongEntity
 import com.mika.domain.utils.toTrack
+import com.mika.dspot.extension.cleanBrandText
 import com.mika.logger.Logger
 import com.mika.dspot.viewModel.PlaylistUIState.Error
 import com.mika.dspot.viewModel.PlaylistUIState.Loading
@@ -239,9 +240,9 @@ class PlaylistViewModel(
                                         data =
                                             PlaylistState(
                                                 id = data.first.id,
-                                                title = data.first.title,
+                                                title = data.first.title.cleanBrandText(),
                                                 isRadio = false,
-                                                author = data.first.author,
+                                                author = data.first.author.copy(name = data.first.author.name.cleanBrandText()),
                                                 thumbnail =
                                                     data.first.thumbnails
                                                         .lastOrNull()

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.expect.ui
+package com.mika.dspot.expect.ui
 
 import androidx.compose.foundation.HorizontalScrollbar
 import androidx.compose.foundation.ScrollbarStyle
@@ -22,14 +22,22 @@ import androidx.compose.ui.unit.dp
 import com.mika.dspot.Platform
 import com.mika.dspot.getPlatform
 
-private val scrollBarStyle =
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+
+private val miniCapsuleStyle =
     ScrollbarStyle(
-        minimalHeight = 8.dp,
-        thickness = 4.dp,
-        shape = RoundedCornerShape(8.dp),
-        hoverDurationMillis = 300,
-        unhoverColor = Color.Gray.copy(alpha = 0.2f),
-        hoverColor = Color.Gray.copy(alpha = 0.6f),
+        minimalHeight = 16.dp,
+        thickness = 3.dp,
+        shape = RoundedCornerShape(10.dp),
+        hoverDurationMillis = 200,
+        unhoverColor = Color.White.copy(alpha = 0.5f),
+        hoverColor = Color(0xFF8ECAE6),
     )
 
 /**
@@ -63,15 +71,29 @@ actual fun HorizontalScrollBar(
 ) {
     val interactionSource = rememberSnapOnThumbRelease(scrollState, flingBehavior)
     if (getPlatform() == Platform.Desktop) {
-        HorizontalScrollbar(
-            modifier = modifier,
-            style = scrollBarStyle,
-            adapter =
-                rememberScrollbarAdapter(
-                    scrollState = scrollState,
-                ),
-            interactionSource = interactionSource,
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .width(68.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+            ) {
+                HorizontalScrollbar(
+                    modifier = Modifier.width(64.dp),
+                    style = miniCapsuleStyle,
+                    adapter =
+                        rememberScrollbarAdapter(
+                            scrollState = scrollState,
+                        ),
+                    interactionSource = interactionSource,
+                )
+            }
+        }
     }
 }
 
@@ -81,23 +103,30 @@ actual fun HorizontalScrollBar(
     scrollState: LazyGridState,
     flingBehavior: FlingBehavior?,
 ) {
-    // LazyGridScrollbarAdapter reads the grid's orientation ONCE, in its constructor, and until the
-    // grid's first measure the state reports the empty layout, whose orientation is Vertical. An
-    // adapter created alongside the grid therefore treats a horizontal grid as vertical for good:
-    // it measures rows against the height, finds nothing to scroll and draws no thumb. Create it
-    // only once the grid has measured as horizontal.
     val measuredHorizontal by remember(scrollState) {
         derivedStateOf { scrollState.layoutInfo.orientation == Orientation.Horizontal }
     }
     val interactionSource = rememberSnapOnThumbRelease(scrollState, flingBehavior)
     if (getPlatform() == Platform.Desktop && measuredHorizontal) {
-        HorizontalScrollbar(
-            modifier = modifier,
-            style = scrollBarStyle,
-            // The LazyGridState overload is the v2 adapter (JVM name rememberScrollbarAdapter2),
-            // taken by the v2 HorizontalScrollbar overload.
-            adapter = rememberScrollbarAdapter(scrollState = scrollState),
-            interactionSource = interactionSource,
-        )
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .width(68.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+            ) {
+                HorizontalScrollbar(
+                    modifier = Modifier.width(64.dp),
+                    style = miniCapsuleStyle,
+                    adapter = rememberScrollbarAdapter(scrollState = scrollState),
+                    interactionSource = interactionSource,
+                )
+            }
+        }
     }
 }

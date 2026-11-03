@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -50,14 +50,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import com.mika.domain.utils.toSongEntity
+import com.mika.dspot.Platform
+import com.mika.dspot.getPlatform
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -143,6 +151,25 @@ fun SongFullWidthItems(
         .collectAsState(initial = DownloadState.STATE_NOT_DOWNLOADED)
     val offsetX = remember { Animatable(initialValue = 0f) }
     var heightDp by remember { mutableStateOf(0.dp) }
+    val isDesktop = getPlatform() == Platform.Desktop
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf<IntOffset?>(null) }   // right-click cursor
+    var moreVertBounds by remember { mutableStateOf<IntRect?>(null) }        // MoreVert button bounds
+    var rowWindowPos by remember { mutableStateOf(IntOffset.Zero) }
+
+    if (isDesktop && showContextMenu) {
+        val targetSong = songEntity ?: track?.toSongEntity()
+        DesktopSongContextMenu(
+            song                 = targetSong,
+            windowOffset         = contextMenuOffset,
+            anchorBoundsInWindow = if (contextMenuOffset == null) moreVertBounds else null,
+            onDismiss = {
+                showContextMenu  = false
+                contextMenuOffset = null
+                moreVertBounds   = null
+            },
+        )
+    }
 
     Box(
         modifier =
@@ -195,10 +222,29 @@ fun SongFullWidthItems(
                                 null
                             },
                     ).animateContentSize()
+                    .pointerInput(isDesktop, selectionMode) {
+                        if (isDesktop && !selectionMode) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == androidx.compose.ui.input.pointer.PointerEventType.Press &&
+                                        event.buttons.isSecondaryPressed
+                                    ) {
+                                        val pos = event.changes.firstOrNull()?.position ?: androidx.compose.ui.geometry.Offset.Zero
+                                        contextMenuOffset = IntOffset(
+                                            (rowWindowPos.x + pos.x).roundToInt(),
+                                            (rowWindowPos.y + pos.y).roundToInt(),
+                                        )
+                                        showContextMenu = true
+                                    }
+                                }
+                            }
+                        }
+                    }
                     // Keyed on selectionMode so the swipe detector is torn down when selection
                     // starts — keyed on Unit it would keep running with the stale flag captured.
                     .pointerInput(selectionMode) {
-                        if (!isPlaying && onAddToQueue != null && !selectionMode) {
+                        if (!isPlaying && onAddToQueue != null && !selectionMode && !isDesktop) {
                             detectHorizontalDragGestures(
                                 onHorizontalDrag = { change, dragAmount ->
                                     if (offsetX.value + dragAmount > 0) {
@@ -226,6 +272,8 @@ fun SongFullWidthItems(
                         with(density) {
                             heightDp = coordinates.size.height.toDp()
                         }
+                        val pos = coordinates.positionInWindow()
+                        rowWindowPos = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
                     },
         ) {
             Row(
@@ -383,8 +431,38 @@ fun SongFullWidthItems(
                 // Hidden while selecting: the per-item menu moves up to the selection app bar,
                 // so one tap cannot mean both "act on this song" and "pick this song".
                 if (onMoreClickListener != null && !selectionMode) {
-                    RippleIconButton(imageVector = SimpIcons.MoreVert, fillMaxSize = false, tint = contentColor) {
-                        if (itemVideoId.isNotBlank()) onMoreClickListener.invoke(itemVideoId)
+                    if (isDesktop) {
+                        // On Desktop: capture the button bounds and open anchored context menu.
+                        Box(
+                            modifier = Modifier.onGloballyPositioned { coords ->
+                                val r = coords.boundsInWindow()
+                                moreVertBounds = IntRect(
+                                    left   = r.left.toInt(),
+                                    top    = r.top.toInt(),
+                                    right  = r.right.toInt(),
+                                    bottom = r.bottom.toInt(),
+                                )
+                            },
+                        ) {
+                            RippleIconButton(
+                                imageVector = SimpIcons.MoreVert,
+                                fillMaxSize = false,
+                                tint        = contentColor,
+                            ) {
+                                if (itemVideoId.isNotBlank()) {
+                                    contextMenuOffset = null
+                                    showContextMenu   = true
+                                }
+                            }
+                        }
+                    } else {
+                        RippleIconButton(
+                            imageVector = SimpIcons.MoreVert,
+                            fillMaxSize = false,
+                            tint        = contentColor,
+                        ) {
+                            if (itemVideoId.isNotBlank()) onMoreClickListener.invoke(itemVideoId)
+                        }
                     }
                 }
                 AnimatedVisibility(

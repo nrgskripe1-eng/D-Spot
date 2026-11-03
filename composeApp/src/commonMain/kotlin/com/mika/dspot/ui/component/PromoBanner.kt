@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.kyant.backdrop.highlight.Highlight
 import com.mika.dspot.expect.ui.layerBackdrop
@@ -36,6 +37,13 @@ val LocalNowPlayingOpen = compositionLocalOf { false }
  * A launch banner that has not had its turn yet then waits for a later launch.
  */
 val LocalUserStarted = compositionLocalOf { false }
+
+/**
+ * The app-level [NavController] provided by [App] for the whole navigation graph.
+ * Desktop-only components (e.g. [DesktopSongContextMenu]) read it to navigate without needing
+ * an explicit parameter passed all the way through the item-list hierarchy.
+ */
+val LocalNavController = compositionLocalOf<NavController?> { null }
 
 // Banners are portrait 720×1280 pictures; one of another shape is fitted, centred, inside this frame.
 private const val BANNER_ASPECT_RATIO = 9f / 16f

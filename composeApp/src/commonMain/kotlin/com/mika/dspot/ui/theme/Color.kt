@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.theme
+package com.mika.dspot.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -35,7 +35,7 @@ val blackMoreOverlay = Color(0x8f242424)
 
 val desktopWindowDark = Color(0xFF000000)
 val desktopWindowLight = Color(0xFFFFFFFF)
-val desktopPanelDark = Color(0xFF121212)
+val desktopPanelDark = Color(0xFF0C0C0F)
 
 // ===== Desktop window controls =====
 // The macOS traffic lights. Fixed by convention rather than by theme — users read these by

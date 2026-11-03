@@ -136,6 +136,7 @@ import com.mika.dspot.ui.icon.Close
 import com.mika.dspot.ui.icon.Error
 import com.mika.dspot.ui.icon.PeopleAlt
 import com.mika.dspot.ui.icon.PlaylistAdd
+import com.mika.dspot.ui.icon.Search
 import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.home.AppLogDestination
 import com.mika.dspot.ui.navigation.destination.home.AudioCutterDestination
@@ -197,6 +198,7 @@ import dspot.composeapp.generated.resources.shake_to_shuffle
 import dspot.composeapp.generated.resources.shake_to_shuffle_description
 import dspot.composeapp.generated.resources.yt_playlist_sync
 import dspot.composeapp.generated.resources.yt_playlist_sync_description
+import dspot.composeapp.generated.resources.search
 import dspot.composeapp.generated.resources.audio_cutter
 import dspot.composeapp.generated.resources.audio_cutter_description
 import dspot.composeapp.generated.resources.earphone_customizer
@@ -443,6 +445,7 @@ import dspot.composeapp.generated.resources.theme_color_wallpaper
 import dspot.composeapp.generated.resources.theme_mode_dark
 import dspot.composeapp.generated.resources.theme_mode_light
 import dspot.composeapp.generated.resources.theme_mode_system
+import dspot.composeapp.generated.resources.theme_mode_amoled
 import dspot.composeapp.generated.resources.third_party_libraries
 import dspot.composeapp.generated.resources.thumbnail_cache
 import dspot.composeapp.generated.resources.translation_language
@@ -646,6 +649,11 @@ fun SettingScreen(
     var settingSearchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    // Returns true when the query is blank (show everything) or when any of the provided
+    // strings contain the query — used to filter setting groups and their items.
+    fun matchesQuery(vararg texts: String): Boolean =
+        settingSearchQuery.isBlank() ||
+            texts.any { it.contains(settingSearchQuery, ignoreCase = true) }
     var showLoginSyncDialog by rememberSaveable {
         mutableStateOf(false)
     }
@@ -701,6 +709,13 @@ fun SettingScreen(
                 .padding(horizontal = listSidePadding)
                 .hazeSource(hazeState),
     ) {
+        // ── user_interface: Login/Sync + UI ─────────────────────────────────
+        val showUserInterface =
+            matchesQuery(
+                "login", "sync", "user interface", "theme", "dark", "light",
+                "now playing", "style", "lyrics style", "apple music", "spotify",
+                "romanization", "theme color", "custom color", "liquid glass",
+            )
         item(key = "user_interface") {
             Column {
                 // Was its own item. Folded in so item 0 is taller than the glow — the glow's
@@ -754,7 +769,8 @@ fun SettingScreen(
                 )
                 // Above every section, and inside item 0 rather than an item of its own, for the
                 // glow reason above.
-                SettingGroup(
+                // Login/Sync group — visible when query matches it
+                if (matchesQuery("login", "sync", "connect")) SettingGroup(
                     title = stringResource(Res.string.login_sync_section),
                     modifier = Modifier.onSizeChanged { devicesGroupHeightPx = it.height },
                 ) {
@@ -774,12 +790,14 @@ fun SettingScreen(
                         onClick = { showLoginSyncDialog = true },
                     )
                 }
-                SettingGroup(title = stringResource(Res.string.user_interface)) {
+                // User Interface group — visible when query matches it
+                if (showUserInterface) SettingGroup(title = stringResource(Res.string.user_interface)) {
                     val themeModeLabels =
                         listOf(
                             DataStoreManager.THEME_MODE_SYSTEM to stringResource(Res.string.theme_mode_system),
                             DataStoreManager.THEME_MODE_DARK to stringResource(Res.string.theme_mode_dark),
                             DataStoreManager.THEME_MODE_LIGHT to stringResource(Res.string.theme_mode_light),
+                            DataStoreManager.THEME_MODE_AMOLED to stringResource(Res.string.theme_mode_amoled),
                         )
                     SettingItem(
                         title = stringResource(Res.string.theme),
@@ -1007,16 +1025,17 @@ fun SettingScreen(
                 }
             }
         }
+        // ── content ────────────────────────────────────────────────────────
+        val showContent =
+            matchesQuery(
+                "content", "youtube account", "language", "content country",
+                "audio language", "quality", "download quality", "video quality",
+                "auto download", "liked songs", "play video", "radio audio",
+                "sync follow", "send back", "listening data", "google",
+                "explicit", "youtube playlist", "proxy", "lockscreen", "animated canvas",
+            )
         item(key = "content") {
-            SettingGroup(title = stringResource(Res.string.content)) {
-                SettingItem(
-                    title = stringResource(Res.string.youtube_account),
-                    subtitle = stringResource(Res.string.manage_your_youtube_accounts),
-                    onClick = {
-                        viewModel.getAllGoogleAccount()
-                        showYouTubeAccountDialog = true
-                    },
-                )
+            if (showContent) SettingGroup(title = stringResource(Res.string.content)) {
                 SettingItem(
                     title = stringResource(Res.string.language),
                     subtitle = SUPPORTED_LANGUAGE.getLanguageFromCode(language ?: "en-US"),
@@ -1437,9 +1456,15 @@ fun SettingScreen(
                 )
             }
         }
+        // ── audio (Android only) ────────────────────────────────────────────
+        val showAudio =
+            matchesQuery(
+                "audio", "normalize", "volume", "skip silent", "equalizer",
+                "system equalizer", "balance",
+            )
         if (getPlatform() == Platform.Android) {
             item(key = "audio") {
-                SettingGroup(title = stringResource(Res.string.audio)) {
+                if (showAudio) SettingGroup(title = stringResource(Res.string.audio)) {
                     SettingItem(
                         title = stringResource(Res.string.normalize_volume),
                         subtitle = stringResource(Res.string.balance_media_loudness),
@@ -1498,8 +1523,15 @@ fun SettingScreen(
                 }
             }
         }
+        // ── playback ───────────────────────────────────────────────────────
+        val showPlayback =
+            matchesQuery(
+                "playback", "equalizer", "audio delay", "reverb", "crossfade",
+                "save playback", "shuffle", "repeat", "kill service",
+                "shake to shuffle", "earphone", "waveform", "dj mode",
+            )
         item(key = "playback") {
-            SettingGroup(title = stringResource(Res.string.playback)) {
+            if (showPlayback) SettingGroup(title = stringResource(Res.string.playback)) {
                 // Under Playback rather than Audio because that whole group sits inside an
                 // Android-only branch — "Open system equalizer" is an Android feature — and this
                 // one is on both platforms: mpv's `af` chain on Desktop, an AudioProcessor in the
@@ -1687,8 +1719,13 @@ fun SettingScreen(
         // Deliberately not part of "storage" further down, which is Android-only: tracking and the
         // rows it leaves behind exist on Desktop just the same. The switch that produces the history
         // and the button that erases it belong together.
+        // ── listening history ──────────────────────────────────────────────
+        val showListeningHistory =
+            matchesQuery(
+                "listening history", "tracking", "clear history", "local tracking",
+            )
         item(key = "listening_history") {
-            SettingGroup(title = stringResource(Res.string.listening_history)) {
+            if (showListeningHistory) SettingGroup(title = stringResource(Res.string.listening_history)) {
                 SettingItem(
                     title = stringResource(Res.string.local_tracking_title),
                     subtitle = stringResource(Res.string.local_tracking_description),
@@ -1713,8 +1750,15 @@ fun SettingScreen(
                 )
             }
         }
+        // ── lyrics ─────────────────────────────────────────────────────────
+        val showLyrics =
+            matchesQuery(
+                "lyrics", "provider", "lrclib", "better lyrics", "youtube transcript",
+                "offset", "translation", "subtitle", "romanization",
+                "contributor", "database",
+            )
         item(key = "lyrics") {
-            SettingGroup(title = stringResource(Res.string.lyrics)) {
+            if (showLyrics) SettingGroup(title = stringResource(Res.string.lyrics)) {
                 SettingItem(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
@@ -1913,8 +1957,14 @@ fun SettingScreen(
                 )
             }
         }
+        // ── AI ─────────────────────────────────────────────────────────────
+        val showAI =
+            matchesQuery(
+                "ai", "openai", "gemini", "api key", "model", "base url",
+                "headers", "translation", "custom model",
+            )
         item(key = "AI") {
-            SettingGroup(title = stringResource(Res.string.ai)) {
+            if (showAI) SettingGroup(title = stringResource(Res.string.ai)) {
                 SettingItem(
                     title = stringResource(Res.string.ai_provider),
                     subtitle =
@@ -2096,33 +2146,13 @@ fun SettingScreen(
                 )
             }
         }
+        // ── spotify ────────────────────────────────────────────────────────
+        val showSpotify =
+            matchesQuery(
+                "spotify", "canvas", "lyrics", "animated artwork", "log in", "log out",
+            )
         item(key = "spotify") {
-            SettingGroup(title = stringResource(Res.string.spotify)) {
-                SettingItem(
-                    // The title follows the state: a row that still reads "Log in" while logged in
-                    // gives no clue that tapping it signs you out.
-                    title =
-                        if (spotifyLoggedIn) {
-                            stringResource(Res.string.log_out_from_spotify)
-                        } else {
-                            stringResource(Res.string.log_in_to_spotify)
-                        },
-                    subtitle =
-                        if (spotifyLoggedIn) {
-                            stringResource(Res.string.logged_in)
-                        } else {
-                            stringResource(Res.string.intro_login_to_spotify)
-                        },
-                    onClick = {
-                        if (spotifyLoggedIn) {
-                            viewModel.confirmLogOut(
-                                confirmLabel = runBlocking { getString(Res.string.log_out_from_spotify) },
-                            ) { viewModel.setSpotifyLogIn(false) }
-                        } else {
-                            navController.navigate(SpotifyLoginDestination)
-                        }
-                    },
-                )
+            if (showSpotify) SettingGroup(title = stringResource(Res.string.spotify)) {
                 SettingItem(
                     title = stringResource(Res.string.enable_spotify_lyrics),
                     subtitle = stringResource(Res.string.spotify_lyrícs_info),
@@ -2145,31 +2175,13 @@ fun SettingScreen(
                 )
             }
         }
+        // ── discord ────────────────────────────────────────────────────────
+        val showDiscord =
+            matchesQuery(
+                "discord", "rich presence", "log in", "log out",
+            )
         item(key = "discord") {
-            SettingGroup(title = stringResource(Res.string.discord_integration)) {
-                SettingItem(
-                    title =
-                        if (discordLoggedIn) {
-                            stringResource(Res.string.log_out_from_discord)
-                        } else {
-                            stringResource(Res.string.log_in_to_discord)
-                        },
-                    subtitle =
-                        if (discordLoggedIn) {
-                            stringResource(Res.string.logged_in)
-                        } else {
-                            stringResource(Res.string.intro_login_to_discord)
-                        },
-                    onClick = {
-                        if (discordLoggedIn) {
-                            viewModel.confirmLogOut(
-                                confirmLabel = runBlocking { getString(Res.string.log_out_from_discord) },
-                            ) { viewModel.logOutDiscord() }
-                        } else {
-                            navController.navigate(DiscordLoginDestination)
-                        }
-                    },
-                )
+            if (showDiscord) SettingGroup(title = stringResource(Res.string.discord_integration)) {
                 SettingItem(
                     title = stringResource(Res.string.enable_rich_presence),
                     subtitle = stringResource(Res.string.rich_presence_info),
@@ -2180,9 +2192,14 @@ fun SettingScreen(
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
         // build whose local.properties has no key.
+        // ── last.fm ────────────────────────────────────────────────────────
+        val showLastfm =
+            matchesQuery(
+                "lastfm", "last.fm", "scrobbling", "scrobble", "log in", "log out",
+            )
         if (viewModel.lastfmAvailable) {
             item(key = "lastfm") {
-                SettingGroup(title = stringResource(Res.string.lastfm_integration)) {
+                if (showLastfm) SettingGroup(title = stringResource(Res.string.lastfm_integration)) {
                     SettingItem(
                         title =
                             if (lastfmLoggedIn) {
@@ -2215,8 +2232,13 @@ fun SettingScreen(
                 }
             }
         }
+        // ── sponsor block ──────────────────────────────────────────────────
+        val showSponsorBlock =
+            matchesQuery(
+                "sponsorblock", "sponsor", "skip", "segments", "categories",
+            )
         item(key = "sponsor_block") {
-            SettingGroup(
+            if (showSponsorBlock) SettingGroup(
                 title = stringResource(Res.string.sponsorBlock),
                 // The project's note sits under the card, where a grouped list keeps its explanations.
                 footer = {
@@ -2290,9 +2312,15 @@ fun SettingScreen(
                 )
             }
         }
+        // ── storage (Android only) ─────────────────────────────────────────
+        val showStorage =
+            matchesQuery(
+                "storage", "cache", "player cache", "downloaded cache", "thumbnail",
+                "canvas cache", "limit", "free space", "database",
+            )
         if (getPlatform() == Platform.Android) {
             item(key = "storage") {
-                SettingGroup(title = stringResource(Res.string.storage)) {
+                if (showStorage) SettingGroup(title = stringResource(Res.string.storage)) {
                     SettingItem(
                         title = stringResource(Res.string.player_cache),
                         subtitle = "${playerCache.bytesToMB()} MB",
@@ -2597,8 +2625,14 @@ fun SettingScreen(
                 }
             }
         }
+        // ── backup ─────────────────────────────────────────────────────────
+        val showBackup =
+            matchesQuery(
+                "backup", "restore", "import", "export", "playlist", "data",
+                "duplicate", "sync", "audio cutter",
+            )
         item(key = "backup") {
-            SettingGroup(
+            if (showBackup) SettingGroup(
                 title = stringResource(Res.string.backup),
                 footer = {
                     val beforeUrl = stringResource(Res.string.import_data_intro).substringBefore("https://www.dspot.app/tools")
@@ -2784,8 +2818,14 @@ fun SettingScreen(
                 )
             }
         }
+        // ── about us ───────────────────────────────────────────────────────
+        val showAbout =
+            matchesQuery(
+                "about", "version", "changelog", "update", "author", "twitter",
+                "x.com", "blog", "donate", "coffee", "third party", "libraries",
+            )
         item(key = "about_us") {
-            SettingGroup(title = stringResource(Res.string.about_us)) {
+            if (showAbout) SettingGroup(title = stringResource(Res.string.about_us)) {
                 SettingItem(
                     title = stringResource(Res.string.version),
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
@@ -2851,14 +2891,14 @@ fun SettingScreen(
                     title = stringResource(Res.string.author),
                     subtitle = stringResource(Res.string.mika_dev),
                     onClick = {
-                        uriHandler.openUri("https://github.com/Mika")
+                        uriHandler.openUri("https://github.com/DT-Deville")
                     },
                 )
                 SettingItem(
                     title = stringResource(Res.string.follow_me_on_x),
-                    subtitle = "@mika_dev",
+                    subtitle = "@mikaxcc",
                     onClick = {
-                        uriHandler.openUri("https://x.com/mika_dev")
+                        uriHandler.openUri("https://x.com/mikaxcc")
                     },
                 )
                 SettingItem(
@@ -2879,7 +2919,7 @@ fun SettingScreen(
                     title = stringResource(Res.string.buy_me_a_coffee),
                     subtitle = stringResource(Res.string.donation),
                     onClick = {
-                        uriHandler.openUri("https://github.com/sponsors/Mika")
+                        uriHandler.openUri("https://buymeacoffee.com/mikaxcc")
                     },
                 )
                 SettingItem(
@@ -2891,8 +2931,10 @@ fun SettingScreen(
                 )
             }
         }
+        // ── developer options ──────────────────────────────────────────────
+        val showDeveloper = false
         item(key = "developer_option") {
-            SettingGroup(title = stringResource(Res.string.developer_option)) {
+            if (showDeveloper) SettingGroup(title = stringResource(Res.string.developer_option)) {
                 SettingItem(
                     title = stringResource(Res.string.app_log),
                     subtitle = stringResource(Res.string.app_log_description),
@@ -3034,169 +3076,11 @@ fun SettingScreen(
         LoginSyncDialog(onDismiss = { showLoginSyncDialog = false })
     }
     if (showYouTubeAccountDialog) {
-        BasicAlertDialog(
-            onDismissRequest = { },
-            modifier = Modifier.wrapContentSize(),
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = AlertDialogDefaults.TonalElevation,
-                shadowElevation = 1.dp,
-            ) {
-                val googleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle(
-                    minActiveState = Lifecycle.State.RESUMED,
-                )
-                LaunchedEffect(googleAccounts) {
-                    Logger.w(
-                        "SettingScreen",
-                        "LaunchedEffect: ${
-                            googleAccounts.data?.map {
-                                it.name to it.isUsed
-                            }
-                        }",
-                    )
-                }
-                LazyColumn(modifier = Modifier.padding(8.dp)) {
-                    item {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                        ) {
-                            IconButton(
-                                onClick = { showYouTubeAccountDialog = false },
-                                colors =
-                                    IconButtonDefaults.iconButtonColors().copy(
-                                        contentColor = MaterialTheme.colorScheme.onSurface,
-                                    ),
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.CenterStart)
-                                        .fillMaxHeight(),
-                            ) {
-                                Icon(SimpIcons.Close, null, tint = MaterialTheme.colorScheme.onSurface)
-                            }
-                            Text(
-                                stringResource(Res.string.youtube_account),
-                                style = typo().titleMedium,
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.Center)
-                                        .wrapContentHeight(align = Alignment.CenterVertically)
-                                        .wrapContentWidth(),
-                            )
-                        }
-                    }
-                    if (googleAccounts is LocalResource.Success) {
-                        val data = googleAccounts.data
-                        if (data.isNullOrEmpty()) {
-                            item {
-                                Text(
-                                    stringResource(Res.string.no_account),
-                                    style = typo().bodyMedium,
-                                    textAlign = TextAlign.Center,
-                                    modifier =
-                                        Modifier
-                                            .padding(12.dp)
-                                            .fillMaxWidth(),
-                                )
-                            }
-                        } else {
-                            items(data) {
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .padding(vertical = 8.dp)
-                                            .clickable {
-                                                viewModel.setUsedAccount(it)
-                                            },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Spacer(Modifier.width(24.dp))
-                                    AsyncImage(
-                                        model =
-                                            ImageRequest
-                                                .Builder(LocalPlatformContext.current)
-                                                .data(it.thumbnailUrl)
-                                                .crossfade(550)
-                                                .build(),
-                                        placeholder = rememberVectorPainter(SimpIcons.PeopleAlt),
-                                        error = rememberVectorPainter(SimpIcons.PeopleAlt),
-                                        contentDescription = it.name,
-                                        modifier =
-                                            Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape),
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(it.name, style = typo().labelMedium, color = MaterialTheme.colorScheme.onBackground)
-                                        Text(it.email, style = typo().bodySmall)
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    AnimatedVisibility(it.isUsed) {
-                                        Text(
-                                            stringResource(Res.string.signed_in),
-                                            style = typo().bodySmall,
-                                            maxLines = 2,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.widthIn(0.dp, 64.dp),
-                                        )
-                                    }
-                                    Spacer(Modifier.width(24.dp))
-                                }
-                            }
-                        }
-                    } else {
-                        item {
-                            CenterLoadingBox(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp),
-                            )
-                        }
-                    }
-                    item {
-                        Column {
-                            ActionButton(
-                                icon = SimpIcons.PeopleAlt,
-                                text = Res.string.guest,
-                            ) {
-                                viewModel.setUsedAccount(null)
-                                showYouTubeAccountDialog = false
-                            }
-                            ActionButton(
-                                icon = SimpIcons.Close,
-                                text = Res.string.log_out,
-                            ) {
-                                viewModel.setBasicAlertData(
-                                    SettingBasicAlertState(
-                                        title = runBlocking { getString(Res.string.warning) },
-                                        message = runBlocking { getString(Res.string.log_out_warning) },
-                                        confirm =
-                                            runBlocking { getString(Res.string.log_out) } to {
-                                                viewModel.logOutAllYouTube()
-                                                showYouTubeAccountDialog = false
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            }
-                            ActionButton(
-                                icon = SimpIcons.PlaylistAdd,
-                                text = Res.string.add_an_account,
-                            ) {
-                                showYouTubeAccountDialog = false
-                                navController.navigate(LoginDestination)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        com.mika.dspot.ui.component.YouTubeAccountDialog(
+            viewModel = viewModel,
+            navController = navController,
+            onDismissRequest = { showYouTubeAccountDialog = false },
+        )
     }
     val alertData by viewModel.alertData.collectAsStateWithLifecycle()
     if (alertData != null) {

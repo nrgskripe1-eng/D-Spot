@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.viewModel
+package com.mika.dspot.viewModel
 
 import androidx.lifecycle.viewModelScope
 import com.mika.common.SELECTED_LANGUAGE
@@ -101,6 +101,13 @@ class SearchViewModel(
 
     private val _searchHistory: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
     val searchHistory: StateFlow<List<String>> get() = _searchHistory.asStateFlow()
+
+    private val _activeSearchQuery = MutableStateFlow("")
+    val activeSearchQuery: StateFlow<String> get() = _activeSearchQuery.asStateFlow()
+
+    fun setActiveSearchQuery(query: String) {
+        _activeSearchQuery.value = query
+    }
 
     /** Browse categories shown on the empty search screen, the way YouTube Music itself does. */
     private val _moodAndGenres: MutableStateFlow<Mood?> = MutableStateFlow(null)
@@ -210,6 +217,7 @@ class SearchViewModel(
     }
 
     fun searchAll(query: String) {
+        _activeSearchQuery.value = query
         _searchScreenUIState.value = SearchScreenUIState.Loading
         viewModelScope.launch {
             var song = ArrayList<SongsResult>()

@@ -137,6 +137,8 @@ import com.mika.dspot.expect.ui.persistPickedImage
 import com.mika.dspot.expect.ui.photoPickerResult
 import com.mika.dspot.extension.displayNameRes
 import com.mika.dspot.extension.greyScale
+import com.mika.dspot.Platform
+import com.mika.dspot.getPlatform
 import com.mika.dspot.ui.icon.AccessAlarm
 import com.mika.dspot.ui.icon.Add
 import com.mika.dspot.ui.icon.AddCircleOutline
@@ -1336,6 +1338,20 @@ fun NowPlayingBottomSheet(
     queuePosition: QueuePosition? = null,
     dataStoreManager: DataStoreManager = koinInject<DataStoreManager>(),
 ) {
+    val isDesktop = getPlatform() == Platform.Desktop
+    if (isDesktop) {
+        DesktopSongContextMenu(
+            song = song,
+            onDismiss = onDismiss,
+            onNavigateToOtherScreen = onNavigateToOtherScreen,
+            onDelete = onDelete,
+            onLibraryDelete = onLibraryDelete,
+            queuePosition = queuePosition,
+            viewModel = viewModel,
+        )
+        return
+    }
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     val modelBottomSheetState =
@@ -1879,7 +1895,6 @@ fun rememberAddToQueueBlock(): AddToQueueBlock? {
 fun AddToQueueBlock?.addToQueueLabel(): StringResource =
     when (this) {
         null -> Res.string.add_to_queue
-        AddToQueueBlock.RADIO -> Res.string.add_to_queue_disabled_radio
         AddToQueueBlock.ENDLESS_QUEUE -> Res.string.add_to_queue_disabled_endless
     }
 

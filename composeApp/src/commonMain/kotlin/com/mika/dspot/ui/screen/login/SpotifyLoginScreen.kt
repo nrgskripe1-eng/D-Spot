@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.login
+package com.mika.dspot.ui.screen.login
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -178,14 +178,18 @@ fun SpotifyLoginScreen(
                 // URLs fail the match silently, so sp_dc was never saved and auto-login
                 // appeared to do nothing.
                 val statusUrl = Regex("^https://accounts\\.spotify\\.com/(?:[^/]+/)?status(?:\\?.*)?$")
-                if (statusUrl.matches(url)) {
+                val isSpotifyLoginDone = statusUrl.matches(url) ||
+                    url.contains("open.spotify.com") ||
+                    (cookie.contains("sp_dc=") && !url.contains("/login"))
+                if (isSpotifyLoginDone) {
                     cookie
                         .takeIf {
                             it.isNotEmpty()
                         }?.let {
                             viewModel.saveSpotifySpdc(it)
+                            viewModel.makeToast(getStringBlocking(Res.string.login_success))
+                            navController.navigateUp()
                         }
-                    cookieManager.removeAllCookies()
                 }
             }
         }

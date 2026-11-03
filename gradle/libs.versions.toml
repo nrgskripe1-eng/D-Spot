@@ -97,6 +97,9 @@ conveyor = "2.0"
 # Login sync: QR encode (Desktop) + decode (Android), and the Android scanner's camera
 zxing = "3.5.4"
 camerax = "1.6.2"
+# jcefmaven version = Chromium-based embedded browser for Desktop login.
+# Versions follow the JCEF Chromium major.minor numbering on Maven Central.
+jcef = "152.0.6"
 
 [libraries]
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
@@ -239,6 +242,8 @@ jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jnaPlatform" }
 nowplaying = { module = "org.simpmusic:nowplayingcenter", version = "0.0.3" }
 jmtc = { module = "org.simpmusic:jmtc", version = "0.0.3" }
+# JCEF: embedded Chromium browser for Desktop login (YouTube, Spotify, LastFM, Discord)
+jcef-maven = { module = "me.friwi:jcefmaven", version.ref = "jcef" }
 
 #Koin
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }

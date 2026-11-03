@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.library
+package com.mika.dspot.ui.screen.library
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -94,8 +94,11 @@ import com.mika.dspot.ui.component.selection.rememberSongSelectionState
 import com.mika.dspot.ui.icon.Groups
 import com.mika.dspot.ui.icon.PeopleAlt
 import com.mika.dspot.ui.icon.SimpIcons
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
+import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.home.ListenTogetherDestination
 import com.mika.dspot.ui.navigation.destination.home.SettingsDestination
+import com.mika.dspot.ui.screen.home.DesktopNavPill
 import com.mika.dspot.ui.theme.typo
 import com.mika.dspot.viewModel.LibraryViewModel
 import com.mika.dspot.viewModel.SharedViewModel
@@ -520,6 +523,52 @@ fun LibraryScreen(
                 topAppBarHeight = with(density) { coordinates.size.height.toDp() }
             },
     ) {
+        if (getPlatform() == Platform.Desktop) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF13141A))
+                            .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    DesktopNavPill(
+                        label = "Home",
+                        selected = false,
+                        onClick = {
+                            navController.navigate(HomeDestination) {
+                                popUpTo(HomeDestination) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                    DesktopNavPill(
+                        label = "Library",
+                        selected = true,
+                        onClick = { /* already here */ },
+                    )
+                    DesktopNavPill(
+                        label = "Account",
+                        selected = false,
+                        onClick = {
+                            navController.navigate(AccountDestination) {
+                                popUpTo(HomeDestination) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
+                }
+            }
+        }
         TopAppBar(
             title = {
                 Text(

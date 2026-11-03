@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -48,6 +48,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mika.domain.data.player.GenericMediaItem
 import com.mika.logger.Logger
 import com.mika.dspot.expect.ui.PlatformBackdrop
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
 import com.mika.dspot.ui.navigation.destination.home.AnalyticsDestination
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
@@ -107,42 +108,33 @@ actual fun LiquidGlassAppBottomNavigationBar(
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val bottomNavScreens =
-        listOfNotNull(
+        listOf(
             BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
+            BottomNavScreen.MixForYou,
             BottomNavScreen.Library,
+            BottomNavScreen.Account,
             BottomNavScreen.Search,
         )
     // Tabs shown in the sliding bar (Apple Music style); Search lives in its own FAB.
     val barTabs =
-        listOfNotNull(
+        listOf(
             BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
+            BottomNavScreen.MixForYou,
             BottomNavScreen.Library,
+            BottomNavScreen.Account,
         )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
             when (startDestination) {
                 is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
                 is MixForYouDestination -> BottomNavScreen.MixForYou.ordinal
+                is LibraryDestination -> BottomNavScreen.Library.ordinal
+                is AccountDestination -> BottomNavScreen.Account.ordinal
+                is SearchDestination -> BottomNavScreen.Search.ordinal
+                is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
                 else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
             },
         )
-    }
-    // A tab can disappear from the bar under the user: tracking gets turned off while Analytics is
-    // selected, or the YouTube session ends while Mix for you is. Fall back to Home in both cases so
-    // nothing is left highlighted.
-    LaunchedEffect(showAnalyticsTab, showMixForYouTab) {
-        if ((!showAnalyticsTab && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
-            (!showMixForYouTab && selectedIndex == BottomNavScreen.MixForYou.ordinal)
-        ) {
-            selectedIndex = BottomNavScreen.Home.ordinal
-        }
     }
     var isExpanded by rememberSaveable {
         mutableStateOf(true)
@@ -339,7 +331,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = miniPlayerPadding)
-                    .height(56.dp)
+                    .height(64.dp)
                     .layoutId("miniPlayer"),
                 backdrop = backdrop,
                 isVisible = isShowMiniPlayer,

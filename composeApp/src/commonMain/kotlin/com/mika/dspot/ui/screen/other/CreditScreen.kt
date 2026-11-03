@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.other
+package com.mika.dspot.ui.screen.other
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
@@ -197,7 +197,7 @@ fun CreditScreen(
             // Buy me a coffee button
             TextButton(
                 onClick = {
-                    openUrl("https://github.com/sponsors/Mika")
+                    openUrl("https://buymeacoffee.com/mikaxcc")
                 },
                 modifier =
                     Modifier

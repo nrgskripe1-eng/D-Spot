@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.other
+package com.mika.dspot.ui.screen.other
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
@@ -95,9 +95,6 @@ private val TargetThumbnailHeight = 180.dp
 // The home cards' own 10dp start + 10dp end padding, outside the thumbnail.
 private val CardHorizontalPadding = 20.dp
 
-// The width a mood button asks for, as the old grid's cells did.
-private val MoodCellWidth = 170.dp
-
 /**
  * The page a home section's "More" endpoint opens when YouTube names no album, playlist, artist or
  * podcast behind it. Every shelf is flattened into justified rows — each card keeps its own shape
@@ -116,6 +113,7 @@ fun BrowseScreen(
     viewModel: BrowseViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val moodArtwork by viewModel.moodArtwork.collectAsStateWithLifecycle()
     val hazeState = rememberHazeState()
     val listState = rememberLazyListState()
     // Mix for you's bar rule: transparent only while pixel 0 is on screen.
@@ -211,7 +209,13 @@ fun BrowseScreen(
                                 remember(state.page.contents, maxWidth) {
                                     justifyRows(state.page.contents, maxWidth)
                                 }
-                            val moodColumns = maxOf(1, ((maxWidth + RowGap) / (MoodCellWidth + RowGap)).toInt())
+                            val moodColumns = remember(maxWidth) {
+                                when {
+                                    maxWidth >= 600.dp -> 4
+                                    maxWidth >= 400.dp -> 3
+                                    else -> 2
+                                }
+                            }
                             val moodRows =
                                 remember(state.page.moods, moodColumns) {
                                     state.page.moods.chunked(moodColumns)
@@ -227,13 +231,17 @@ fun BrowseScreen(
                                 items(moodRows) { row ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(RowGap),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     ) {
                                         row.forEach { mood ->
+                                            LaunchedEffect(mood.params) {
+                                                viewModel.loadMoodArtwork(mood.params)
+                                            }
                                             Box(Modifier.weight(1f)) {
                                                 MoodMomentAndGenreHomeItem(
                                                     title = mood.title,
                                                     stripeColor = mood.stripeColor,
+                                                    artworkUrl = moodArtwork[mood.params],
                                                     fillMaxWidth = true,
                                                 ) {
                                                     navController.navigate(MoodDestination(mood.params))

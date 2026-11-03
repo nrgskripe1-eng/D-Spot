@@ -1,4 +1,5 @@
 package com.mika.dspot.ui.component
+import com.mika.dspot.extension.cleanBrandText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -8,6 +9,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -43,6 +45,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -106,6 +109,13 @@ import com.mika.dspot.expect.ui.HorizontalScrollBar
 import com.mika.dspot.getPlatform
 import com.mika.dspot.ui.navigation.destination.list.AlbumDestination
 import com.mika.dspot.ui.navigation.destination.list.ArtistDestination
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import com.mika.dspot.ui.navigation.destination.list.BrowseDestination
 import com.mika.dspot.ui.navigation.destination.list.PlaylistDestination
 import com.mika.dspot.ui.navigation.destination.list.PodcastDestination
@@ -127,6 +137,7 @@ import dspot.composeapp.generated.resources.more
 import dspot.composeapp.generated.resources.play_all
 import dspot.composeapp.generated.resources.playlist
 import dspot.composeapp.generated.resources.subscribers
+import dspot.composeapp.generated.resources.channel_subscribers
 import dspot.composeapp.generated.resources.wrapped_recap_subtitle
 import dspot.composeapp.generated.resources.you
 
@@ -153,8 +164,10 @@ fun HomeItem(
 
     Column {
         HomeSectionHeader(data = data, navController = navController, onPlayAll = { homeViewModel.playAll(data) })
+        Spacer(Modifier.height(12.dp))
         LazyRow(
             state = lazyListState,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             flingBehavior = snapperFlingBehavior,
         ) {
             items(data.contents) { temp ->
@@ -265,24 +278,43 @@ fun HomeSectionHeader(
             )
         }
         if (moreEndpoint != null) {
-            TextButton(
+            androidx.compose.material3.FilledTonalButton(
                 onClick = { navController.navigateToMoreEndpoint(moreEndpoint, data.title) },
+                shape = RoundedCornerShape(20.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                 colors =
-                    ButtonDefaults
-                        .textButtonColors()
-                        .copy(contentColor = MaterialTheme.colorScheme.onSurface),
+                    androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color(0xFF191B24),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             ) {
-                Text(stringResource(Res.string.more), style = typo().bodySmall)
+                Text(
+                    stringResource(Res.string.more),
+                    style = typo().labelSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
             }
         } else if (data.playAllEndpoint != null) {
-            TextButton(
+            androidx.compose.material3.FilledTonalButton(
                 onClick = onPlayAll,
+                shape = RoundedCornerShape(20.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                 colors =
-                    ButtonDefaults
-                        .textButtonColors()
-                        .copy(contentColor = MaterialTheme.colorScheme.onSurface),
+                    androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color(0xFF191B24),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             ) {
-                Text(stringResource(Res.string.play_all), style = typo().bodySmall)
+                androidx.compose.material3.Icon(
+                    imageVector = SimpIcons.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                )
+                Text(
+                    stringResource(Res.string.play_all),
+                    style = typo().labelSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
             }
         }
     }
@@ -395,15 +427,17 @@ internal fun rememberCardHover(enabled: Boolean): Pair<Modifier, Boolean> {
     var focused by remember { mutableStateOf(false) }
     val active = enabled && (hovered || focused)
     val tint by animateColorAsState(
-        targetValue = if (active) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f) else Color.Transparent,
+        targetValue = if (active) Color(0xFF1E2028).copy(alpha = 0.65f) else Color.Transparent,
+        animationSpec = tween(150),
         label = "cardHoverTint",
     )
     val modifier =
         Modifier
             .onFocusChanged { focused = it.isFocused }
             .hoverable(source)
-            .drawBehind { drawRoundRect(color = tint, cornerRadius = CornerRadius(8.dp.toPx())) }
-    return modifier to active
+            .clip(RoundedCornerShape(12.dp))
+            .background(tint)
+    return Pair<Modifier, Boolean>(modifier, active)
 }
 
 /** The theme-coloured play button of a hovered Home card, rising onto the artwork's corner. */
@@ -513,14 +547,111 @@ fun HomeItemContentPlaylist(
     val titleColor = if (forceDark) Color.White else MaterialTheme.colorScheme.onSurface
     val textWidth = if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier.width(thumbSize)
     val (hoverModifier, hovered) = rememberCardHover(enabled = onPlay != null)
+    val isDesktop = getPlatform() == Platform.Desktop
+    var showPlaylistContextMenu by remember { mutableStateOf(false) }
+    var playlistContextMenuOffset by remember { mutableStateOf<IntOffset?>(null) }
+    var cardWindowPos by remember { mutableStateOf(IntOffset.Zero) }
+
+    val playlistContextData = remember(data) {
+        val playlistId = when (data) {
+            is Content -> data.playlistId ?: data.browseId?.takeIf { !it.startsWith("UC") && !it.startsWith("MP") }
+            is ResultPlaylist -> data.id
+            is PlaylistsResult -> data.browseId
+            is PlaylistEntity -> data.id
+            is LocalPlaylistEntity -> data.youtubePlaylistId ?: data.id.toString()
+            is com.mika.domain.data.model.mood.genre.Content -> data.playlistBrowseId
+            is com.mika.domain.data.model.mood.moodmoments.Content -> data.playlistBrowseId
+            else -> null
+        }
+        if (playlistId != null) {
+            val title = when (data) {
+                is Content -> data.title.cleanBrandText()
+                is ResultPlaylist -> data.title.cleanBrandText()
+                is PlaylistsResult -> data.title.cleanBrandText()
+                is PlaylistEntity -> data.title
+                is LocalPlaylistEntity -> data.title
+                is com.mika.domain.data.model.mood.genre.Content -> data.title.title
+                is com.mika.domain.data.model.mood.moodmoments.Content -> data.title
+                else -> ""
+            }
+            val author = when (data) {
+                is Content -> (data.description?.cleanBrandText()) ?: (data.artists?.toListName()?.connectArtists() ?: "")
+                is ResultPlaylist -> data.author
+                is PlaylistsResult -> data.author
+                is PlaylistEntity -> data.author.orEmpty()
+                is LocalPlaylistEntity -> "You"
+                is com.mika.domain.data.model.mood.genre.Content -> data.title.subtitle
+                is com.mika.domain.data.model.mood.moodmoments.Content -> data.subtitle.orEmpty()
+                else -> ""
+            }
+            val thumb = when (data) {
+                is Content -> data.thumbnails.lastOrNull()?.url
+                is ResultPlaylist -> data.thumbnails.lastOrNull()?.url
+                is PlaylistsResult -> data.thumbnails.lastOrNull()?.url
+                is PlaylistEntity -> data.thumbnails
+                is LocalPlaylistEntity -> data.thumbnail
+                is com.mika.domain.data.model.mood.genre.Content -> data.thumbnail?.lastOrNull()?.url
+                is com.mika.domain.data.model.mood.moodmoments.Content -> data.thumbnails?.lastOrNull()?.url
+                else -> null
+            }
+            val playEndpoint = when (data) {
+                is Content -> data.playEndpoint
+                else -> null
+            }
+            DesktopPlaylistContextData(
+                id = playlistId,
+                title = title,
+                author = author,
+                thumbnail = thumb,
+                playEndpoint = playEndpoint,
+            )
+        } else {
+            null
+        }
+    }
+
+    if (isDesktop && showPlaylistContextMenu && playlistContextData != null) {
+        DesktopPlaylistContextMenu(
+            data = playlistContextData,
+            windowOffset = playlistContextMenuOffset,
+            onDismiss = {
+                showPlaylistContextMenu = false
+                playlistContextMenuOffset = null
+            },
+        )
+    }
+
     Box(
         Modifier
             .then(hoverModifier)
             .wrapContentSize()
             .focusable(true)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable {
                 onClick()
+            }
+            .pointerInput(isDesktop, playlistContextData != null) {
+                if (isDesktop && playlistContextData != null) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.type == PointerEventType.Press &&
+                                event.buttons.isSecondaryPressed
+                            ) {
+                                val pos = event.changes.firstOrNull()?.position ?: androidx.compose.ui.geometry.Offset.Zero
+                                playlistContextMenuOffset = IntOffset(
+                                    (cardWindowPos.x + pos.x).roundToInt(),
+                                    (cardWindowPos.y + pos.y).roundToInt(),
+                                )
+                                showPlaylistContextMenu = true
+                            }
+                        }
+                    }
+                }
+            }
+            .onGloballyPositioned { coordinates ->
+                val pos = coordinates.positionInWindow()
+                cardWindowPos = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
             },
     ) {
         Column(
@@ -647,17 +778,17 @@ fun HomeItemContentPlaylist(
             Text(
                 text =
                     when (data) {
-                        is Content -> data.title
-                        is com.mika.domain.data.model.mood.genre.Content -> data.title.title
-                        is com.mika.domain.data.model.mood.moodmoments.Content -> data.title
+                        is Content -> data.title.cleanBrandText()
+                        is com.mika.domain.data.model.mood.genre.Content -> data.title.title.cleanBrandText()
+                        is com.mika.domain.data.model.mood.moodmoments.Content -> data.title.cleanBrandText()
                         is LocalPlaylistEntity -> data.title
-                        is ChartItem -> data.name
-                        is PlaylistsResult -> data.title
+                        is ChartItem -> data.name.cleanBrandText()
+                        is PlaylistsResult -> data.title.cleanBrandText()
                         is AlbumEntity -> data.title
                         is PlaylistEntity -> data.title
                         is ResultSingle -> data.title
                         is ResultAlbum -> data.title
-                        is ResultPlaylist -> data.title
+                        is ResultPlaylist -> data.title.cleanBrandText()
                         is PodcastsEntity -> data.title
                         is AlbumsResult -> data.title
                         is MonthlyRecapItem -> data.title
@@ -676,7 +807,7 @@ fun HomeItemContentPlaylist(
                 text =
                     when (data) {
                         is Content -> {
-                            data.description
+                            data.description?.cleanBrandText()
                                 ?: if (data.playlistId == null) {
                                     (
                                         if (!data.artists.isNullOrEmpty()) {
@@ -709,7 +840,7 @@ fun HomeItemContentPlaylist(
                         }
 
                         is PlaylistsResult -> {
-                            data.author
+                            data.author.cleanBrandText()
                         }
 
                         is AlbumEntity -> {
@@ -729,7 +860,7 @@ fun HomeItemContentPlaylist(
                         }
 
                         is ResultPlaylist -> {
-                            data.author
+                            data.author.cleanBrandText()
                         }
 
                         is PodcastsEntity -> {
@@ -774,23 +905,74 @@ fun QuickPicksItem(
     data: Content,
 ) {
     val tag = "QuickPicksItem"
+    val isDesktop = getPlatform() == Platform.Desktop
+    var showContextMenu by remember { mutableStateOf(false) }
+    var contextMenuOffset by remember { mutableStateOf<IntOffset?>(null) }
+    var rowWindowPos by remember { mutableStateOf(IntOffset.Zero) }
+
+    if (isDesktop && showContextMenu) {
+        DesktopSongContextMenu(
+            song = data.toTrack().toSongEntity(),
+            windowOffset = contextMenuOffset,
+            onDismiss = {
+                showContextMenu = false
+                contextMenuOffset = null
+            },
+        )
+    }
+
+    val itemInteractionSource = remember { MutableInteractionSource() }
+    val itemHovered by itemInteractionSource.collectIsHoveredAsState()
+    val itemBg by animateColorAsState(
+        targetValue = if (itemHovered) Color(0xFF1E2028).copy(alpha = 0.65f) else Color.Transparent,
+        animationSpec = tween(150),
+        label = "quickPicksHover",
+    )
+
     Box(
         modifier =
             Modifier
                 .wrapContentHeight()
-                .width(widthDp - 30.dp)
+                .width(widthDp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(itemBg)
+                .hoverable(itemInteractionSource)
                 .focusable(true)
-                .clip(RoundedCornerShape(8.dp))
                 .combinedClickable(
+                    interactionSource = itemInteractionSource,
+                    indication = null,
                     onClick = onClick,
                     onLongClick = onLongClick,
-                ),
+                )
+                .pointerInput(isDesktop) {
+                    if (isDesktop) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.type == PointerEventType.Press &&
+                                    event.buttons.isSecondaryPressed
+                                ) {
+                                    val pos = event.changes.firstOrNull()?.position ?: androidx.compose.ui.geometry.Offset.Zero
+                                    contextMenuOffset = IntOffset(
+                                        (rowWindowPos.x + pos.x).roundToInt(),
+                                        (rowWindowPos.y + pos.y).roundToInt(),
+                                    )
+                                    showContextMenu = true
+                                }
+                            }
+                        }
+                    }
+                }
+                .onGloballyPositioned { coordinates ->
+                    val pos = coordinates.positionInWindow()
+                    rowWindowPos = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
+                },
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             AsyncImage(
                 model =
@@ -896,7 +1078,7 @@ fun HomeItemSong(
                 .then(hoverModifier)
                 .fillMaxSize()
                 .focusable(true)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
@@ -1007,7 +1189,7 @@ fun HomeItemVideo(
             .then(hoverModifier)
             .fillMaxSize()
             .focusable(true)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
@@ -1195,43 +1377,61 @@ fun HomeItemArtist(
 fun MoodMomentAndGenreHomeItem(
     title: String,
     stripeColor: Long,
+    artworkUrl: String? = null,
     // Fill a grid cell instead of the fixed 160dp.
     fillMaxWidth: Boolean = false,
     onClick: () -> Unit,
 ) {
-    ElevatedCard(
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 6.dp,
-            ),
-        onClick = onClick,
-        shape = RoundedCornerShape(5.dp),
-        modifier =
-            (if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier.width(160.dp))
-                .height(50.dp)
-                .padding(8.dp),
+    // Slightly darken the stripe color so it's not too bright on the dark card background.
+    val fallbackColor = remember(stripeColor) { Color(stripeColor).copy(alpha = 1f).let { c ->
+        Color(c.red * 0.7f, c.green * 0.7f, c.blue * 0.7f)
+    } }
+    val cardShape = RoundedCornerShape(6.dp)
+    // Only the left corners are rounded on the thumbnail (flush with card's left edge).
+    val thumbShape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp)
+
+    Row(
+        modifier = (if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier.fillMaxWidth())
+            .height(56.dp)
+            .clip(cardShape)
+            .background(Color(0xFF1A1B1E))
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row {
-            Box(
-                // `solid.leftStripeColor` straight from the API (full ARGB). This used to be
-                // generateRandomColor(), which — being outside remember — rolled a new colour on
-                // every recomposition, so the stripes flickered while scrolling.
-                Modifier
-                    .width(10.dp)
-                    .height(64.dp)
-                    .background(Color(stripeColor)),
-            )
-            Text(
-                text = title,
-                style = typo().titleSmall,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.CenterVertically),
-            )
+        // Left thumbnail — 56×56dp, flush with card left, clipped to left corners only.
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(thumbShape)
+                .background(fallbackColor),
+        ) {
+            if (artworkUrl != null) {
+                AsyncImage(
+                    model = ImageRequest
+                        .Builder(LocalPlatformContext.current)
+                        .data(artworkUrl)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .diskCacheKey(artworkUrl)
+                        .crossfade(400)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
+        // Title — 14dp gap from thumbnail, left-aligned, single line with ellipsis, 12dp right padding.
+        Text(
+            text = title,
+            style = typo().titleSmall,
+            fontWeight = FontWeight.Medium,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 14.dp, end = 12.dp),
+        )
     }
 }
 
@@ -1357,17 +1557,26 @@ fun ItemArtistChart(
                     .width(widthDp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = data.rank,
-                style = typo().titleLarge,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier =
                     Modifier
-                        .wrapContentSize(Alignment.Center)
-                        .align(Alignment.CenterVertically)
-                        .padding(end = 20.dp),
-            )
+                        .size(36.dp)
+                        .align(Alignment.CenterVertically),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = data.rank,
+                        style = typo().labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
             val thumb = data.thumbnails.lastOrNull()?.url
             AsyncImage(
                 model =
@@ -1403,20 +1612,18 @@ fun ItemArtistChart(
                         Modifier
                             .wrapContentHeight(align = Alignment.CenterVertically),
                 )
+                val rawSubscribers = data.subscribers
+                    .replace(stringResource(Res.string.subscribers).replace("%1\$s ", ""), "")
+                    .replace(stringResource(Res.string.subscribers).replace("%1\$s", ""), "")
+                    .trim()
+                val displaySubtitle = subtitle ?: if (rawSubscribers.isNotEmpty()) {
+                    stringResource(Res.string.channel_subscribers, rawSubscribers)
+                } else {
+                    data.subscribers
+                }
                 Text(
-                    text =
-                        subtitle ?: if (data.subscribers.contains(
-                                stringResource(Res.string.subscribers).replace("%1\$s ", ""),
-                            )
-                        ) {
-                            data.subscribers
-                        } else {
-                            stringResource(
-                                Res.string.subscribers,
-                                data.subscribers,
-                            )
-                        },
-                    style = typo().bodySmall,
+                    text = displaySubtitle,
+                    style = typo().bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)),
                     minLines = 1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

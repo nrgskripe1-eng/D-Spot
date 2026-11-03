@@ -1,5 +1,7 @@
-﻿package com.mika.dspot.ui.navigation.graph
+package com.mika.dspot.ui.navigation.graph
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -19,6 +21,8 @@ import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
 import com.mika.dspot.ui.navigation.destination.library.MixForYouDestination
 import com.mika.dspot.ui.navigation.destination.player.FullscreenDestination
 import com.mika.dspot.ui.navigation.destination.search.SearchDestination
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
+import com.mika.dspot.ui.screen.account.AccountHubScreen
 import com.mika.dspot.ui.screen.home.HomeScreen
 import com.mika.dspot.ui.screen.home.analytics.AnalyticsScreen
 import com.mika.dspot.ui.screen.home.wrapped.WrappedScreen
@@ -43,16 +47,16 @@ fun AppNavigationGraph(
         navController,
         startDestination = startDestination,
         enterTransition = {
-            fadeIn() + slideInHorizontally { -it }
+            fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
         },
         exitTransition = {
-            fadeOut() + slideOutHorizontally { it }
+            fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
         },
         popEnterTransition = {
-            fadeIn() + slideInHorizontally { -it }
+            fadeIn(animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
         },
         popExitTransition = {
-            fadeOut() + slideOutHorizontally { it }
+            fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
         },
     ) {
         // Bottom bar destinations
@@ -82,10 +86,13 @@ fun AppNavigationGraph(
                 onScrolling = onScrolling,
             )
         }
-        // Only reachable as a tab while local tracking is enabled.
-        // ForceDarkContent for the same reason as album/playlist/artist: the page background comes
-        // from the artwork via toImmersiveBackground(), which always lands dark, so the light
-        // theme's dark-on-light text and icons would be unreadable on it.
+        composable<AccountDestination> {
+            AccountHubScreen(
+                innerPadding = innerPadding,
+                navController = navController,
+            )
+        }
+        // Reachable via Account hub or deep link
         composable<AnalyticsDestination> {
             ForceDarkContent {
                 AnalyticsScreen(

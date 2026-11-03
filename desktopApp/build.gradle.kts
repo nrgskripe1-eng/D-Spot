@@ -1,4 +1,4 @@
-﻿@file:Suppress("UnstableApiUsage")
+@file:Suppress("UnstableApiUsage")
 
 import org.apache.commons.io.FileUtils
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -149,6 +149,11 @@ compose.desktop {
     application {
         mainClass = "com.mika.dspot.MainKt"
         jvmArgs += "--add-opens=java.base/java.nio=ALL-UNNAMED"
+        // JCEF (embedded Chromium) needs AWT peer access and native loading.
+        jvmArgs += "--add-opens=java.desktop/sun.awt=ALL-UNNAMED"
+        jvmArgs += "--add-opens=java.desktop/java.awt.peer=ALL-UNNAMED"
+        jvmArgs += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+        jvmArgs += "--add-opens=java.base/java.util=ALL-UNNAMED"
 
         nativeDistributions {
             appResourcesRootDir = rootDir.resolve("mpv-natives/")

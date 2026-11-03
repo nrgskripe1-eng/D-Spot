@@ -103,12 +103,12 @@ fun ReviewDialog(
                         append(stringResource(Res.string.if_you_love_my_work_consider).removeSurrounding("\"").trimEnd() + " ")
                         withLink(
                             LinkAnnotation.Url(
-                                "https://buymeacoffee.com/mika",
+                                "https://buymeacoffee.com/mikaxcc",
                                 TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = seed)),
                             ) {
                                 onDoneReview.invoke()
                                 onDismissRequest.invoke()
-                                uriHandler.openUri("https://buymeacoffee.com/mika")
+                                uriHandler.openUri("https://buymeacoffee.com/mikaxcc")
                             },
                         ) {
                             append(stringResource(Res.string.buying_me_a_coffee))

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.library
+package com.mika.dspot.ui.screen.library
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -7,14 +7,25 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -34,6 +45,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -48,6 +61,9 @@ import com.mika.dspot.extension.rgbFactor
 import com.mika.dspot.getPlatform
 import com.mika.dspot.ui.component.AmbientGlowHeight
 import com.mika.dspot.ui.component.GridLibraryPlaylist
+import com.mika.dspot.ui.icon.Sensors
+import com.mika.dspot.ui.icon.SimpIcons
+import com.mika.dspot.ui.navigation.destination.login.LoginDestination
 import com.mika.dspot.ui.theme.desktopPanelDark
 import com.mika.dspot.ui.theme.typo
 import com.mika.dspot.viewModel.LibraryViewModel
@@ -55,24 +71,22 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import dspot.composeapp.generated.resources.Res
+import dspot.composeapp.generated.resources.mix_for_you
+import dspot.composeapp.generated.resources.no_mixes_found
+import dspot.composeapp.generated.resources.sign_in
+import dspot.composeapp.generated.resources.sign_in_to_youtube_mix_prompt
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.http.Url
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
-import dspot.composeapp.generated.resources.Res
-import dspot.composeapp.generated.resources.mix_for_you
-import dspot.composeapp.generated.resources.no_mixes_found
 
 /**
- * The YouTube "Mix for you" playlists, promoted out of the Library chip row into a tab of its own.
+ * The YouTube "Mix for you" playlists, promoted out of the Library chip row into a permanent tab.
  *
- * It shares [LibraryViewModel] with the Library screen rather than owning a view model, so the
- * mixes stay fetched once and the grid, its pull-to-refresh and its empty state behave exactly as
- * they did while this was a chip.
- *
- * The tab is hidden while signed out (see `App.kt`), which is what the chip did too — YouTube has
- * no mixes to give an anonymous session.
+ * When signed out, it renders a friendly sign-in prompt instead of an empty/broken list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,22 +97,17 @@ fun MixForYouScreen(
     onScrolling: (onTop: Boolean) -> Unit = {},
 ) {
     val density = LocalDensity.current
+    val isYouTubeLoggedIn by viewModel.youtubeLoggedIn.collectAsStateWithLifecycle(initialValue = false)
     val mixForYou by viewModel.youTubeMixForYou.collectAsStateWithLifecycle()
     val hazeState = rememberHazeState()
     val gridState = rememberLazyGridState()
-    // Home's rule, verbatim: transparent only while pixel-0 is on screen. onScrolling is too
-    // coarse for this — it stays "on top" through the whole first row. The frost itself is kept
-    // light (below), so frosting over the glow reads as a veil rather than a lid.
+
     val isAtTop by remember {
         derivedStateOf { gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0 }
     }
 
     var topAppBarHeight by remember { mutableStateOf(0.dp) }
 
-    // Home's ambient top glow, tinted from the FIRST mix's artwork — the same DominantColorState +
-    // network-loader machinery HomeScreen runs on its main thumbnail, including the light-theme
-    // pastel lift and the desktop-panel tail (the desktop shell paints its rounded panel, not
-    // colorScheme.background, so a tail aimed at background would draw a seam where the glow ends).
     val backgroundColor = MaterialTheme.colorScheme.background
     val isLightTheme = backgroundColor.luminance() > 0.5f
     val pageBackground =
@@ -131,82 +140,162 @@ fun MixForYouScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (mixForYou.data.isNullOrEmpty()) {
+    LaunchedEffect(isYouTubeLoggedIn) {
+        if (isYouTubeLoggedIn && mixForYou.data.isNullOrEmpty()) {
             viewModel.getYouTubeMixedForYou()
         }
     }
 
-    Box(Modifier.hazeSource(hazeState)) {
-        // Drawn before the grid, and it SCROLLS AWAY with it like Home's — the draw-phase
-        // translation tracks the first row exactly and parks once it has passed; whatever remains
-        // at the hand-off sits deep in the scrim tail, so the switch does not pop. Inside the haze
-        // source on purpose: the blurred top app bar frosts the glow exactly as it frosts artwork.
-        Box(
-            Modifier
-                .graphicsLayer {
-                    translationY =
-                        if (gridState.firstVisibleItemIndex == 0) {
-                            -gridState.firstVisibleItemScrollOffset.toFloat()
-                        } else {
-                            -size.height
-                        }
-                }.fillMaxWidth()
-                .height(AmbientGlowHeight)
-                .angledGradientBackground(listOf(animatedColor, pageBackground), 25f),
-        ) {
+    if (!isYouTubeLoggedIn) {
+        MixSignedOutView(
+            innerPadding = innerPadding,
+            onSignInClick = { navController.navigate(LoginDestination) },
+        )
+    } else {
+        Box(Modifier.hazeSource(hazeState)) {
             Box(
                 Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(artworkScrimBrush(pageBackground)),
-            )
+                    .graphicsLayer {
+                        translationY =
+                            if (gridState.firstVisibleItemIndex == 0) {
+                                -gridState.firstVisibleItemScrollOffset.toFloat()
+                            } else {
+                                -size.height
+                            }
+                    }.fillMaxWidth()
+                    .height(AmbientGlowHeight)
+                    .angledGradientBackground(listOf(animatedColor, pageBackground), 25f),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(artworkScrimBrush(pageBackground)),
+                )
+            }
+            GridLibraryPlaylist(
+                navController,
+                innerPadding.copy(top = topAppBarHeight),
+                mixForYou,
+                emptyText = Res.string.no_mixes_found,
+                state = gridState,
+                onScrolling = onScrolling,
+            ) {
+                viewModel.getYouTubeMixedForYou()
+            }
         }
-        GridLibraryPlaylist(
-            navController,
-            innerPadding.copy(top = topAppBarHeight),
-            mixForYou,
-            emptyText = Res.string.no_mixes_found,
-            state = gridState,
-            onScrolling = onScrolling,
-        ) {
-            viewModel.getYouTubeMixedForYou()
+        AnimatedContent(
+            targetState = isAtTop,
+            transitionSpec = {
+                fadeIn(tween(300)).togetherWith(fadeOut(tween(300)))
+            },
+        ) { atTop ->
+            Column(
+                Modifier
+                    .then(
+                        if (atTop) {
+                            Modifier.background(Color.Transparent)
+                        } else {
+                            Modifier.hazeBlur(HazeInput.Sources(hazeState), barBlurStyle(pageBackground, 0.3f))
+                        },
+                    ).onGloballyPositioned { coordinates ->
+                        topAppBarHeight = with(density) { coordinates.size.height.toDp() }
+                    },
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(Res.string.mix_for_you),
+                            style = typo().titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    },
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                        ),
+                )
+            }
         }
     }
-    // Transparent while the grid sits at pixel zero, frosted the moment it scrolls — the
-    // same AnimatedContent crossfade Home and Search run on their bars.
-    AnimatedContent(
-        targetState = isAtTop,
-        transitionSpec = {
-            fadeIn(tween(300)).togetherWith(fadeOut(tween(300)))
-        },
-    ) { atTop ->
-        Column(
-            Modifier
-                .then(
-                    if (atTop) {
-                        Modifier.background(Color.Transparent)
-                    } else {
-                        // AlbumScreen's bar recipe, thinned to 0.3 — see SettingScreen.
-                        Modifier.hazeBlur(HazeInput.Sources(hazeState), barBlurStyle(pageBackground, 0.3f))
-                    },
-                ).onGloballyPositioned { coordinates ->
-                    topAppBarHeight = with(density) { coordinates.size.height.toDp() }
-                },
+}
+
+@Composable
+fun MixSignedOutView(
+    innerPadding: PaddingValues,
+    onSignInClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.mix_for_you),
-                        style = typo().titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                },
-                colors =
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                    ),
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = SimpIcons.Sensors,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = stringResource(Res.string.mix_for_you),
+            style = typo().titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(Res.string.sign_in_to_youtube_mix_prompt),
+            style = typo().bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = onSignInClick,
+            shape = RoundedCornerShape(24.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+            modifier = Modifier.height(48.dp),
+        ) {
+            Text(
+                text = stringResource(Res.string.sign_in),
+                style = typo().labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun MixSignedOutPreview() {
+    MaterialTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            MixSignedOutView(
+                innerPadding = PaddingValues(0.dp),
+                onSignInClick = {},
             )
         }
     }

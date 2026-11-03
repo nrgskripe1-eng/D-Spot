@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
@@ -144,20 +145,13 @@ private class PlaylistThumbnailPainter(
         Logger.d("PlaylistThumbnailPainter", "Colors: ${colors.map { it.toArgb() }}")
         val centerX = size.width * 0.9f
         val centerY = size.height * 0.1f
-        val circleRadius = size.width * 0.1f / 2
-
-        drawCircle(
-            center = Offset(centerX, centerY),
-            color = Color.White,
-            radius = circleRadius
-        )
 
         translate(
             left = centerX - size.width * 0.15f / 2,
             top = centerY - size.height * 0.15f / 2,
         ) {
             with(iconPainter) {
-                draw(size * 0.15f, alpha = 0.2f)
+                draw(size * 0.15f, alpha = 0.85f, colorFilter = ColorFilter.tint(Color.White))
             }
         }
     }

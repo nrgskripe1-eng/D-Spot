@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
@@ -39,6 +39,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mika.dspot.extension.greyScale
+import com.mika.dspot.ui.navigation.destination.account.AccountDestination
 import com.mika.dspot.ui.navigation.destination.home.AnalyticsDestination
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
@@ -397,14 +398,15 @@ fun AppNavigationRail(
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    // See the note in AppBottomNavigationBar: `ordinal` is the tab's identity, not its position.
+    // Desktop rail screens: Home, Search, Library, Mix (if logged in), Analytics (if enabled), Account
     val bottomNavScreens =
         listOfNotNull(
             BottomNavScreen.Home,
+            BottomNavScreen.Search,
+            BottomNavScreen.Library,
             BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
             BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
-            BottomNavScreen.Library,
-            BottomNavScreen.Search,
+            BottomNavScreen.Account,
         )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
@@ -414,7 +416,8 @@ fun AppNavigationRail(
                 is LibraryDestination -> BottomNavScreen.Library.ordinal
                 is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
                 is MixForYouDestination -> BottomNavScreen.MixForYou.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
+                is AccountDestination -> BottomNavScreen.Account.ordinal
+                else -> BottomNavScreen.Home.ordinal
             },
         )
     }
@@ -439,11 +442,11 @@ fun AppNavigationRail(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(Res.drawable.mono),
-                    contentDescription = null,
+                    painter = painterResource(Res.drawable.circle_app_icon),
+                    contentDescription = "D-Spot",
                     modifier =
                         Modifier
-                            .height(32.dp)
+                            .size(36.dp)
                             .clip(CircleShape),
                 )
             }

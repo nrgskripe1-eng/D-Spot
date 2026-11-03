@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.extension
+package com.mika.dspot.extension
 
 import androidx.compose.runtime.Composable
 import com.mika.common.SponsorBlockType
@@ -290,3 +290,8 @@ fun SponsorBlockType.displayRes(): StringResource =
         SponsorBlockType.SELF_PROMOTION -> Res.string.self_promotion
         SponsorBlockType.SPONSOR -> Res.string.sponsor
     }
+
+fun String.cleanBrandText(): String =
+    this.replace("SimpMusic", "D-Spot", ignoreCase = true)
+        .replace("maxrave-dev", "Mika", ignoreCase = true)
+        .replace("maxrave", "Mika", ignoreCase = true)

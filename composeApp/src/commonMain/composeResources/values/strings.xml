@@ -448,6 +448,7 @@
     <string name="theme_mode_system">System default</string>
     <string name="theme_mode_dark">Dark</string>
     <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_amoled">AMOLED</string>
     <string name="now_playing_style">Now Playing style</string>
     <string name="now_playing_style_spotify">Classic</string>
     <string name="now_playing_style_m3_expressive" translatable="false">Material 3 Expressive</string>
@@ -725,6 +726,8 @@
     <string name="analytics_axis_concentration">Concentration</string>
     <string name="analytics_axis_replay">Replay</string>
     <string name="your_recently_played">Your recently played</string>
+    <string name="recently_played">Recently played</string>
+    <string name="jump_back_in">Jump back in</string>
     <string name="your_top_artists">Your top artists</string>
     <string name="your_top_albums">Your top albums</string>
     <string name="your_top_tracks">Your top tracks</string>
@@ -1016,4 +1019,14 @@
     <string name="log_stack_trace_lines">Stack trace · %1$s lines</string>
     <string name="log_hide_stack_trace">Hide stack trace</string>
     <string name="log_export_failed">Could not export the log</string>
+    <string name="philippines">Philippines</string>
+    <string name="more_countries">More countries</string>
+    <string name="channel_subscribers">%1$s channel subscribers</string>
+    <string name="chart_fallback_note">Chart data not available for %1$s. Showing Global charts.</string>
+    <string name="search_countries">Search countries…</string>
+    <string name="close">Close</string>
+    <string name="region">Region</string>
+    <string name="account">Account</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_in_to_youtube_mix_prompt">Sign in to your YouTube account to get personalized mixes and recommendations created just for you.</string>
 </resources>

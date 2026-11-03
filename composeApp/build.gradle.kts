@@ -58,15 +58,15 @@ kotlin {
         }
     }
 
-//    listOf(
-//        iosArm64(),
-//        iosSimulatorArm64()
-//    ).forEach { iosTarget ->
-//        iosTarget.binaries.framework {
-//            baseName = "ComposeApp"
-//            isStatic = true
-//        }
-//    }
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
 
     jvm()
 
@@ -93,6 +93,7 @@ kotlin {
 
             api(projects.media3)
             api(projects.media3Ui)
+            api(projects.data)
 
             // Google Cast (gated: real SDK for full builds, no-op stub for FOSS builds)
             if (isFullBuild) {
@@ -126,7 +127,7 @@ kotlin {
             // Other module
             api(projects.common)
             api(projects.domain)
-            implementation(projects.data)
+            api(projects.data)
 
             // Last.fm (gated: real scrobbler for full builds, no-op stub for FOSS builds).
             // `api` rather than `implementation` so :androidApp can hand it the credentials from
@@ -198,6 +199,17 @@ kotlin {
             implementation(projects.mediaJvmUi)
             // Login sync QR code
             implementation(libs.zxing.core)
+            // JCEF – embedded Chromium browser for Desktop login (YouTube/Spotify/LastFM/Discord).
+            // jcefmaven auto-downloads the native CEF bundle on first run and caches it in the
+            // user's home directory; subsequent startups are instant. The download only happens on
+            // the desktop target; Android never sees this dependency.
+            implementation(libs.jcef.maven)
+            // JNA + JNA-platform: used in JcefBrowser.kt to call Win32 SetWindowPos /
+            // RedrawWindow via User32.INSTANCE to fix the DWM composition bug where
+            // JCEF's Chromium child HWND renders black inside a WS_EX_LAYERED
+            // (transparent) window until a user window-drag triggers WM_WINDOWPOSCHANGED.
+            implementation(libs.jna)
+            implementation(libs.jna.platform)
         }
     }
 }
@@ -701,7 +713,7 @@ val mpvSetupLinuxCi by tasks.registering {
 // ===========================================================================
 // Kept in a repo of its own rather than D-Spot's own releases: these archives are ~196 MB per
 // mpv bump and would otherwise sit in the release list users browse for the app itself.
-val mpvNativesRepo = "maxrave-dev/simpmusic-files"
+val mpvNativesRepo = "mika-dev/d-spot-files"
 val mpvNativesTag = "abc"
 val mpvSlices = listOf("linux-x64", "macos-arm64", "macos-x64", "windows-x64", "windows-arm64")
 

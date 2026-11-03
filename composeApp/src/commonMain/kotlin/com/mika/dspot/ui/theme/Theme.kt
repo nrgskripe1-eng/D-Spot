@@ -151,16 +151,25 @@ fun AppTheme(
         } else {
             seed
         }
-    // Symmetric base: dark pins background/surface to pure black via isAmoled; light pins them to
-    // pure white with a neutral-grey ramp (the seed otherwise tints the light neutrals warm/cream).
+    val isAmoledMode = themeMode == DataStoreManager.THEME_MODE_AMOLED
+    // Symmetric base: AMOLED pins background/surface to pure black (#000000); standard dark keeps
+    // rich tonal dark surfaces; light pins them to pure white with a neutral-grey ramp.
     val colorScheme =
         wallpaperScheme
             ?: rememberDynamicColorScheme(
                 seedColor = seedColor,
                 isDark = isDark,
-                isAmoled = isDark,
+                isAmoled = isAmoledMode,
                 style = PaletteStyle.TonalSpot,
-                modifyColorScheme = { cs -> if (isDark) cs.withPureBlackSurfaces() else cs.withNeutralLightSurfaces() },
+                modifyColorScheme = { cs ->
+                    if (isAmoledMode) {
+                        cs.withPureBlackSurfaces()
+                    } else if (isDark) {
+                        cs
+                    } else {
+                        cs.withNeutralLightSurfaces()
+                    }
+                },
             )
     // Immersive screens stay dark even at light theme (see [ForceDarkContent]). Resolve their scheme
     // once here instead of letting every such subtree build a palette of its own.

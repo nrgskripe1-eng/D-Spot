@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.login
+package com.mika.dspot.ui.screen.login
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +91,6 @@ fun LoginScreen(
     // Hide bottom navigation when entering this screen
     LaunchedEffect(Unit) {
         hideBottomNavigation()
-        createWebViewCookieManager().removeAllCookies()
     }
 
     // Show bottom navigation when leaving this screen
@@ -120,13 +119,15 @@ fun LoginScreen(
                                 devLoginSheet = false
                             },
                             onDone = { cookie ->
-                                coroutineScope.launch {
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                     val success = settingsViewModel.addAccount(cookie)
-                                    if (success) {
-                                        viewModel.makeToast(getString(Res.string.login_success))
-                                        navController.navigateUp()
-                                    } else {
-                                        viewModel.makeToast(getString(Res.string.login_failed))
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        if (success) {
+                                            viewModel.makeToast(getString(Res.string.login_success))
+                                            navController.navigateUp()
+                                        } else {
+                                            viewModel.makeToast(getString(Res.string.login_failed))
+                                        }
                                     }
                                 }
                             },
@@ -136,24 +137,31 @@ fun LoginScreen(
                 }
             ) { url ->
                 Logger.d("LogInScreen", "Current URL: $url")
-                if (url == Config.YOUTUBE_MUSIC_MAIN_URL) {
-                    coroutineScope.launch {
-                        val success =
-                            createWebViewCookieManager()
-                                .getCookie(url)
-                                .takeIf {
-                                    it.isNotEmpty()
-                                }?.let {
-                                    settingsViewModel.addAccount(it)
-                                } ?: false
+                val isYouTubeMusic = url == Config.YOUTUBE_MUSIC_MAIN_URL ||
+                    url.startsWith("https://music.youtube.com") ||
+                    url.startsWith("http://music.youtube.com")
+                if (isYouTubeMusic) {
+                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        var cookieStr = ""
+                        repeat(5) { attempt ->
+                            cookieStr = createWebViewCookieManager().getCookie(url)
+                            if (cookieStr.isNotEmpty()) return@repeat
+                            kotlinx.coroutines.delay(400)
+                            Logger.d("LogInScreen", "Cookie retry attempt ${attempt + 1}")
+                        }
 
-                        createWebViewCookieManager().removeAllCookies()
+                        val success = cookieStr
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { settingsViewModel.addAccount(it) }
+                            ?: false
 
-                        if (success) {
-                            viewModel.makeToast(getString(Res.string.login_success))
-                            navController.navigateUp()
-                        } else {
-                            viewModel.makeToast(getString(Res.string.login_failed))
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            if (success) {
+                                viewModel.makeToast(getString(Res.string.login_success))
+                                navController.navigateUp()
+                            } else {
+                                viewModel.makeToast(getString(Res.string.login_failed))
+                            }
                         }
                     }
                 }
