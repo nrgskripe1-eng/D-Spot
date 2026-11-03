@@ -4,6 +4,8 @@ import DatabaseDao
 import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.ConstructedBy
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.room.execSQL
 import androidx.room.useWriterConnection
@@ -126,3 +128,5 @@ abstract class MusicDatabase : RoomDatabase() {
 expect fun getDatabaseBuilder(converters: Converters): RoomDatabase.Builder<MusicDatabase>
 
 expect fun getDatabasePath(): String
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+expect object MusicDatabaseConstructor : RoomDatabaseConstructor<MusicDatabase>
