@@ -1,6 +1,10 @@
+@file:OptIn(
+    kotlinx.cinterop.ExperimentalForeignApi::class,
+    kotlin.io.encoding.ExperimentalEncodingApi::class,
+)
+
 package com.mika.ktorext.crypto
 
-import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.CommonCrypto.CCHmac
@@ -9,14 +13,13 @@ import platform.CommonCrypto.kCCHmacAlgSHA256
 import platform.Foundation.NSDate
 import platform.Foundation.timeIntervalSince1970
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
-@OptIn(ExperimentalForeignApi::class, ExperimentalEncodingApi::class)
 actual class Hmac actual constructor(algorithm: String, secretKey: String) {
     private val tokenTtl: Long = 300000L // 5 minutes in milliseconds
-    private val algo = if (algorithm.contains("256", ignoreCase = true)) kCCHmacAlgSHA256 else kCCHmacAlgSHA1
-    private val keyBytes = secretKey.encodeToByteArray()
-    private val digestLength = if (algorithm.contains("256", ignoreCase = true)) 32 else 20
+    private val isSha256 = algorithm.contains("256", ignoreCase = true)
+    private val algo: UInt = if (isSha256) kCCHmacAlgSHA256 else kCCHmacAlgSHA1
+    private val keyBytes: ByteArray = secretKey.encodeToByteArray()
+    private val digestLength: Int = if (isSha256) 32 else 20
 
     actual fun getMacTimestampPair(uri: String): Pair<String, String> {
         val timestamp = (NSDate().timeIntervalSince1970 * 1000).toLong().toString()

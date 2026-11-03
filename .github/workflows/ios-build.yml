@@ -35,8 +35,12 @@ jobs:
 
       - name: Build KMP iOS Frameworks
         run: |
-          ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache --info --stacktrace
-          ./gradlew :composeApp:compileKotlinIosArm64 --no-configuration-cache --info --stacktrace
+          ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache --stacktrace || {
+            echo "::error::Compilation failed! Checking errors below:"
+            ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --no-configuration-cache --info 2>&1 | grep -C 3 -E "e: |error:|Compilation finished with errors"
+            exit 1
+          }
+          ./gradlew :composeApp:compileKotlinIosArm64 --no-configuration-cache --stacktrace
 
       - name: Build with Xcode (Simulator Build)
         run: |
