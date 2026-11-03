@@ -7,7 +7,6 @@ import platform.CommonCrypto.CCHmac
 import platform.CommonCrypto.kCCHmacAlgSHA1
 import platform.CommonCrypto.kCCHmacAlgSHA256
 import platform.Foundation.NSDate
-import platform.Foundation.NSISO8601DateFormatter
 import platform.Foundation.timeIntervalSince1970
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -17,7 +16,7 @@ actual class Hmac actual constructor(algorithm: String, secretKey: String) {
     private val tokenTtl: Long = 300000L // 5 minutes in milliseconds
     private val algo = if (algorithm.contains("256", ignoreCase = true)) kCCHmacAlgSHA256 else kCCHmacAlgSHA1
     private val keyBytes = secretKey.encodeToByteArray()
-    private val digestLength = if (algo == kCCHmacAlgSHA256) 32 else 20
+    private val digestLength = if (algorithm.contains("256", ignoreCase = true)) 32 else 20
 
     actual fun getMacTimestampPair(uri: String): Pair<String, String> {
         val timestamp = (NSDate().timeIntervalSince1970 * 1000).toLong().toString()
@@ -30,22 +29,42 @@ actual class Hmac actual constructor(algorithm: String, secretKey: String) {
         val dataBytes = data.encodeToByteArray()
         val result = ByteArray(digestLength)
 
+        if (keyBytes.isEmpty()) {
+            return Base64.Default.encode(result)
+        }
+
         keyBytes.usePinned { keyPinned ->
-            dataBytes.usePinned { dataPinned ->
+            val keyPtr = keyPinned.addressOf(0)
+            val keyLen = keyBytes.size.toULong()
+
+            if (dataBytes.isEmpty()) {
                 result.usePinned { resultPinned ->
                     CCHmac(
                         algo,
-                        keyPinned.addressOf(0),
-                        keyBytes.size.toULong(),
-                        dataPinned.addressOf(0),
-                        dataBytes.size.toULong(),
+                        keyPtr,
+                        keyLen,
+                        null,
+                        0uL,
                         resultPinned.addressOf(0),
                     )
+                }
+            } else {
+                dataBytes.usePinned { dataPinned ->
+                    result.usePinned { resultPinned ->
+                        CCHmac(
+                            algo,
+                            keyPtr,
+                            keyLen,
+                            dataPinned.addressOf(0),
+                            dataBytes.size.toULong(),
+                            resultPinned.addressOf(0),
+                        )
+                    }
                 }
             }
         }
 
-        return Base64.encode(result)
+        return Base64.Default.encode(result)
     }
 
     actual fun validateHmac(
