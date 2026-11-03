@@ -60,6 +60,8 @@ jobs:
             -destination "generic/platform=iOS Simulator" \
             -configuration Release \
             CODE_SIGNING_ALLOWED=NO \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
             build
 
       - name: Compress App Bundle for Sideload / Simulator
