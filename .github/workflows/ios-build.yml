@@ -11,7 +11,7 @@ jobs:
   build-ios-ipa:
     name: Build iOS IPA (for iPhone Sideloading)
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC"
@@ -30,6 +30,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      - name: Cache Kotlin/Native toolchain (~/.konan)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
 
       - name: Setup Xcode version
         uses: maxim-lobanov/setup-xcode@v1
@@ -68,7 +76,7 @@ jobs:
   build-ios-simulator:
     name: Build iOS Simulator App (VirtualBox)
     runs-on: macos-14
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC"
@@ -87,6 +95,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+
+      - name: Cache Kotlin/Native toolchain (~/.konan)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
 
       - name: Setup Xcode version
         uses: maxim-lobanov/setup-xcode@v1
