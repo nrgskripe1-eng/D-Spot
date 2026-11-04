@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
-    name: Build iOS Framework and App
+  build-ios-ipa:
+    name: Build iOS IPA (for iPhone Sideloading)
     runs-on: macos-14
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC"
@@ -39,7 +39,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build for Physical iOS Device (IPA for Sideloading)
+      - name: Build for Physical iOS Device (IPA)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
@@ -59,7 +59,44 @@ jobs:
           zip -r D-Spot.ipa Payload
           cd ..
 
-      - name: Build for iOS Simulator (Mac VirtualBox)
+      - name: Upload IPA (for Sideloadly / AltStore)
+        uses: actions/upload-artifact@v4
+        with:
+          name: D-Spot-iOS-Device
+          path: build_output/D-Spot.ipa
+
+  build-ios-simulator:
+    name: Build iOS Simulator App (VirtualBox)
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC"
+      _JAVA_OPTIONS: "-Xmx9216m"
+      KOTLIN_DAEMON_JVM_OPTIONS: "-Xmx9216m"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build for iOS Simulator
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
@@ -76,13 +113,7 @@ jobs:
           cd ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphonesimulator/
           zip -r iosApp-Simulator.zip iosApp.app
 
-      - name: Upload IPA for iPhone (Sideloadly / AltStore)
-        uses: actions/upload-artifact@v4
-        with:
-          name: D-Spot-iOS-Device
-          path: build_output/D-Spot.ipa
-
-      - name: Upload Simulator App (VirtualBox)
+      - name: Upload Simulator App
         uses: actions/upload-artifact@v4
         with:
           name: iosApp-Simulator
