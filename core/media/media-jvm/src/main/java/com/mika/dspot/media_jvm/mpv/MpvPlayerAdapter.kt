@@ -932,9 +932,6 @@ class MpvPlayerAdapter(
 
     private fun getNextMediaItemIndex(): Int =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> {
-                localCurrentMediaItemIndex
-            }
             PlayerConstants.REPEAT_MODE_ALL -> {
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
                     val currentShufflePos = shuffleIndices.getOrNull(localCurrentMediaItemIndex) ?: 0
@@ -965,9 +962,6 @@ class MpvPlayerAdapter(
 
     private fun getPreviousMediaItemIndex(): Int =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> {
-                localCurrentMediaItemIndex
-            }
             PlayerConstants.REPEAT_MODE_ALL -> {
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
                     val currentShufflePos = shuffleIndices.getOrNull(localCurrentMediaItemIndex) ?: 0
