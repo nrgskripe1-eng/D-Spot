@@ -8,10 +8,10 @@
 
 A YouTube Music and YouTube client for Android and Desktop, built with Kotlin Multiplatform and Compose.
 
-[Website](https://dspot.app/) · [Releases](https://github.com/Mika/D-Spot/releases) · [Discord](https://discord.gg/Rq5tWVM9Hg) · [Report an issue](https://github.com/Mika/D-Spot/issues)
+[Website](https://dspot-web.vercel.app/) Â· [Releases](https://github.com/nrgskripe1-eng/D-Spot/releases) Â· [Discord](https://discord.gg/Rq5tWVM9Hg) Â· [Report an issue](https://github.com/nrgskripe1-eng/D-Spot/issues)
 
-[![Latest release](https://img.shields.io/github/v/release/Mika/D-Spot)](https://github.com/Mika/D-Spot/releases)
-[![Downloads](https://img.shields.io/github/downloads/Mika/D-Spot/total)](https://github.com/Mika/D-Spot/releases)
+[![Latest release](https://img.shields.io/github/v/release/nrgskripe1-eng/D-Spot)](https://github.com/nrgskripe1-eng/D-Spot/releases)
+[![Downloads](https://img.shields.io/github/downloads/nrgskripe1-eng/D-Spot/total)](https://github.com/nrgskripe1-eng/D-Spot/releases)
 
 </div>
 
@@ -33,12 +33,12 @@ Choose the build that matches your device.
 
 | Source | Download |
 | --- | --- |
-| GitHub Releases | [Get the latest APK](https://github.com/Mika/D-Spot/releases) |
+| GitHub Releases | [Get the latest APK](https://github.com/nrgskripe1-eng/D-Spot/releases) |
 | F-Droid | [D-Spot on F-Droid](https://f-droid.org/en/packages/com.mika.dspot/) |
 | IzzyOnDroid | [D-Spot on IzzyOnDroid](https://apt.izzysoft.de/packages/com.mika.dspot/) |
 | OpenAPK | [D-Spot on OpenAPK](https://www.openapk.net/dspot/com.mika.dspot/) |
 
-For vivo devices that need Origin Island and the music widget, use the `D-Spot-full-vivo-*.apk` build from [GitHub Releases](https://github.com/Mika/D-Spot/releases). This build installs as a separate app and cannot be installed alongside Spotify.
+For vivo devices that need Origin Island and the music widget, use the `D-Spot-full-vivo-*.apk` build from [GitHub Releases](https://github.com/nrgskripe1-eng/D-Spot/releases). This build installs as a separate app and cannot be installed alongside Spotify.
 
 ### Desktop
 
@@ -56,7 +56,7 @@ Some Linux distributions may have stability issues related to an upstream JetBra
 
 Nightly builds contain development versions and may be unstable.
 
-[View Android nightly builds](https://dspot.app/nightly-download)
+[View Android nightly builds](https://dspot-web.vercel.app/nightly-download)
 
 ---
 
@@ -85,7 +85,7 @@ Features are grouped by what they help you do, rather than by platform screen.
 - Import playlists converted from Spotify and other services.
 - Customize playlists and sync them with YouTube Music.
 - Follow artists and receive notifications about them.
-- Use D-Spot Chart for chart discovery: [chart.dspot.app](https://chart.dspot.app/).
+- Use D-Spot Chart for chart discovery: [chart.dspot.app](https://dspot-web.vercel.app/chart).
 
 ### Lyrics and artwork
 
@@ -129,35 +129,35 @@ Some features require account sign-in, a supported service, a compatible device,
 The screenshots below show the Android experience. For more views, visit the [D-Spot screenshot collection](https://photos.app.goo.gl/AbieoXG5ctDrpwzp7).
 
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/01.png?raw=true" width="190" alt="D-Spot screenshot 1">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/02.png?raw=true" width="190" alt="D-Spot screenshot 2">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/03.png?raw=true" width="190" alt="D-Spot screenshot 3">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/04.png?raw=true" width="190" alt="D-Spot screenshot 4">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/01.png?raw=true" width="190" alt="D-Spot screenshot 1">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/02.png?raw=true" width="190" alt="D-Spot screenshot 2">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/03.png?raw=true" width="190" alt="D-Spot screenshot 3">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/04.png?raw=true" width="190" alt="D-Spot screenshot 4">
 </p>
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/05.png?raw=true" width="190" alt="D-Spot screenshot 5">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/06.png?raw=true" width="190" alt="D-Spot screenshot 6">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/07.png?raw=true" width="190" alt="D-Spot screenshot 7">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/08.png?raw=true" width="190" alt="D-Spot screenshot 8">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/05.png?raw=true" width="190" alt="D-Spot screenshot 5">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/06.png?raw=true" width="190" alt="D-Spot screenshot 6">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/07.png?raw=true" width="190" alt="D-Spot screenshot 7">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/08.png?raw=true" width="190" alt="D-Spot screenshot 8">
 </p>
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/09.png?raw=true" width="190" alt="D-Spot screenshot 9">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/10.png?raw=true" width="190" alt="D-Spot screenshot 10">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/11.png?raw=true" width="190" alt="D-Spot screenshot 11">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/12.png?raw=true" width="190" alt="D-Spot screenshot 12">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/09.png?raw=true" width="190" alt="D-Spot screenshot 9">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/10.png?raw=true" width="190" alt="D-Spot screenshot 10">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/11.png?raw=true" width="190" alt="D-Spot screenshot 11">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/12.png?raw=true" width="190" alt="D-Spot screenshot 12">
 </p>
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/13.png?raw=true" width="190" alt="D-Spot screenshot 13">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/14.png?raw=true" width="190" alt="D-Spot screenshot 14">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/15.png?raw=true" width="190" alt="D-Spot screenshot 15">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/16.png?raw=true" width="190" alt="D-Spot screenshot 16">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/13.png?raw=true" width="190" alt="D-Spot screenshot 13">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/14.png?raw=true" width="190" alt="D-Spot screenshot 14">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/15.png?raw=true" width="190" alt="D-Spot screenshot 15">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/16.png?raw=true" width="190" alt="D-Spot screenshot 16">
 </p>
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/17.png?raw=true" width="190" alt="D-Spot screenshot 17">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/18.png?raw=true" width="190" alt="D-Spot screenshot 18">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/17.png?raw=true" width="190" alt="D-Spot screenshot 17">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/18.png?raw=true" width="190" alt="D-Spot screenshot 18">
 </p>
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/dev/asset/screenshot/19.png?raw=true" width="800" alt="D-Spot desktop screenshot">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/19.png?raw=true" width="800" alt="D-Spot desktop screenshot">
 </p>
 
 ---
@@ -181,7 +181,7 @@ D-Spot retrieves catalog information and media stream data from services it supp
 The application follows a Clean Architecture approach, with MVVM used in the UI and app module.
 
 <p align="center">
-  <img src="https://github.com/Mika/D-Spot/blob/main/asset/dependencies_graph.svg?raw=true" width="800" alt="D-Spot dependency graph">
+  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/main/asset/dependencies_graph.svg?raw=true" width="800" alt="D-Spot dependency graph">
 </p>
 
 ---
@@ -203,8 +203,8 @@ D-Spot is in beta. Bugs, crashes, and playback issues may occur, including issue
 If you encounter a problem:
 
 1. Check whether you are using the latest available build.
-2. Search the [existing issues](https://github.com/Mika/D-Spot/issues).
-3. If the issue has not been reported, [open a new issue](https://github.com/Mika/D-Spot/issues/new) with the relevant details.
+2. Search the [existing issues](https://github.com/nrgskripe1-eng/D-Spot/issues).
+3. If the issue has not been reported, [open a new issue](https://github.com/nrgskripe1-eng/D-Spot/issues/new) with the relevant details.
 
 You can also join the [D-Spot Discord community](https://discord.gg/Rq5tWVM9Hg).
 
@@ -214,7 +214,7 @@ Contributions, translations, and bug reports are welcome.
 
 - Read the [contribution guide](CONTRIBUTING.md) before opening a pull request.
 - Help translate D-Spot through [Crowdin](https://crowdin.com/project/dspot).
-- Review the [Code of Conduct](https://github.com/Mika/D-Spot/blob/main/CODE_OF_CONDUCT.md).
+- Review the [Code of Conduct](https://github.com/nrgskripe1-eng/D-Spot/blob/main/CODE_OF_CONDUCT.md).
 
 Please follow the repository's contribution process. Pull requests should be connected to an accepted issue, and translations should be submitted through Crowdin rather than by editing translation files directly.
 
@@ -222,12 +222,11 @@ Please follow the repository's contribution process. Pull requests should be con
 
 D-Spot's development builds on ideas and work from the wider community. Special thanks to:
 
-- [SimpMusic](https://github.com/maxrave-dev/SimpMusic) — the original project from which this project traces its roots.
-- [InnerTune](https://github.com/z-huang/InnerTune) — inspiration for retrieving YouTube Music data.
-- [SmartTube](https://github.com/yuliskov/SmartTube) — research and techniques related to extracting YouTube stream URLs.
-- [SponsorBlock](https://sponsor.ajay.app/) — sponsored-segment data.
-- [Return YouTube Dislike](https://returnyoutubedislike.com/) — dislike information.
-- [LRCLIB](https://lrclib.net/) — alternative lyrics data.
+- [InnerTune](https://github.com/z-huang/InnerTune) â€” inspiration for retrieving YouTube Music data.
+- [SmartTube](https://github.com/yuliskov/SmartTube) â€” research and techniques related to extracting YouTube stream URLs.
+- [SponsorBlock](https://sponsor.ajay.app/) â€” sponsored-segment data.
+- [Return YouTube Dislike](https://returnyoutubedislike.com/) â€” dislike information.
+- [LRCLIB](https://lrclib.net/) â€” alternative lyrics data.
 - The translators and contributors who help improve D-Spot.
 
 D-Spot's current name, presentation, and product direction are maintained in this repository. This section acknowledges project history and upstream work; it does not replace the licenses or notices included in the source code.
@@ -258,31 +257,9 @@ D-Spot does not host the media it displays and cannot process takedown requests 
 
 <div align="center">
 
-[Website](https://dspot.app/) · [Discord community](https://discord.gg/Rq5tWVM9Hg) · [GitHub Discussions](https://github.com/Mika/D-Spot/discussions) · [Issues](https://github.com/Mika/D-Spot/issues)
+[Website](https://dspot-web.vercel.app/) Â· [Discord community](https://discord.gg/Rq5tWVM9Hg) Â· [GitHub Discussions](https://github.com/nrgskripe1-eng/D-Spot/discussions) Â· [Issues](https://github.com/nrgskripe1-eng/D-Spot/issues)
 
 </div>
-
-### Support the project
-
-If D-Spot is useful to you, you can support its development through the links below.
-
-<div align="left">
-  <a href="https://buymeacoffee.com/mikaxcc"><img alt="Buy Me a Coffee" height="42" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"></a>
-  <a href="https://liberapay.com/mika/"><img alt="Liberapay" height="42" src="https://raw.githubusercontent.com/liberapay/liberapay.com/master/www/assets/liberapay/logo-v2_black-on-yellow.svg"></a>
-</div>
-
-### Sponsors
-
-D-Spot is sponsored by:
-
-- [Crowdin](https://crowdin.com/)
-- [Sentry](https://sentry.io/)
-
-Both services provide free enterprise plans for eligible open-source projects:
-- [Crowdin Open Source](https://crowdin.com/page/open-source-project-setup-request)
-- [Sentry for Open Source](https://sentry.io/for/open-source/)
-
-The project has also been part of the [Vercel Open Source Program](https://vercel.com/oss) and is tested with [BrowserStack](https://www.browserstack.com/).
 
 ---
 
