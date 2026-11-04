@@ -8,7 +8,7 @@
 
 A YouTube Music and YouTube client for Android and Desktop, built with Kotlin Multiplatform and Compose.
 
-[Website](https://dspot-web.vercel.app/) · [Releases](https://github.com/nrgskripe1-eng/D-Spot/releases) · [Discord](https://discord.gg/Rq5tWVM9Hg) · [Report an issue](https://github.com/nrgskripe1-eng/D-Spot/issues)
+[Website](https://dspot-web.vercel.app/) · [Releases](https://github.com/nrgskripe1-eng/D-Spot/releases) · [Report an issue](https://github.com/nrgskripe1-eng/D-Spot/issues)
 
 [![Latest release](https://img.shields.io/github/v/release/nrgskripe1-eng/D-Spot)](https://github.com/nrgskripe1-eng/D-Spot/releases)
 [![Downloads](https://img.shields.io/github/downloads/nrgskripe1-eng/D-Spot/total)](https://github.com/nrgskripe1-eng/D-Spot/releases)
@@ -28,15 +28,6 @@ D-Spot is not affiliated with or endorsed by Google, YouTube, or Spotify.
 ## Get D-Spot
 
 Choose the build that matches your device.
-
-### Android
-
-| Source | Download |
-| --- | --- |
-| GitHub Releases | [Get the latest APK](https://github.com/nrgskripe1-eng/D-Spot/releases) |
-| F-Droid | [D-Spot on F-Droid](https://f-droid.org/en/packages/com.mika.dspot/) |
-| IzzyOnDroid | [D-Spot on IzzyOnDroid](https://apt.izzysoft.de/packages/com.mika.dspot/) |
-| OpenAPK | [D-Spot on OpenAPK](https://www.openapk.net/dspot/com.mika.dspot/) |
 
 For vivo devices that need Origin Island and the music widget, use the `D-Spot-full-vivo-*.apk` build from [GitHub Releases](https://github.com/nrgskripe1-eng/D-Spot/releases). This build installs as a separate app and cannot be installed alongside Spotify.
 
@@ -118,42 +109,6 @@ Some features require account sign-in, a supported service, a compatible device,
 
 ---
 
-## Screenshots
-
-The screenshots below show the Android experience. For more views, visit the [D-Spot screenshot collection](https://photos.app.goo.gl/AbieoXG5ctDrpwzp7).
-
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/01.png?raw=true" width="190" alt="D-Spot screenshot 1">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/02.png?raw=true" width="190" alt="D-Spot screenshot 2">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/03.png?raw=true" width="190" alt="D-Spot screenshot 3">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/04.png?raw=true" width="190" alt="D-Spot screenshot 4">
-</p>
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/05.png?raw=true" width="190" alt="D-Spot screenshot 5">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/06.png?raw=true" width="190" alt="D-Spot screenshot 6">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/07.png?raw=true" width="190" alt="D-Spot screenshot 7">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/08.png?raw=true" width="190" alt="D-Spot screenshot 8">
-</p>
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/09.png?raw=true" width="190" alt="D-Spot screenshot 9">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/10.png?raw=true" width="190" alt="D-Spot screenshot 10">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/11.png?raw=true" width="190" alt="D-Spot screenshot 11">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/12.png?raw=true" width="190" alt="D-Spot screenshot 12">
-</p>
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/13.png?raw=true" width="190" alt="D-Spot screenshot 13">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/14.png?raw=true" width="190" alt="D-Spot screenshot 14">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/15.png?raw=true" width="190" alt="D-Spot screenshot 15">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/16.png?raw=true" width="190" alt="D-Spot screenshot 16">
-</p>
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/17.png?raw=true" width="190" alt="D-Spot screenshot 17">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/18.png?raw=true" width="190" alt="D-Spot screenshot 18">
-</p>
-<p align="center">
-  <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/dev/asset/screenshot/19.png?raw=true" width="800" alt="D-Spot desktop screenshot">
-</p>
-
 ---
 
 ## How D-Spot works
@@ -200,7 +155,7 @@ If you encounter a problem:
 2. Search the [existing issues](https://github.com/nrgskripe1-eng/D-Spot/issues).
 3. If the issue has not been reported, [open a new issue](https://github.com/nrgskripe1-eng/D-Spot/issues/new) with the relevant details.
 
-You can also join the [D-Spot Discord community](https://discord.gg/Rq5tWVM9Hg).
+
 
 ## Help improve D-Spot
 
@@ -216,11 +171,11 @@ Please follow the repository's contribution process. Pull requests should be con
 
 D-Spot's development builds on ideas and work from the wider community. Special thanks to:
 
-- [InnerTune](https://github.com/z-huang/InnerTune) â€” inspiration for retrieving YouTube Music data.
-- [SmartTube](https://github.com/yuliskov/SmartTube) â€” research and techniques related to extracting YouTube stream URLs.
-- [SponsorBlock](https://sponsor.ajay.app/) â€” sponsored-segment data.
-- [Return YouTube Dislike](https://returnyoutubedislike.com/) â€” dislike information.
-- [LRCLIB](https://lrclib.net/) â€” alternative lyrics data.
+- [InnerTune](https://github.com/z-huang/InnerTune) inspiration for retrieving YouTube Music data.
+- [SmartTube](https://github.com/yuliskov/SmartTube) research and techniques related to extracting YouTube stream URLs.
+- [SponsorBlock](https://sponsor.ajay.app/) sponsored-segment data.
+- [Return YouTube Dislike](https://returnyoutubedislike.com/) dislike information.
+- [LRCLIB](https://lrclib.net/) alternative lyrics data.
 - The translators and contributors who help improve D-Spot.
 
 D-Spot's current name, presentation, and product direction are maintained in this repository. This section acknowledges project history and upstream work; it does not replace the licenses or notices included in the source code.
@@ -243,15 +198,14 @@ Users are encouraged to support artists and creators through official subscripti
 
 The software is provided "AS IS", without warranty of any kind, express or implied. The developers do not encourage or condone copyright infringement. Users are responsible for ensuring that their use complies with applicable laws and third-party terms.
 
-D-Spot does not host the media it displays and cannot process takedown requests for content hosted by Google or YouTube. For general inquiries, contact **mika.dev.contact@gmail.com**.
-
+D-Spot does not host the media it displays and cannot process takedown requests for content hosted by Google or YouTube. For general inquiries, contact
 ---
 
 ## Community and support
 
 <div align="center">
 
-[Website](https://dspot-web.vercel.app/) Â· [Discord community](https://discord.gg/Rq5tWVM9Hg) Â· [GitHub Discussions](https://github.com/nrgskripe1-eng/D-Spot/discussions) Â· [Issues](https://github.com/nrgskripe1-eng/D-Spot/issues)
+[Website](https://dspot-web.vercel.app/) · [GitHub Discussions](https://github.com/nrgskripe1-eng/D-Spot/discussions) · [Issues](https://github.com/nrgskripe1-eng/D-Spot/issues)
 
 </div>
 
