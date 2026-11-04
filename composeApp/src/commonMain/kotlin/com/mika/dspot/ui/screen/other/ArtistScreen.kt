@@ -100,6 +100,7 @@ import com.mika.dspot.expect.ui.toImageBitmap
 import com.mika.dspot.extension.artworkScrimBrush
 import com.mika.dspot.extension.barBlurStyle
 import com.mika.dspot.extension.getColorFromPalette
+import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.getScreenSizeInfo
 import com.mika.dspot.extension.getStringBlocking
 import com.mika.dspot.extension.hexToColorOrNull

@@ -12,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import com.mika.dspot.extension.mouseDragScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -1204,6 +1205,7 @@ fun SearchScreen(
                     Row(
                         modifier =
                             Modifier
+                                .mouseDragScroll(chipRowState)
                                 .horizontalScroll(chipRowState)
                                 .padding(top = 10.dp)
                                 .padding(horizontal = 12.dp),

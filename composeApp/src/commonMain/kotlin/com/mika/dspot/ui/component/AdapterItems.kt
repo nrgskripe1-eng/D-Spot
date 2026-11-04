@@ -1,4 +1,6 @@
 package com.mika.dspot.ui.component
+
+import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.cleanBrandText
 
 import androidx.compose.animation.AnimatedVisibility

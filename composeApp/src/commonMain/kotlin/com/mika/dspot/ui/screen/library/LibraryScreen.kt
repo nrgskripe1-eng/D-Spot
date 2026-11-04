@@ -74,6 +74,7 @@ import com.mika.logger.Logger
 import com.mika.dspot.Platform
 import com.mika.dspot.extension.copy
 import com.mika.dspot.extension.isScrollingUp
+import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.ultraThinBarStyle
 import com.mika.dspot.getPlatform
 import com.mika.dspot.ui.component.AddToPlaylistModalBottomSheet

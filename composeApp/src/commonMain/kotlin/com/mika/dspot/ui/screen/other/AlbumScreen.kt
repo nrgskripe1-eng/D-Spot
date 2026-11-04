@@ -77,6 +77,7 @@ import com.mika.dspot.expect.ui.layerBackdrop
 import com.mika.dspot.expect.ui.rememberBackdrop
 import com.mika.dspot.expect.ui.toImageBitmap
 import com.mika.dspot.extension.artworkScrimBrush
+import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.getColorFromPalette
 import com.mika.dspot.extension.getScreenSizeInfo
 import com.mika.dspot.extension.rememberPaletteColor
