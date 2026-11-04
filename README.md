@@ -129,7 +129,7 @@ D-Spot retrieves catalog information and media stream data from services it supp
 
 The application follows a Clean Architecture approach, with MVVM used in the UI and app module.
 
-<p align="center">
+<p align="center"> 
   <img src="https://github.com/nrgskripe1-eng/D-Spot/blob/main/asset/dependencies_graph.svg?raw=true" width="800" alt="D-Spot dependency graph">
 </p>
 
