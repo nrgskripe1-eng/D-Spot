@@ -906,7 +906,6 @@ class MpvPlayerAdapter(
 
     override fun hasNextMediaItem(): Boolean =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> true
             PlayerConstants.REPEAT_MODE_ALL -> true
             else ->
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
@@ -920,7 +919,6 @@ class MpvPlayerAdapter(
 
     override fun hasPreviousMediaItem(): Boolean =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> true
             PlayerConstants.REPEAT_MODE_ALL -> true
             else ->
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
@@ -2782,6 +2780,7 @@ class MpvPlayerAdapter(
                             if (crossfadeEnabled &&
                                 !crossfadeSuppressed &&
                                 !isCrossfading &&
+                                internalRepeatMode != PlayerConstants.REPEAT_MODE_ONE &&
                                 internalPlayWhenReady &&
                                 !isCurrentTrackVideo() &&
                                 !isNextTrackVideo() &&

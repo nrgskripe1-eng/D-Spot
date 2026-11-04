@@ -1268,7 +1268,6 @@ internal class CrossfadeExoPlayerAdapter(
 
     override fun hasNextMediaItem(): Boolean =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> true
             PlayerConstants.REPEAT_MODE_ALL -> true
             else ->
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
@@ -1282,7 +1281,6 @@ internal class CrossfadeExoPlayerAdapter(
 
     override fun hasPreviousMediaItem(): Boolean =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> true
             PlayerConstants.REPEAT_MODE_ALL -> true
             else ->
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
@@ -1296,9 +1294,6 @@ internal class CrossfadeExoPlayerAdapter(
 
     private fun getNextMediaItemIndex(): Int =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> {
-                localCurrentMediaItemIndex
-            }
             PlayerConstants.REPEAT_MODE_ALL -> {
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
                     val currentShufflePos = shuffleIndices.getOrNull(localCurrentMediaItemIndex) ?: 0
@@ -1329,9 +1324,6 @@ internal class CrossfadeExoPlayerAdapter(
 
     private fun getPreviousMediaItemIndex(): Int =
         when (internalRepeatMode) {
-            PlayerConstants.REPEAT_MODE_ONE -> {
-                localCurrentMediaItemIndex
-            }
             PlayerConstants.REPEAT_MODE_ALL -> {
                 if (internalShuffleModeEnabled && shuffleOrder.isNotEmpty()) {
                     val currentShufflePos = shuffleIndices.getOrNull(localCurrentMediaItemIndex) ?: 0
@@ -1846,7 +1838,7 @@ internal class CrossfadeExoPlayerAdapter(
                     when (playbackState) {
                         Player.STATE_ENDED -> {
                             Logger.d(TAG, "End of stream reached")
-                            if (hasNextMediaItem()) {
+                            if (hasNextMediaItem() || internalRepeatMode == PlayerConstants.REPEAT_MODE_ONE) {
                                 forwardingPlayer.suppressPlaybackEnded = true
                                 transitionToState(InternalState.PREPARING)
                             } else {
@@ -2189,6 +2181,7 @@ internal class CrossfadeExoPlayerAdapter(
         val shouldCrossfade =
             crossfadeEnabled &&
                 !crossfadeSuppressed &&
+                internalRepeatMode != PlayerConstants.REPEAT_MODE_ONE &&
                 hasNextMediaItem() &&
                 !isCrossfading &&
                 !isCurrentTrackVideo() &&
