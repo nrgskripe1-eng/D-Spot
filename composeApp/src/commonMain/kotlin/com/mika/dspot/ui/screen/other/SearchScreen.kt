@@ -685,7 +685,7 @@ fun SearchScreen(
                                     DSpotChartButton(
                                         modifier = Modifier.padding(top = 10.dp),
                                     ) {
-                                        uriHandler.openUri("https://chart.dspot.app")
+                                        uriHandler.openUri("https://dspot-web.vercel.app/chart")
                                     }
                                 }
                             }

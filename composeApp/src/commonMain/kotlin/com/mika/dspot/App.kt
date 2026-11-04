@@ -820,7 +820,7 @@ fun App(
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    openUrl("https://dspot.app/download")
+                                    openUrl("https://dspot-web.vercel.app/download")
                                 },
                             ) {
                                 Text(

@@ -199,7 +199,7 @@ fun HomeItem(
 
 /**
  * A Home shelf's header: the optional avatar, strapline and title, plus the one button YouTube
- * sends with the shelf — "More" (a browse page) or "Play all" (a watch endpoint). Every shelf
+ * sends with the shelf â€” "More" (a browse page) or "Play all" (a watch endpoint). Every shelf
  * style uses it, so the two buttons look and behave the same everywhere.
  */
 @Composable
@@ -671,7 +671,7 @@ fun HomeItemContentPlaylist(
                     is com.mika.domain.data.model.mood.genre.Content -> data.thumbnail?.lastOrNull()?.url
                     is com.mika.domain.data.model.mood.moodmoments.Content -> data.thumbnails?.lastOrNull()?.url
                     is LocalPlaylistEntity -> data.thumbnail
-                    is ChartItem -> null
+                    is ChartItem -> data.cover
                     is PlaylistsResult -> data.thumbnails.lastOrNull()?.url
                     is AlbumEntity -> data.thumbnails
                     is PlaylistEntity -> data.thumbnails
@@ -683,7 +683,7 @@ fun HomeItemContentPlaylist(
                     // A recap owns no artwork; it borrows the month's own top song's, resolved
                     // where the recap itself is (LibraryViewModel.getMonthlyRecaps).
                     // Deliberately null: a recap has no artwork of its own, so it falls to
-                    // the title placeholder below — the same tile a local playlist without
+                    // the title placeholder below â€” the same tile a local playlist without
                     // a thumbnail gets. Same reason ChartItem above is null.
                     is MonthlyRecapItem -> null
                     else -> null
@@ -1150,7 +1150,7 @@ fun HomeItemSong(
                                 .connectArtists()
                                 .takeIf { it.isNotBlank() },
                             data.album?.name?.takeIf { it.isNotBlank() },
-                        ).joinToString(" • "),
+                        ).joinToString(" â€¢ "),
                     style = typo().bodySmall,
                     minLines = 1,
                     maxLines = 1,
@@ -1251,7 +1251,7 @@ fun HomeItemVideo(
                                 .connectArtists()
                                 .takeIf { it.isNotBlank() },
                             data.views?.takeIf { it.isNotBlank() },
-                        ).joinToString(" • "),
+                        ).joinToString(" â€¢ "),
                     style = typo().bodySmall,
                     minLines = 1,
                     maxLines = 1,
@@ -1273,7 +1273,7 @@ fun HomeItemVideo(
 
 /**
  * The red LIVE chip on a broadcast that is on air right now. Sized off the subtitle beside it
- * (bodySmall, 11sp) and kept a step smaller, as on the web — this app's labelSmall is 14sp
+ * (bodySmall, 11sp) and kept a step smaller, as on the web â€” this app's labelSmall is 14sp
  * SemiBold, which made the chip taller than the line it sits on.
  */
 @Composable
@@ -1398,7 +1398,7 @@ fun MoodMomentAndGenreHomeItem(
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Left thumbnail — 56×56dp, flush with card left, clipped to left corners only.
+        // Left thumbnail â€” 56Ã—56dp, flush with card left, clipped to left corners only.
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -1420,7 +1420,7 @@ fun MoodMomentAndGenreHomeItem(
                 )
             }
         }
-        // Title — 14dp gap from thumbnail, left-aligned, single line with ellipsis, 12dp right padding.
+        // Title â€” 14dp gap from thumbnail, left-aligned, single line with ellipsis, 12dp right padding.
         Text(
             text = title,
             style = typo().titleSmall,
@@ -1511,7 +1511,7 @@ fun ItemVideoChart(
                                     .connectArtists()
                                     .takeIf { it.isNotBlank() },
                                 data.views.takeIf { it.isNotBlank() },
-                            ).joinToString(" • "),
+                            ).joinToString(" â€¢ "),
                         style = typo().bodyMedium,
                         minLines = 1,
                         maxLines = 1,

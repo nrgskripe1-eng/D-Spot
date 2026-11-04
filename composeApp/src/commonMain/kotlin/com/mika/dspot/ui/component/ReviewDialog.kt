@@ -75,7 +75,7 @@ fun ReviewDialog(
                 TextButton(onClick = {
                     onDoneReview.invoke()
                     // openUrl rather than the uri handler, which throws where no browser answers.
-                    runCatching { openUrl("https://x.com/mika_dev") }
+                    runCatching { openUrl("https://x.com/mika_devv") }
                 }) {
                     Text(
                         stringResource(Res.string.follow_me_on_x),

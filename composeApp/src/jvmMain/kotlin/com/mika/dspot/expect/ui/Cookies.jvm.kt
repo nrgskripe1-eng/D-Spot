@@ -189,10 +189,17 @@ actual fun PlatformWebView(
                         val currentUrl = browser.url ?: ""
 
                         // 1. YouTube / Google login detection
+                        //
+                        // We trigger as soon as the browser begins navigating to
+                        // music.youtube.com (isLoading == true), not only after the
+                        // page finishes loading.  isLoginCompleted is set to true
+                        // immediately inside triggerExtraction, which also flips
+                        // visible=false on JcefBrowser, so Chromium's rendering is
+                        // hidden before the YouTube Music interface can appear.
                         val host = try { java.net.URI(currentUrl).host?.lowercase() ?: "" } catch (_: Exception) { "" }
                         val isActualYouTubeMusic = host == "music.youtube.com" || host.endsWith(".music.youtube.com")
 
-                        if (isActualYouTubeMusic && !isLoading) {
+                        if (isActualYouTubeMusic) {
                             triggerExtraction(browser)
                             return@JcefBrowser
                         }

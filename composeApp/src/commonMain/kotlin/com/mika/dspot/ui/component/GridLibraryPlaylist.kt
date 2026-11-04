@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.MarqueeAnimationMode
@@ -314,7 +314,7 @@ internal inline fun <reified T> GridLibraryPlaylist(
                                     vertical = 16.dp,
                                 ),
                             onClick = {
-                                uriHandler.openUri("https://chart.dspot.app")
+                                uriHandler.openUri("https://dspot-web.vercel.app/chart")
                             },
                         )
                     }

@@ -1,4 +1,4 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.data.db.datasource.LocalDataSource
 import com.mika.data.extension.getFullDataFromDB
@@ -781,6 +781,7 @@ internal class PlaylistRepositoryImpl(
                             ChartItem(
                                 name = it.name ?: return@mapNotNull null,
                                 ytPlaylistId = it.youtubePlaylistId ?: return@mapNotNull null,
+                                cover = it.cover,
                             )
                         }
                     emit(Resource.Success(result))

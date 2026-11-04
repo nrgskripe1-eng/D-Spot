@@ -1,4 +1,4 @@
-﻿package com.mika.kotlinytmusicscraper.models.response
+package com.mika.kotlinytmusicscraper.models.response
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -28,6 +28,8 @@ data class DSpotChartResponse(
         val youtubePlaylistId: String?,
         @SerialName("youtubeUrl")
         val youtubeUrl: String?,
+        @SerialName("cover")
+        val cover: String? = null,
     )
 
     @Serializable

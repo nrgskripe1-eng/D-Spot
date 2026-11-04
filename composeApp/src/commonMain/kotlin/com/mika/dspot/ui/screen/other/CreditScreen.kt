@@ -135,7 +135,7 @@ fun CreditScreen(
             // Website button
             TextButton(
                 onClick = {
-                    openUrl("https://dspot.app")
+                    openUrl("https://dspot-web.vercel.app")
                 },
                 modifier =
                     Modifier

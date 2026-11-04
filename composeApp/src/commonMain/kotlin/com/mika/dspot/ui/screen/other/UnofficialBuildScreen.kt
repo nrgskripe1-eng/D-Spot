@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.other
+package com.mika.dspot.ui.screen.other
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +49,7 @@ fun UnofficialBuildScreen() {
             modifier = Modifier.widthIn(max = 480.dp),
         )
         Button(
-            onClick = { openUrl("https://dspot.app/download") },
+            onClick = { openUrl("https://dspot-web.vercel.app/download") },
             modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(),
         ) {
             // typo() bakes a body colour into its styles; the label must take the button's own.

@@ -456,7 +456,7 @@ class Ytmusic {
     }
 
     suspend fun getDSpotChart() =
-        httpClient.get("https://chart.simpmusic.org/api/playlists") {
+        httpClient.get("https://dspot-web.vercel.app/api/playlists") {
             accept(ContentType.Application.Json)
             contentType(ContentType.Application.Json)
         }

@@ -17,6 +17,7 @@ import platform.Foundation.NSURLRequest
 import platform.WebKit.WKHTTPCookieStore
 import platform.WebKit.WKWebView
 import platform.WebKit.WKWebViewConfiguration
+import platform.WebKit.WKWebsiteDataStore
 import platform.WebKit.WKNavigationDelegateProtocol
 import platform.WebKit.WKNavigation
 import platform.darwin.NSObject
@@ -79,6 +80,19 @@ actual fun PlatformWebView(
         UIKitView(
             factory = {
                 val config = WKWebViewConfiguration()
+
+                // For Google login URLs, use a non-persistent (ephemeral) data store so
+                // that WKWebView starts with no cached Google session cookies.  Without
+                // this, WKWebView shares the default persistent store across all loads and
+                // Google silently reuses the signed-in session, skipping the account
+                // chooser entirely.  The ephemeral store is discarded when the WebView is
+                // released — the app's own credentials are stored in DataStore, not here,
+                // so they are unaffected.  Desktop login goes through JcefBrowser and is
+                // not touched by this change.
+                if (initUrl.contains("accounts.google.com")) {
+                    config.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore()
+                }
+
                 val webView = WKWebView(frame = cValue<CGRect> { }, configuration = config)
                 webView.navigationDelegate = WKNavigationDelegate(onFinished = { url ->
                     state.value = WebViewState.Finished
@@ -155,4 +169,3 @@ actual fun DiscordWebView(
         aboveContent()
     }
 }
-
