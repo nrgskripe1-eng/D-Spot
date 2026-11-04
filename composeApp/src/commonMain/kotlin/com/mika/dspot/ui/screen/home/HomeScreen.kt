@@ -123,6 +123,7 @@ import com.mika.dspot.extension.angledGradientBackground
 import com.mika.dspot.extension.artworkScrimBrush
 import com.mika.dspot.extension.getScreenSizeInfo
 import com.mika.dspot.extension.isScrollingUp
+import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.rgbFactor
 import com.mika.dspot.extension.ultraThinBarStyle
 import com.mika.dspot.getPlatform
@@ -1115,6 +1116,7 @@ fun HomeScreen(
                         Row(
                             modifier =
                                 Modifier
+                                    .mouseDragScroll(chipRowState)
                                     .horizontalScroll(chipRowState)
                                     .background(Color.Transparent),
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1161,6 +1163,7 @@ fun HomeScreen(
                     Row(
                         modifier =
                             Modifier
+                                .mouseDragScroll(chipRowState)
                                 .horizontalScroll(chipRowState)
                                 .padding(vertical = 8.dp)
                                 .padding(start = 16.dp, end = 24.dp)
@@ -1490,7 +1493,7 @@ fun QuickPicks(
         Spacer(Modifier.height(12.dp))
         LazyHorizontalGrid(
             rows = GridCells.Fixed(4),
-            modifier = Modifier.height(290.dp),
+            modifier = Modifier.height(290.dp).mouseDragScroll(lazyListState, snapperFlingBehavior),
             state = lazyListState,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -1660,7 +1663,11 @@ fun ChartData(
             )
             val lazyListState = rememberLazyListState()
             val snapperFlingBehavior = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyListState = lazyListState))
-            LazyRow(flingBehavior = snapperFlingBehavior) {
+            LazyRow(
+                modifier = Modifier.mouseDragScroll(lazyListState, snapperFlingBehavior),
+                state = lazyListState,
+                flingBehavior = snapperFlingBehavior,
+            ) {
                 items(item.playlists.size, key = { index ->
                     val data = item.playlists[index]
                     data.id + data.title + index
@@ -1691,7 +1698,7 @@ fun ChartData(
         )
         LazyHorizontalGrid(
             rows = GridCells.Fixed(3),
-            modifier = Modifier.height(240.dp),
+            modifier = Modifier.height(240.dp).mouseDragScroll(lazyListState2, snapperFlingBehavior2),
             state = lazyListState2,
             flingBehavior = snapperFlingBehavior2,
         ) {
@@ -1734,7 +1741,7 @@ fun ChartData(
             val podcastFlingBehavior = rememberSnapFlingBehavior(SnapLayoutInfoProvider(lazyGridState = podcastGridState))
             LazyHorizontalGrid(
                 rows = GridCells.Fixed(3),
-                modifier = Modifier.height(240.dp),
+                modifier = Modifier.height(240.dp).mouseDragScroll(podcastGridState, podcastFlingBehavior),
                 state = podcastGridState,
                 flingBehavior = podcastFlingBehavior,
             ) {

@@ -70,6 +70,14 @@ import com.kmpalette.palette.graphics.Palette
 import com.mika.domain.data.model.ui.ScreenSizeInfo
 import com.mika.logger.Logger
 import com.mika.dspot.getPlatform
+import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.ScrollableState
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.ui.unit.LayoutDirection
+import com.mika.dspot.Platform
 import com.mika.dspot.ui.theme.LocalAppColors
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
@@ -847,5 +855,22 @@ fun hsvToColor(
         green = (g + m).coerceIn(0f, 1f),
         blue = (b + m).coerceIn(0f, 1f),
         alpha = 1f,
+    )
+}
+
+/**
+ * Lets a mouse drag a horizontal list, on Desktop only.
+ */
+@Composable
+fun Modifier.mouseDragScroll(
+    state: ScrollableState,
+    flingBehavior: FlingBehavior = ScrollableDefaults.flingBehavior(),
+): Modifier {
+    if (getPlatform() != Platform.Desktop) return this
+    return draggable(
+        state = rememberDraggableState { state.dispatchRawDelta(-it) },
+        orientation = Orientation.Horizontal,
+        reverseDirection = LocalLayoutDirection.current == LayoutDirection.Rtl,
+        onDragStopped = { velocity -> state.scroll { with(flingBehavior) { performFling(-velocity) } } },
     )
 }
