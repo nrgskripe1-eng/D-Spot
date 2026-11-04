@@ -8,7 +8,7 @@
 
 A YouTube Music and YouTube client for Android and Desktop, built with Kotlin Multiplatform and Compose.
 
-[Website](https://dspot-web.vercel.app/) Â· [Releases](https://github.com/nrgskripe1-eng/D-Spot/releases) Â· [Discord](https://discord.gg/Rq5tWVM9Hg) Â· [Report an issue](https://github.com/nrgskripe1-eng/D-Spot/issues)
+[Website](https://dspot-web.vercel.app/) · [Releases](https://github.com/nrgskripe1-eng/D-Spot/releases) · [Discord](https://discord.gg/Rq5tWVM9Hg) · [Report an issue](https://github.com/nrgskripe1-eng/D-Spot/issues)
 
 [![Latest release](https://img.shields.io/github/v/release/nrgskripe1-eng/D-Spot)](https://github.com/nrgskripe1-eng/D-Spot/releases)
 [![Downloads](https://img.shields.io/github/downloads/nrgskripe1-eng/D-Spot/total)](https://github.com/nrgskripe1-eng/D-Spot/releases)
@@ -42,21 +42,15 @@ For vivo devices that need Origin Island and the music widget, use the `D-Spot-f
 
 ### Desktop
 
-D-Spot is also available for desktop.
+D-Spot is also available for desktop with direct in-app sign-in.
 
-- **Windows:** Download `D-Spot-Windows-installer.zip`, extract it, then run `install.bat`.
-- **macOS:** Download the `.dmg` build. macOS 15 or newer is required.
-- **Linux:** Download the `.AppImage` build.
+- **Windows:** Download D-Spot-Windows-installer.zip, extract it, then run install.bat.
+- **macOS:** Download the .dmg build. macOS 15 or newer is required.
+- **Linux:** Download the .AppImage build.
 
-See the [desktop sign-in guide](https://www.dspot.app/blogs/en/how-to-log-in-on-desktop-app) before signing in. For Discord sign-in, see the [Discord login guide](https://gist.github.com/MarvNC/e601f3603df22f36ebd3102c501116c6).
+You can directly sign in to your YouTube and music accounts straight from the app's login page without needing external QR codes.
 
-Some Linux distributions may have stability issues related to an upstream JetBrains issue. On Windows and Linux ARM64 devices, use the x64 build.
-
-### Nightly builds
-
-Nightly builds contain development versions and may be unstable.
-
-[View Android nightly builds](https://dspot-web.vercel.app/nightly-download)
+On Windows and Linux ARM64 devices, use the x64 build.
 
 ---
 
@@ -118,7 +112,7 @@ Features are grouped by what they help you do, rather than by platform screen.
 - Use SponsorBlock and Return YouTube Dislike.
 - Connect Discord Rich Presence.
 - Join Listen Together rooms and synchronize playback with friends; compatible with Metrolist.
-- Send an Android sign-in session to Desktop by scanning a QR code.
+- Direct in-app sign-in supported across mobile and desktop.
 
 Some features require account sign-in, a supported service, a compatible device, or an API key. AI lyric translation and AI-powered music features may require an OpenAI or Gemini API key.
 
