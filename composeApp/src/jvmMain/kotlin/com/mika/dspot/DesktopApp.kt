@@ -281,7 +281,7 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
         sharedViewModel.setIntent(intent)
     }
 
-    application {
+    governedApplication {
         // Main Window
         val windowState =
             rememberWindowState(
