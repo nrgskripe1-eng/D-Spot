@@ -68,3 +68,4 @@ jobs:
         with:
           name: iosApp-Simulator
           path: ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Release-iphonesimulator/iosApp-Simulator.zip
+
