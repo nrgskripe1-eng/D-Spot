@@ -820,7 +820,18 @@ fun App(
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    openUrl("https://dspot-web.vercel.app/download")
+                                    val downloadUrl = when (getPlatform()) {
+                                        Platform.Android -> "https://dspot-web.vercel.app/api/download?platform=android"
+                                        Platform.iOS -> "https://dspot-web.vercel.app/api/download?platform=ios"
+                                        Platform.Desktop -> when {
+                                            System.getProperty("os.name")?.lowercase()?.contains("mac") == true ->
+                                                "https://dspot-web.vercel.app/api/download?platform=macos"
+                                            System.getProperty("os.name")?.lowercase()?.contains("linux") == true ->
+                                                "https://dspot-web.vercel.app/api/download?platform=linux"
+                                            else -> "https://dspot-web.vercel.app/api/download?platform=windows"
+                                        }
+                                    }
+                                    openUrl(downloadUrl)
                                 },
                             ) {
                                 Text(

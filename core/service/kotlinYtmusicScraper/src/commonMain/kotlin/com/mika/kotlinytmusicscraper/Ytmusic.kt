@@ -715,7 +715,7 @@ class Ytmusic {
         }
 
     suspend fun checkForGithubReleaseUpdate() =
-        httpClient.get("https://api.github.com/repos/Mika/D-Spot/releases/latest") {
+        httpClient.get("https://dspot-web.vercel.app/api/version") {
             contentType(ContentType.Application.Json)
         }
 
