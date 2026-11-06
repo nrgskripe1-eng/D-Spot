@@ -6,7 +6,7 @@ on:
 jobs:
   build-ios-simulator:
     name: Build iOS Simulator App (VirtualBox / Mac)
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 60
 
     env:
@@ -60,12 +60,20 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             build
 
-          cd ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphonesimulator/
-          zip -r iosApp-Simulator.zip iosApp.app
+          mkdir -p build_output
+          SIM_APP=$(find ~/Library/Developer/Xcode/DerivedData -name "iosApp.app" -path "*/Release-iphonesimulator/*" | head -1)
+          if [ -n "$SIM_APP" ]; then
+            echo "Found simulator app at: $SIM_APP"
+            cd "$(dirname "$SIM_APP")"
+            zip -r "$GITHUB_WORKSPACE/build_output/iosApp-Simulator.zip" iosApp.app
+            cd "$GITHUB_WORKSPACE"
+          else
+            echo "::error::Simulator app not found!"
+            exit 1
+          fi
 
       - name: Upload Simulator App
         uses: actions/upload-artifact@v4
         with:
           name: iosApp-Simulator
-          path: ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Release-iphonesimulator/iosApp-Simulator.zip
-
+          path: build_output/iosApp-Simulator.zip
