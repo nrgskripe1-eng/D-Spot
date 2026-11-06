@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.home
+package com.mika.dspot.ui.screen.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -2175,15 +2175,14 @@ fun SettingScreen(
         // ── discord ────────────────────────────────────────────────────────
         val showDiscord =
             matchesQuery(
-                "discord", "rich presence", "log in", "log out",
+                "discord", "rich presence",
             )
         item(key = "discord") {
             if (showDiscord) SettingGroup(title = stringResource(Res.string.discord_integration)) {
                 SettingItem(
                     title = stringResource(Res.string.enable_rich_presence),
-                    subtitle = stringResource(Res.string.rich_presence_info),
+                    subtitle = "Automatically shares current song on Discord without login",
                     switch = (richPresenceEnabled to { viewModel.setDiscordRichPresenceEnabled(it) }),
-                    isEnable = discordLoggedIn,
                 )
             }
         }

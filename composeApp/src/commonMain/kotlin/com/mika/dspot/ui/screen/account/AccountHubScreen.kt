@@ -62,7 +62,6 @@ import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.home.AnalyticsDestination
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
-import com.mika.dspot.ui.navigation.destination.login.DiscordLoginDestination
 import com.mika.dspot.ui.navigation.destination.login.LastfmLoginDestination
 import com.mika.dspot.ui.navigation.destination.login.LoginDestination
 import com.mika.dspot.ui.navigation.destination.login.SpotifyLoginDestination
@@ -439,35 +438,13 @@ fun AccountHubScreen(
                 }
             }
 
-            // Discord
+            // Discord (Zero Login Required)
             item {
                 SettingGroup(title = stringResource(Res.string.discord_integration)) {
                     SettingItem(
-                        title = if (discordLoggedIn) {
-                            stringResource(Res.string.log_out_from_discord)
-                        } else {
-                            stringResource(Res.string.log_in_to_discord)
-                        },
-                        subtitle = if (discordLoggedIn) {
-                            stringResource(Res.string.logged_in)
-                        } else {
-                            "Share your current track to Discord status"
-                        },
-                        onClick = {
-                            if (discordLoggedIn) {
-                                settingsViewModel.confirmLogOut(
-                                    confirmLabel = runBlocking { getString(Res.string.log_out_from_discord) },
-                                ) { settingsViewModel.logOutDiscord() }
-                            } else {
-                                navController.navigate(DiscordLoginDestination)
-                            }
-                        },
-                    )
-                    SettingItem(
                         title = stringResource(Res.string.enable_rich_presence),
-                        subtitle = stringResource(Res.string.rich_presence_info),
+                        subtitle = "Automatically shares current song on Discord without login",
                         switch = (richPresenceEnabled to { settingsViewModel.setDiscordRichPresenceEnabled(it) }),
-                        isEnable = discordLoggedIn,
                     )
                 }
             }

@@ -73,7 +73,7 @@ import com.mika.domain.utils.toListName
 import com.mika.domain.utils.toSongEntity
 import com.mika.domain.utils.toTrack
 import com.mika.logger.Logger
-import com.my.kizzy.DiscordRPC
+import com.my.kizzy.ipc.DesktopDiscordIpc
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -227,7 +227,7 @@ class JvmMediaPlayerHandlerImpl(
     override val player: MediaPlayerInterface = getKoin().get()
 
     @Volatile
-    private var discordRPC: DiscordRPC? = null
+    private var discordRPC: DesktopDiscordIpc? = null
 
     /**
      * Built here rather than injected: it needs nothing this handler does not already hold, and
@@ -630,22 +630,14 @@ class JvmMediaPlayerHandlerImpl(
                 }
             val discordRPCEnabledJob =
                 launch {
-                    // Run Rich Presence only when enabled AND logged in (non-blank token); a blank-token
-                    // DiscordRPC loops reconnect forever (issue #2157). Combining both flows also tears
-                    // the RPC down as soon as the token is cleared on logout.
-                    combine(
-                        dataStoreManager.richPresenceEnabled,
-                        dataStoreManager.discordToken,
-                    ) { enabled, token ->
-                        enabled == TRUE && token.isNotBlank()
-                    }.distinctUntilChanged()
+                    // Run Rich Presence whenever enabled on Desktop via native IPC (zero token / login required).
+                    dataStoreManager.richPresenceEnabled
+                        .map { it == TRUE }
+                        .distinctUntilChanged()
                         .collectLatest { shouldRun ->
                             if (shouldRun) {
-                                // Both branches below are independently idempotent: a toggle
-                                // on→off→on race must not skip (re)creating whichever of
-                                // discordRPC/rpcSenderJob dropped out (#Fix 6).
                                 if (discordRPC == null) {
-                                    discordRPC = DiscordRPC(dataStoreManager.discordToken.first())
+                                    discordRPC = DesktopDiscordIpc()
                                 }
                                 if (rpcSenderJob?.isActive != true) {
                                     // One sender for the whole RPC lifetime: collectLatest cancels an

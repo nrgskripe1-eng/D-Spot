@@ -1,4 +1,4 @@
-﻿package com.my.kizzy
+package com.my.kizzy
 
 import com.mika.domain.data.entities.SongEntity
 import com.my.kizzy.rpc.KizzyRPC
@@ -7,7 +7,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 class DiscordRPC(
-    token: String,
+    token: String = "",
 ) : KizzyRPC(token) {
     @OptIn(ExperimentalTime::class)
     suspend fun updateSong(
@@ -24,18 +24,22 @@ class DiscordRPC(
         val remainingDuration = durationMillis - currentPlaybackTimeMillis
         val adjustedRemainingDuration = (remainingDuration / playbackSpeed).toLong()
 
+        val songTitle = song.title ?: "Unknown Track"
+        val artistDisplay = song.artistName?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Unknown Artist"
+        val albumDisplay = song.albumName ?: "D-Spot Audio"
+
         setActivity(
-            name = APP_NAME,
-            details = song.title,
-            state = song.artistName?.joinToString(", "),
+            name = songTitle,
+            details = songTitle,
+            state = artistDisplay,
             largeImage = song.thumbnails?.let { RpcImage.ExternalImage(it) },
             smallImage = RpcImage.ExternalImage(APP_ICON),
-            largeText = song.albumName,
-            smallText = song.artistName?.firstOrNull(),
+            largeText = albumDisplay,
+            smallText = "D-Spot",
             buttons =
                 listOf(
-                    "Listen on D-Spot" to "https://dspot.app/app/watch?v=${song.videoId}",
-                    "Visit D-Spot" to "https://github.com/Mika/D-Spot",
+                    "Play Track" to "https://dspot-web.vercel.app",
+                    "Get D-Spot" to "https://dspot-web.vercel.app/download",
                 ),
             type = Type.LISTENING,
             since = currentTime,
@@ -46,9 +50,9 @@ class DiscordRPC(
     }
 
     companion object {
-        private const val APPLICATION_ID = "1557223074083110933"
-        private const val APP_NAME: String = "D-Spot"
-        private const val APP_ICON: String =
-            "https://syd.cloud.appwrite.io/v1/storage/buckets/6ac646100001f9f95c29/files/6ad30ebc0030079878c9/view?project=6ac645f9001be50b8303&impersonateuserid"
+        const val APPLICATION_ID = "1557223074083110933"
+        const val APP_NAME: String = "D-Spot"
+        const val APP_ICON: String =
+            "https://raw.githubusercontent.com/nrgskripe1-eng/D-Spot/account-tab/composeApp/icon/circle_app_icon.png"
     }
 }
