@@ -299,6 +299,7 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "i386 x86_64";
 				ARCHS = arm64;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 			};
 			name = Debug;
 		};
@@ -331,6 +332,7 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "i386 x86_64";
 				ARCHS = arm64;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 			};
 			name = Release;
 		};
