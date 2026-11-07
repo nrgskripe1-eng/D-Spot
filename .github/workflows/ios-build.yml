@@ -10,7 +10,7 @@ on:
 jobs:
   build-ios-ipa:
     name: Build iOS IPA (for iPhone Sideloading)
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 60
 
     env:
