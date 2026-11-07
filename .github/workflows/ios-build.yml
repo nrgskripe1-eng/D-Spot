@@ -47,15 +47,6 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Pre-build Kotlin/Native Framework
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-        run: |
-          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode \
-            -Pkotlin.native.binary.enableReleaseBinaryCache=true \
-            --parallel \
-            --build-cache
-
       - name: Build for Physical iOS Device (IPA)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
