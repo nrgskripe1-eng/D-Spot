@@ -7,7 +7,7 @@ jobs:
   build-ios-simulator:
     name: Build iOS Simulator App (VirtualBox / Mac)
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     env:
       GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
