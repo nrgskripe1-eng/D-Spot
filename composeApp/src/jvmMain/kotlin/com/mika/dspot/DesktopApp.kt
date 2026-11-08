@@ -271,6 +271,16 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     val desktopNotificationManager = getKoin().get<DesktopNotificationManager>()
     desktopNotificationManager.initialize()
 
+    // Ensure resources, native media controls and notifications are cleanly unwound
+    // on JVM shutdown even if the process exits abruptly or via window close.
+    Runtime.getRuntime().addShutdownHook(
+        Thread({
+            runCatching {
+                mediaPlayerHandler.release()
+            }
+        }, "DSpot-Shutdown-Hook")
+    )
+
     val sharedViewModel = getKoin().get<SharedViewModel>()
     if (sharedViewModel.shouldCheckForUpdate()) {
         sharedViewModel.checkForUpdate()

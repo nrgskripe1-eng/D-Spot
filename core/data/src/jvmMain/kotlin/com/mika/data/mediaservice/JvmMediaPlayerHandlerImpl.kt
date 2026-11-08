@@ -2649,7 +2649,23 @@ class JvmMediaPlayerHandlerImpl(
 
     override fun release() {
         Logger.w("ServiceHandler", "Starting release process")
-        nypc?.removeListener()
+        runCatching {
+            nypc?.removeListener()
+            // On Windows, reset and disable SMTC controls before shutdown so
+            // the native Windows.Media.MediaControl WinRT session doesn't fault in ntdll
+            if (getPlatform() is Platform.Windows) {
+                runCatching {
+                    val controlField = nypc?.javaClass?.getDeclaredField("nowPlayingCenter")?.apply { isAccessible = true }
+                    val jmtcImpl = controlField?.get(nypc)
+                    val jmtcField = jmtcImpl?.javaClass?.getDeclaredField("control")?.apply { isAccessible = true }
+                    val jmtc = jmtcField?.get(jmtcImpl)
+                    if (jmtc != null) {
+                        jmtc.javaClass.getMethod("setEnabled", Boolean::class.javaPrimitiveType).invoke(jmtc, false)
+                        jmtc.javaClass.getMethod("resetDisplay").invoke(jmtc)
+                    }
+                }
+            }
+        }
         // Release macOS media integration
         clearMacOSNowPlayingInfo()
         macOSMediaIntegration?.release()
