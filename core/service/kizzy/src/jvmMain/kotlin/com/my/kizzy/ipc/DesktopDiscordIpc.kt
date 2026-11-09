@@ -29,38 +29,37 @@ import kotlin.time.ExperimentalTime
 class DesktopDiscordIpc(
     private val applicationId: String = DiscordRPC.APPLICATION_ID,
 ) {
-    private var channel: ByteChannel? = null
-    private var isConnected = false
+    // Keep a list of all active Discord channels (Standard, PTB, Canary, Development)
+    private val channels = mutableListOf<ByteChannel>()
     private val processId = ProcessHandle.current().pid()
 
     @Synchronized
-    fun isRpcRunning(): Boolean = isConnected && channel?.isOpen == true
+    fun isRpcRunning(): Boolean = channels.any { it.isOpen }
 
     @Synchronized
     fun closeRPC() {
-        try {
-            if (isConnected) {
-                // Send clear activity
-                sendFrame(
-                    buildJsonObject {
-                        put("cmd", "SET_ACTIVITY")
-                        putJsonObject("args") {
-                            put("pid", processId)
-                        }
-                        put("nonce", Clock.System.now().toEpochMilliseconds().toString())
-                    }.toString()
-                )
-            }
-        } catch (_: Exception) {}
-        try {
-            channel?.close()
-        } catch (_: Exception) {}
-        channel = null
-        isConnected = false
+        if (channels.isNotEmpty()) {
+            val clearFrame = buildJsonObject {
+                put("cmd", "SET_ACTIVITY")
+                putJsonObject("args") {
+                    put("pid", processId)
+                }
+                put("nonce", Clock.System.now().toEpochMilliseconds().toString())
+            }.toString()
+
+            sendFrame(clearFrame)
+        }
+
+        channels.forEach { ch ->
+            try { ch.close() } catch (_: Exception) {}
+        }
+        channels.clear()
     }
 
     private fun connect(): Boolean {
-        if (isRpcRunning()) return true
+        // Remove closed channels
+        channels.removeAll { !it.isOpen }
+        if (channels.isNotEmpty()) return true
 
         val os = System.getProperty("os.name")?.lowercase().orEmpty()
         for (i in 0..9) {
@@ -69,10 +68,11 @@ class DesktopDiscordIpc(
                     val pipeFile = File("\\\\.\\pipe\\discord-ipc-$i")
                     if (pipeFile.exists()) {
                         val raf = RandomAccessFile(pipeFile, "rw")
-                        channel = raf.channel
-                        if (performHandshake()) {
-                            isConnected = true
-                            return true
+                        val ch = raf.channel
+                        if (performHandshake(ch)) {
+                            channels.add(ch)
+                        } else {
+                            try { ch.close() } catch (_: Exception) {}
                         }
                     }
                 } else {
@@ -87,51 +87,59 @@ class DesktopDiscordIpc(
                         val address = UnixDomainSocketAddress.of(socketPath)
                         val socketChannel = SocketChannel.open(StandardProtocolFamily.UNIX)
                         socketChannel.connect(address)
-                        channel = socketChannel
-                        if (performHandshake()) {
-                            isConnected = true
-                            return true
+                        if (performHandshake(socketChannel)) {
+                            channels.add(socketChannel)
+                        } else {
+                            try { socketChannel.close() } catch (_: Exception) {}
                         }
                     }
                 }
-            } catch (_: Exception) {
-                try { channel?.close() } catch (_: Exception) {}
-                channel = null
-            }
+            } catch (_: Exception) {}
         }
-        return false
+        return channels.isNotEmpty()
     }
 
-    private fun performHandshake(): Boolean {
+    private fun performHandshake(ch: ByteChannel): Boolean {
         val payload = buildJsonObject {
             put("v", 1)
             put("client_id", applicationId)
         }.toString()
 
-        sendPacket(OP_HANDSHAKE, payload)
-        val response = readPacket() ?: return false
+        sendPacket(ch, OP_HANDSHAKE, payload)
+        val response = readPacket(ch) ?: return false
         return response.contains("DISPATCH") || response.contains("READY")
     }
 
     private fun sendFrame(json: String) {
-        sendPacket(OP_FRAME, json)
+        val iterator = channels.iterator()
+        while (iterator.hasNext()) {
+            val ch = iterator.next()
+            try {
+                if (ch.isOpen) {
+                    sendPacket(ch, OP_FRAME, json)
+                } else {
+                    iterator.remove()
+                }
+            } catch (_: Exception) {
+                try { ch.close() } catch (_: Exception) {}
+                iterator.remove()
+            }
+        }
     }
 
-    private fun sendPacket(op: Int, json: String) {
+    private fun sendPacket(ch: ByteChannel, op: Int, json: String) {
         val bytes = json.toByteArray(Charsets.UTF_8)
         val buffer = ByteBuffer.allocate(8 + bytes.size).order(ByteOrder.LITTLE_ENDIAN)
         buffer.putInt(op)
         buffer.putInt(bytes.size)
         buffer.put(bytes)
         buffer.flip()
-        val ch = channel ?: return
         while (buffer.hasRemaining()) {
             ch.write(buffer)
         }
     }
 
-    private fun readPacket(): String? {
-        val ch = channel ?: return null
+    private fun readPacket(ch: ByteChannel): String? {
         val header = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
         while (header.hasRemaining()) {
             if (ch.read(header) < 0) return null
