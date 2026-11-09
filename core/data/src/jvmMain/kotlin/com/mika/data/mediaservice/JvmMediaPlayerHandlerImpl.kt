@@ -379,6 +379,7 @@ class JvmMediaPlayerHandlerImpl(
         val seq: Long,
         val roomCode: String? = null,
         val roomMemberCount: Int = 1,
+        val isRepeatOne: Boolean = false,
     )
 
     private val rpcSnapshotFlow = MutableStateFlow<RpcSnapshot?>(null)
@@ -666,6 +667,7 @@ class JvmMediaPlayerHandlerImpl(
                                                         snap.song,
                                                         snap.roomCode,
                                                         snap.roomMemberCount,
+                                                        snap.isRepeatOne,
                                                     )
                                                     ?.onFailure { if (it !is CancellationException) Logger.e(TAG, "Discord RPC update failed: ${it.message}") }
                                             }
@@ -2789,6 +2791,9 @@ class JvmMediaPlayerHandlerImpl(
             PlayerConstants.STATE_READY -> {
                 Logger.d(TAG, "onPlaybackStateChanged: Ready")
                 _simpleMediaState.value = SimpleMediaState.Ready(player.duration)
+                if (controlState.value.isPlaying) {
+                    nowPlayingState.value.songEntity?.let { updateDiscordRpc(it) }
+                }
             }
 
             else -> {
@@ -2922,6 +2927,7 @@ class JvmMediaPlayerHandlerImpl(
             val roomCode = if (room?.inRoom == true) room.roomCode else null
             val roomMemberCount = room?.members?.size ?: 1
 
+            val isRepeatOne = player.repeatMode == PlayerConstants.REPEAT_MODE_ONE
             val snapshot =
                 RpcSnapshot(
                     song = song,
@@ -2931,6 +2937,7 @@ class JvmMediaPlayerHandlerImpl(
                     seq = seq,
                     roomCode = roomCode,
                     roomMemberCount = roomMemberCount,
+                    isRepeatOne = isRepeatOne,
                 )
             // Compare-and-keep-newest: the playbackSpeed.first() suspend above means two calls to
             // updateDiscordRpc() can interleave and resolve out of order, so a plain `.value = ...`
@@ -3027,6 +3034,9 @@ class JvmMediaPlayerHandlerImpl(
                 _controlState.value =
                     _controlState.value.copy(repeatState = RepeatState.All)
             }
+        }
+        if (controlState.value.isPlaying) {
+            nowPlayingState.value.songEntity?.let { updateDiscordRpc(it) }
         }
     }
 

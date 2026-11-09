@@ -44,6 +44,7 @@ class DesktopDiscordIpc(
                 put("cmd", "SET_ACTIVITY")
                 putJsonObject("args") {
                     put("pid", processId)
+                    put("activity", kotlinx.serialization.json.JsonNull)
                 }
                 put("nonce", Clock.System.now().toEpochMilliseconds().toString())
             }.toString()
@@ -172,15 +173,17 @@ class DesktopDiscordIpc(
         song: SongEntity,
         roomCode: String? = null,
         roomMemberCount: Int = 1,
+        isRepeatOne: Boolean = false,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (!connect()) return@runCatching
 
             val currentTime = Clock.System.now().toEpochMilliseconds()
-            val adjustedPlaybackTime = if (currentPlaybackTimeMillis <= 2000L) 0L else (currentPlaybackTimeMillis / playbackSpeed).toLong()
+            val effectiveDuration = if (durationMillis > 0L) durationMillis else (song.durationSeconds * 1000L)
+            val adjustedPlaybackTime = if (currentPlaybackTimeMillis <= 3000L) 0L else (currentPlaybackTimeMillis / playbackSpeed).toLong()
             val calculatedStartTime = currentTime - adjustedPlaybackTime
 
-            val remainingDuration = durationMillis - currentPlaybackTimeMillis
+            val remainingDuration = (effectiveDuration - currentPlaybackTimeMillis).coerceAtLeast(0L)
             val adjustedRemainingDuration = (remainingDuration / playbackSpeed).toLong()
 
             val songTitle = song.title ?: "Unknown Track"
@@ -189,6 +192,11 @@ class DesktopDiscordIpc(
                 "$rawArtist • 🎧 Room $roomCode ($roomMemberCount)"
             } else {
                 rawArtist
+            }
+            val tooltipText = when {
+                isRepeatOne -> "D-Spot • 🔂 Repeat"
+                !roomCode.isNullOrBlank() -> "D-Spot • Listen Together"
+                else -> "D-Spot"
             }
             val albumDisplay = song.albumName ?: "D-Spot Audio"
             val thumbUrl = if (!song.thumbnails.isNullOrBlank()) song.thumbnails else DiscordRPC.APP_ICON
@@ -209,7 +217,7 @@ class DesktopDiscordIpc(
                         put("state", stateText)
                         putJsonObject("timestamps") {
                             put("start", calculatedStartTime)
-                            if (durationMillis > 0) {
+                            if (effectiveDuration > 0) {
                                 put("end", currentTime + adjustedRemainingDuration)
                             }
                         }
@@ -217,7 +225,7 @@ class DesktopDiscordIpc(
                             put("large_image", thumbUrl)
                             put("large_text", albumDisplay)
                             put("small_image", DiscordRPC.APP_ICON)
-                            put("small_text", if (!roomCode.isNullOrBlank()) "D-Spot • Listen Together" else "D-Spot")
+                            put("small_text", tooltipText)
                         }
                         if (!roomCode.isNullOrBlank()) {
                             putJsonObject("party") {
