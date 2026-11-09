@@ -177,6 +177,11 @@ class DesktopDiscordIpc(
             val artistDisplay = song.artistName?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Unknown Artist"
             val albumDisplay = song.albumName ?: "D-Spot Audio"
             val thumbUrl = song.thumbnails ?: DiscordRPC.APP_ICON
+            val trackUrl = if (!song.videoId.isNullOrBlank()) {
+                "https://dspot.app/app/watch?v=${song.videoId}"
+            } else {
+                "https://dspot-web.vercel.app"
+            }
 
             val frameJson = buildJsonObject {
                 put("cmd", "SET_ACTIVITY")
@@ -201,12 +206,8 @@ class DesktopDiscordIpc(
                         }
                         put("buttons", buildJsonArray {
                             addJsonObject {
-                                put("label", "Play Track")
-                                put("url", "https://dspot-web.vercel.app")
-                            }
-                            addJsonObject {
-                                put("label", "Get D-Spot")
-                                put("url", "https://dspot-web.vercel.app/download")
+                                put("label", "Listen on D-Spot")
+                                put("url", trackUrl)
                             }
                         })
                     }
