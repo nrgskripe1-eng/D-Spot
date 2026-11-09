@@ -37,7 +37,7 @@ class DesktopDiscordIpc(
     fun isRpcRunning(): Boolean = channels.any { it.isOpen }
 
     @Synchronized
-    fun closeRPC() {
+    fun clearActivity() {
         if (channels.isNotEmpty()) {
             val clearFrame = buildJsonObject {
                 put("cmd", "SET_ACTIVITY")
@@ -49,6 +49,11 @@ class DesktopDiscordIpc(
 
             sendFrame(clearFrame)
         }
+    }
+
+    @Synchronized
+    fun closeRPC() {
+        clearActivity()
 
         channels.forEach { ch ->
             try { ch.close() } catch (_: Exception) {}
@@ -66,14 +71,16 @@ class DesktopDiscordIpc(
             try {
                 if (os.contains("win")) {
                     val pipeFile = File("\\\\.\\pipe\\discord-ipc-$i")
-                    if (pipeFile.exists()) {
-                        val raf = RandomAccessFile(pipeFile, "rw")
-                        val ch = raf.channel
-                        if (performHandshake(ch)) {
-                            channels.add(ch)
-                        } else {
-                            try { ch.close() } catch (_: Exception) {}
-                        }
+                    val raf = try {
+                        RandomAccessFile(pipeFile, "rw")
+                    } catch (_: Exception) {
+                        null
+                    } ?: continue
+                    val ch = raf.channel
+                    if (performHandshake(ch)) {
+                        channels.add(ch)
+                    } else {
+                        try { ch.close() } catch (_: Exception) {}
                     }
                 } else {
                     val tempDir = System.getenv("XDG_RUNTIME_DIR")
@@ -167,7 +174,7 @@ class DesktopDiscordIpc(
             if (!connect()) return@runCatching
 
             val currentTime = Clock.System.now().toEpochMilliseconds()
-            val adjustedPlaybackTime = (currentPlaybackTimeMillis / playbackSpeed).toLong()
+            val adjustedPlaybackTime = if (currentPlaybackTimeMillis <= 2000L) 0L else (currentPlaybackTimeMillis / playbackSpeed).toLong()
             val calculatedStartTime = currentTime - adjustedPlaybackTime
 
             val remainingDuration = durationMillis - currentPlaybackTimeMillis

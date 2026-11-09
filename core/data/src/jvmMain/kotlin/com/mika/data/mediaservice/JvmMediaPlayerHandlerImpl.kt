@@ -1044,9 +1044,17 @@ class JvmMediaPlayerHandlerImpl(
                 // twice as many even steps reads better than half as many.
                 val tickIntervalMs = 50L
                 var sinceLastPositionSaveMs = 0L
+                var lastSeenPosMs = 0L
                 while (true) {
                     delay(tickIntervalMs)
-                    _simpleMediaState.value = SimpleMediaState.Progress(smoothedPosition(player.currentPosition))
+                    val currentPos = player.currentPosition
+                    // Detect track loop restart (position wrapped back to start without explicit seek)
+                    if (lastSeenPosMs > 10_000L && currentPos < 2_000L) {
+                        nowPlayingState.value.songEntity?.let { updateDiscordRpc(it) }
+                    }
+                    lastSeenPosMs = currentPos
+
+                    _simpleMediaState.value = SimpleMediaState.Progress(smoothedPosition(currentPos))
                     updateMacOSElapsedTime()
                     sinceLastPositionSaveMs += tickIntervalMs
                     if (sinceLastPositionSaveMs >= positionPersistIntervalMs) {
@@ -1055,7 +1063,7 @@ class JvmMediaPlayerHandlerImpl(
                         // Riding the existing 5s tick instead of adding one: the scrobble point is
                         // half the track or four minutes, so five seconds of granularity is plenty
                         // and the 100ms loop stays as cheap as it was.
-                        lastfmScrobbler.onProgress(player.currentPosition)
+                        lastfmScrobbler.onProgress(currentPos)
                     }
                 }
             }
@@ -2793,7 +2801,7 @@ class JvmMediaPlayerHandlerImpl(
             mayBeSaveRecentSong()
             mayBeSavePlaybackState()
             if (discordRPC?.isRpcRunning() == true) {
-                discordRPC?.closeRPC()
+                discordRPC?.clearActivity()
             }
         }
         updateNextPreviousTrackAvailability()
