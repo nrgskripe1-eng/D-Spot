@@ -5,6 +5,7 @@ import com.my.kizzy.DiscordRPC
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -169,6 +170,8 @@ class DesktopDiscordIpc(
         durationMillis: Long,
         playbackSpeed: Float = 1.0f,
         song: SongEntity,
+        roomCode: String? = null,
+        roomMemberCount: Int = 1,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (!connect()) return@runCatching
@@ -181,9 +184,14 @@ class DesktopDiscordIpc(
             val adjustedRemainingDuration = (remainingDuration / playbackSpeed).toLong()
 
             val songTitle = song.title ?: "Unknown Track"
-            val artistDisplay = song.artistName?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Unknown Artist"
+            val rawArtist = song.artistName?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Unknown Artist"
+            val stateText = if (!roomCode.isNullOrBlank()) {
+                "$rawArtist • 🎧 Room $roomCode ($roomMemberCount)"
+            } else {
+                rawArtist
+            }
             val albumDisplay = song.albumName ?: "D-Spot Audio"
-            val thumbUrl = song.thumbnails ?: DiscordRPC.APP_ICON
+            val thumbUrl = if (!song.thumbnails.isNullOrBlank()) song.thumbnails else DiscordRPC.APP_ICON
             val trackUrl = if (!song.videoId.isNullOrBlank()) {
                 "https://dspot.app/app/watch?v=${song.videoId}"
             } else {
@@ -198,7 +206,7 @@ class DesktopDiscordIpc(
                         put("type", 2)
                         put("name", songTitle)
                         put("details", songTitle)
-                        put("state", artistDisplay)
+                        put("state", stateText)
                         putJsonObject("timestamps") {
                             put("start", calculatedStartTime)
                             if (durationMillis > 0) {
@@ -209,12 +217,27 @@ class DesktopDiscordIpc(
                             put("large_image", thumbUrl)
                             put("large_text", albumDisplay)
                             put("small_image", DiscordRPC.APP_ICON)
-                            put("small_text", "D-Spot")
+                            put("small_text", if (!roomCode.isNullOrBlank()) "D-Spot • Listen Together" else "D-Spot")
+                        }
+                        if (!roomCode.isNullOrBlank()) {
+                            putJsonObject("party") {
+                                put("id", "dspot-room-$roomCode")
+                                put("size", buildJsonArray {
+                                    add(roomMemberCount.coerceAtLeast(1))
+                                    add(10)
+                                })
+                            }
                         }
                         put("buttons", buildJsonArray {
                             addJsonObject {
                                 put("label", "Listen on D-Spot")
                                 put("url", trackUrl)
+                            }
+                            if (!roomCode.isNullOrBlank()) {
+                                addJsonObject {
+                                    put("label", "Join Room ($roomCode)")
+                                    put("url", "https://dspot.app/app/listen?room=$roomCode")
+                                }
                             }
                         })
                     }

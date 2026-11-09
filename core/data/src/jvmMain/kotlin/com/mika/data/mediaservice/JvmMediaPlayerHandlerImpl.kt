@@ -377,6 +377,8 @@ class JvmMediaPlayerHandlerImpl(
         val durationMs: Long,
         val speed: Float,
         val seq: Long,
+        val roomCode: String? = null,
+        val roomMemberCount: Int = 1,
     )
 
     private val rpcSnapshotFlow = MutableStateFlow<RpcSnapshot?>(null)
@@ -657,7 +659,14 @@ class JvmMediaPlayerHandlerImpl(
                                                 // read from Dispatchers.IO, unlike player.isPlaying.
                                                 if (!controlState.value.isPlaying) return@collectLatest
                                                 discordRPC
-                                                    ?.updateSong(snap.progressMs, snap.durationMs, snap.speed, snap.song)
+                                                    ?.updateSong(
+                                                        snap.progressMs,
+                                                        snap.durationMs,
+                                                        snap.speed,
+                                                        snap.song,
+                                                        snap.roomCode,
+                                                        snap.roomMemberCount,
+                                                    )
                                                     ?.onFailure { if (it !is CancellationException) Logger.e(TAG, "Discord RPC update failed: ${it.message}") }
                                             }
                                         }
@@ -2909,6 +2918,10 @@ class JvmMediaPlayerHandlerImpl(
             // reflects true event order. A monotonic counter (not wall-clock time) so an NTP/manual
             // clock step backward can't freeze the ordering guard in the sender (Fix A).
             val seq = rpcEventSeq.incrementAndGet()
+            val room = runCatching { getKoin().getOrNull<com.mika.domain.repository.ListenTogetherRepository>()?.room?.value }.getOrNull()
+            val roomCode = if (room?.inRoom == true) room.roomCode else null
+            val roomMemberCount = room?.members?.size ?: 1
+
             val snapshot =
                 RpcSnapshot(
                     song = song,
@@ -2916,6 +2929,8 @@ class JvmMediaPlayerHandlerImpl(
                     durationMs = getPlayerDuration(),
                     speed = dataStoreManager.playbackSpeed.first(),
                     seq = seq,
+                    roomCode = roomCode,
+                    roomMemberCount = roomMemberCount,
                 )
             // Compare-and-keep-newest: the playbackSpeed.first() suspend above means two calls to
             // updateDiscordRpc() can interleave and resolve out of order, so a plain `.value = ...`
