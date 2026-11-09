@@ -454,6 +454,10 @@ class MpvPlayerAdapter(
             // Cancel any ongoing load
             currentLoadJob?.cancel()
 
+            // Eagerly reset cachedPosition so Discord RPC reads the correct start position
+            // immediately (prevents stale end-of-track position showing on loop/repeat)
+            cachedPosition = positionMs
+
             localCurrentMediaItemIndex = mediaItemIndex
             unpinCurrent()
             currentPlayer?.release()
@@ -1537,6 +1541,10 @@ class MpvPlayerAdapter(
                         delay(100)
                         player.seekTo(startPositionMs)
                         cachedPosition = startPositionMs
+                    } else {
+                        // Reset position to 0 so Discord RPC doesn't show stale end-of-track position
+                        // (e.g. after repeat/loop, cachedPosition was stuck at song end)
+                        cachedPosition = 0L
                     }
 
                     // Always transition to READY first so UI receives
