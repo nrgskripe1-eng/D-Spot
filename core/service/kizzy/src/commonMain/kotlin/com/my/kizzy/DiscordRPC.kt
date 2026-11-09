@@ -50,7 +50,7 @@ class DiscordRPC(
     }
 
     companion object {
-        const val APPLICATION_ID = "1557223074083110933"
+        const val APPLICATION_ID = "1565241843439108106"
         const val APP_NAME: String = "D-Spot"
         const val APP_ICON: String =
             "https://raw.githubusercontent.com/nrgskripe1-eng/D-Spot/account-tab/composeApp/icon/circle_app_icon.png"

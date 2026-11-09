@@ -66,7 +66,7 @@ class DesktopDiscordIpc(
         for (i in 0..9) {
             try {
                 if (os.contains("win")) {
-                    val pipeFile = File("\\\\.\\pipe\\discord-rpc-$i")
+                    val pipeFile = File("\\\\.\\pipe\\discord-ipc-$i")
                     if (pipeFile.exists()) {
                         val raf = RandomAccessFile(pipeFile, "rw")
                         channel = raf.channel
