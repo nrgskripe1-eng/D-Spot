@@ -183,7 +183,8 @@ class DesktopDiscordIpc(
                 putJsonObject("args") {
                     put("pid", processId)
                     putJsonObject("activity") {
-                        put("type", 2) // LISTENING (Displays as 🎵 Title)
+                        put("type", 2)
+                        put("name", songTitle)
                         put("details", songTitle)
                         put("state", artistDisplay)
                         putJsonObject("timestamps") {
