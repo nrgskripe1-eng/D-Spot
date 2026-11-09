@@ -130,6 +130,16 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     System.setProperty("compose.interop.blending", "true")
     System.setProperty("compose.layers.type", "COMPONENT")
 
+    // On Windows, legacy integrated GPUs (e.g. Intel HD Graphics 4000/4400/4600 on Haswell/Ivy Bridge)
+    // and older WDDM drivers freeze or produce a blank/hidden window when Skiko attempts Direct3D 12/DirectX.
+    // Falling back to OPENGL (or user-specified override) allows hardware acceleration to work stably across
+    // all old and modern desktop GPUs without getting stuck.
+    if (System.getProperty("os.name", "").contains("Windows", ignoreCase = true)) {
+        if (System.getProperty("skiko.renderApi") == null && System.getenv("SKIKO_RENDER_API") == null) {
+            System.setProperty("skiko.renderApi", "OPENGL")
+        }
+    }
+
     // Skiko's vsync wait can park the EDT forever after a display change:
     // macOS waits on a CVDisplayLink-signalled NSConditionLock with no timeout
     // (DisplayLinkThrottler.mm), Linux blocks inside the vsync'd glXSwapBuffers
