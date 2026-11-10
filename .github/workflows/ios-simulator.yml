@@ -6,7 +6,7 @@ on:
 jobs:
   build-ios-simulator:
     name: Build iOS Simulator App (VirtualBox / Mac)
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 120
 
     env:
