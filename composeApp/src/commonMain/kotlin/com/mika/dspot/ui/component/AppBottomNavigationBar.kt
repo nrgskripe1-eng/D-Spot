@@ -126,32 +126,71 @@ fun AppBottomNavigationBar(
     // Search rides in its own circular button, so the capsule holds everything else.
     val barTabs = bottomNavScreens.filter { it != BottomNavScreen.Search }
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        // One centred cluster — capsule, gap, FAB — exactly like the glass bar: fill = false keeps
-        // the capsule at its measured width, so the leftover goes around the cluster instead of
-        // wedging itself between the capsule and the search button.
-        horizontalArrangement = Arrangement.Center,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                .padding(horizontal = 16.dp)
-                .padding(top = 4.dp, bottom = 8.dp),
-    ) {
-        BoxWithConstraints(Modifier.weight(1f, fill = false)) {
-            FlatTabBar(
-                tabs = barTabs,
-                selectedIndex = selectedIndex,
-                availableWidth = maxWidth,
-                onTabSelected = selectTab,
+    if (com.mika.dspot.expect.ui.isOledTheme()) {
+        NavigationBar(
+            containerColor = Color.Black,
+            tonalElevation = 0.dp,
+            windowInsets = NavigationBarDefaults.windowInsets,
+        ) {
+            bottomNavScreens.forEach { screen ->
+                val selected = selectedIndex == screen.ordinal
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { selectTab(screen) },
+                    icon = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CompositionLocalProvider(
+                                LocalContentColor provides if (selected) Color.White else Color(0xFF333333)
+                            ) {
+                                screen.icon()
+                            }
+                            if (selected) {
+                                Spacer(Modifier.height(4.dp))
+                                Box(
+                                    Modifier
+                                        .width(12.dp)
+                                        .height(2.dp)
+                                        .background(Color.White, RoundedCornerShape(1.dp))
+                                )
+                            }
+                        }
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = Color.Transparent,
+                        selectedIconColor = Color.White,
+                        unselectedIconColor = Color(0xFF333333),
+                    )
+                )
+            }
+        }
+    } else {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            // One centred cluster — capsule, gap, FAB — exactly like the glass bar: fill = false keeps
+            // the capsule at its measured width, so the leftover goes around the cluster instead of
+            // wedging itself between the capsule and the search button.
+            horizontalArrangement = Arrangement.Center,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp, bottom = 8.dp),
+        ) {
+            BoxWithConstraints(Modifier.weight(1f, fill = false)) {
+                FlatTabBar(
+                    tabs = barTabs,
+                    selectedIndex = selectedIndex,
+                    availableWidth = maxWidth,
+                    onTabSelected = selectTab,
+                )
+            }
+            Spacer(Modifier.size(12.dp))
+            FlatSearchButton(
+                selected = selectedIndex == BottomNavScreen.Search.ordinal,
+                onClick = { selectTab(BottomNavScreen.Search) },
             )
         }
-        Spacer(Modifier.size(12.dp))
-        FlatSearchButton(
-            selected = selectedIndex == BottomNavScreen.Search.ordinal,
-            onClick = { selectTab(BottomNavScreen.Search) },
-        )
     }
 }
 

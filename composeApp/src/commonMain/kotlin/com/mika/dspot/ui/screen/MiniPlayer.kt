@@ -79,6 +79,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.StrokeCap
@@ -129,7 +130,9 @@ import com.mika.dspot.ui.component.rememberHolderPainter
 import com.mika.dspot.ui.icon.Close
 import com.mika.dspot.ui.icon.Headphones
 import com.mika.dspot.ui.icon.OpenInFull
+import com.mika.dspot.ui.icon.Pause
 import com.mika.dspot.ui.icon.PictureInPictureAlt
+import com.mika.dspot.ui.icon.PlayArrow
 import com.mika.dspot.ui.icon.QueueMusic
 import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.icon.VolumeOff
@@ -268,7 +271,61 @@ fun MiniPlayer(
         job4.join()
     }
 
-    if (getPlatform() == Platform.Android) {
+    if (com.mika.dspot.expect.ui.isOledTheme()) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .drawBehind {
+                    drawRect(
+                        color = Color(0xFF111111),
+                        size = androidx.compose.ui.geometry.Size(size.width, 0.5f * density)
+                    )
+                }
+                .clickable { onClick() }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val thumbUrl = songEntity?.thumbnails
+            AsyncImage(
+                model = thumbUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = songEntity?.title ?: "",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    style = typo().titleSmall,
+                )
+                Text(
+                    text = songEntity?.artistName?.connectArtists() ?: "",
+                    color = Color(0xFF666666),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    style = typo().bodySmall,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(Color.White, RoundedCornerShape(4.dp))
+                    .clickable { sharedViewModel.onUIEvent(UIEvent.PlayPause) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) SimpIcons.Pause else SimpIcons.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    } else if (getPlatform() == Platform.Android) {
         // One shape for both the Card and the clip below. They must not diverge: the clip wraps
         // the Card's own background draw, so the larger radius wins and silently becomes the
         // visible one.

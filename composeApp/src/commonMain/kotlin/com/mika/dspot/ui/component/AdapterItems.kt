@@ -2,6 +2,7 @@ package com.mika.dspot.ui.component
 
 import com.mika.dspot.extension.mouseDragScroll
 import com.mika.dspot.extension.cleanBrandText
+import com.mika.domain.extension.now
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -236,8 +237,9 @@ fun HomeSectionHeader(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val isDesktop = getPlatform() == Platform.Desktop
         AnimatedVisibility(
-            visible = (data.thumbnail?.lastOrNull() != null),
+            visible = (!isDesktop && data.thumbnail?.lastOrNull() != null),
             modifier = Modifier.align(Alignment.CenterVertically),
         ) {
             AsyncImage(
@@ -263,18 +265,25 @@ fun HomeSectionHeader(
         Column(
             Modifier
                 .weight(1f)
-                .padding(start = 10.dp),
+                .padding(start = if (!isDesktop && data.thumbnail?.lastOrNull() != null) 10.dp else 0.dp),
         ) {
-            AnimatedVisibility(visible = (data.subtitle != null && data.subtitle != "")) {
+            AnimatedVisibility(visible = (!isDesktop && data.subtitle != null && data.subtitle != "")) {
                 Text(
                     text = data.subtitle ?: "",
                     style = typo().bodySmall,
                 )
             }
+            val isOled = com.mika.dspot.expect.ui.isOledTheme()
             Text(
-                text = data.title,
-                style = typo().headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = if (isOled) data.title.uppercase() else data.title,
+                style = if (isOled) {
+                    MaterialTheme.typography.labelSmall.copy(
+                        color = Color(0xFF666666),
+                        letterSpacing = 2.sp,
+                        fontSize = 10.sp
+                    )
+                } else typo().headlineMedium,
+                color = if (isOled) Color(0xFF666666) else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -906,6 +915,59 @@ fun QuickPicksItem(
     widthDp: Dp,
     data: Content,
 ) {
+    if (com.mika.dspot.expect.ui.isOledTheme()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Black)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick,
+                )
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalPlatformContext.current)
+                    .data(data.thumbnails.lastOrNull()?.url)
+                    .crossfade(true)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .build(),
+                placeholder = rememberHolderPainter(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(4.dp)),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = data.title,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = data.artists?.mapNotNull { it.name }?.connectArtists() ?: "",
+                    color = Color(0xFF666666),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            val streamText = data.views ?: data.description
+            if (!streamText.isNullOrBlank()) {
+                Text(
+                    text = streamText,
+                    color = Color(0xFF333333),
+                    fontSize = 10.sp,
+                )
+            }
+        }
+        androidx.compose.material3.HorizontalDivider(color = Color(0xFF111111), thickness = 0.5.dp)
+        return
+    }
+
     val tag = "QuickPicksItem"
     val isDesktop = getPlatform() == Platform.Desktop
     var showContextMenu by remember { mutableStateOf(false) }

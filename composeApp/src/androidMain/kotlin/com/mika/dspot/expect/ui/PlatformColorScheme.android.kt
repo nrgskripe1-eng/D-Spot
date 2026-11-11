@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.expect.ui
+package com.mika.dspot.expect.ui
 
 import android.os.Build
 import androidx.compose.material3.ColorScheme
@@ -43,3 +43,10 @@ actual fun SystemBarAppearanceEffect(isDark: Boolean) {
         }
     }
 }
+
+actual fun platformBackgroundColor(): Color = Color.Unspecified
+actual fun platformSurfaceColor(): Color = Color.Unspecified
+actual fun platformSurfaceVariantColor(): Color = Color.Unspecified
+actual fun platformDividerColor(): Color = Color.Unspecified
+actual fun platformNavIndicatorColor(): Color = Color.Unspecified
+actual fun isOledTheme(): Boolean = false

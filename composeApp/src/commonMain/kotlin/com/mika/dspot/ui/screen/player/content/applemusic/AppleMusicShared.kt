@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.player.content.applemusic
+package com.mika.dspot.ui.screen.player.content.applemusic
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -491,6 +491,7 @@ internal fun AppleMusicThinSlider(
                 // mismatched bar. Clipping ONE container and drawing the played portion inside it
                 // keeps both ends of the bar equally round, and gives the played portion the flat
                 // right edge Apple's own bar has.
+                val isOled = com.mika.dspot.expect.ui.isOledTheme()
                 val fraction = value.coerceIn(0f, 1f)
                 Box(
                     modifier =
@@ -498,14 +499,14 @@ internal fun AppleMusicThinSlider(
                             .fillMaxWidth()
                             .height(trackHeight)
                             .clip(RoundedCornerShape(percent = 50))
-                            .background(AppleMusicTrackInactive),
+                            .background(if (isOled) Color(0xFF111111) else AppleMusicTrackInactive),
                 ) {
                     Box(
                         modifier =
                             Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(fraction)
-                                .background(activeColor),
+                                .background(if (isOled) Color.White else activeColor),
                     )
                 }
             },
@@ -705,22 +706,39 @@ internal fun AppleMusicTransportRow(
         // No loading state on this button. It is play/pause and nothing else: it stays pressable
         // and keeps showing the transport glyph even while the player is buffering, so the control
         // never disappears out from under a finger reaching for it.
-        Box(
-            modifier =
-                Modifier
-                    .appleMusicPressInflate()
-                    .size(76.dp)
-                    .clip(CircleShape)
+        if (com.mika.dspot.expect.ui.isOledTheme()) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(Color.White, RoundedCornerShape(6.dp))
                     .clickable { onUIEvent(UIEvent.PlayPause) },
-            contentAlignment = Alignment.Center,
-        ) {
-            Crossfade(targetState = controllerState.isPlaying, label = "appleMusicPlayPauseIcon") { isPlaying ->
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
-                    imageVector = if (isPlaying) SimpIcons.Pause else SimpIcons.PlayArrow,
-                    contentDescription = "",
-                    tint = Color.White,
-                    modifier = Modifier.size(66.dp),
+                    imageVector = if (controllerState.isPlaying) SimpIcons.Pause else SimpIcons.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(28.dp),
                 )
+            }
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .appleMusicPressInflate()
+                        .size(76.dp)
+                        .clip(CircleShape)
+                        .clickable { onUIEvent(UIEvent.PlayPause) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Crossfade(targetState = controllerState.isPlaying, label = "appleMusicPlayPauseIcon") { isPlaying ->
+                    Icon(
+                        imageVector = if (isPlaying) SimpIcons.Pause else SimpIcons.PlayArrow,
+                        contentDescription = "",
+                        tint = Color.White,
+                        modifier = Modifier.size(66.dp),
+                    )
+                }
             }
         }
         IconButton(

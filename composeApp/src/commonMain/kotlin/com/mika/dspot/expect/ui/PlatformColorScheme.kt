@@ -1,7 +1,8 @@
-﻿package com.mika.dspot.expect.ui
+package com.mika.dspot.expect.ui
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 /** Wallpaper-based (Material You) color scheme, or null when the platform can't provide one. */
 @Composable
@@ -13,3 +14,10 @@ expect fun isWallpaperDynamicColorSupported(): Boolean
 /** Keeps the system bar icon appearance in sync with the app theme (Android only; no-op elsewhere). */
 @Composable
 expect fun SystemBarAppearanceEffect(isDark: Boolean)
+
+expect fun platformBackgroundColor(): Color
+expect fun platformSurfaceColor(): Color
+expect fun platformSurfaceVariantColor(): Color
+expect fun platformDividerColor(): Color
+expect fun platformNavIndicatorColor(): Color
+expect fun isOledTheme(): Boolean

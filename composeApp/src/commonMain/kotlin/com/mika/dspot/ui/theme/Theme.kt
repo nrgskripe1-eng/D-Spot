@@ -19,7 +19,11 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 import com.mika.domain.manager.DataStoreManager
 import com.mika.dspot.expect.ui.SystemBarAppearanceEffect
+import com.mika.dspot.expect.ui.isOledTheme
+import com.mika.dspot.expect.ui.platformBackgroundColor
 import com.mika.dspot.expect.ui.platformDynamicColorScheme
+import com.mika.dspot.expect.ui.platformSurfaceColor
+import com.mika.dspot.expect.ui.platformSurfaceVariantColor
 
 /**
  * Semantic colors that sit outside the Material 3 ColorScheme.
@@ -154,7 +158,7 @@ fun AppTheme(
     val isAmoledMode = themeMode == DataStoreManager.THEME_MODE_AMOLED
     // Symmetric base: AMOLED pins background/surface to pure black (#000000); standard dark keeps
     // rich tonal dark surfaces; light pins them to pure white with a neutral-grey ramp.
-    val colorScheme =
+    val rawColorScheme =
         wallpaperScheme
             ?: rememberDynamicColorScheme(
                 seedColor = seedColor,
@@ -171,6 +175,23 @@ fun AppTheme(
                     }
                 },
             )
+
+    val bg = platformBackgroundColor()
+    val sf = platformSurfaceColor()
+    val sfv = platformSurfaceVariantColor()
+
+    val colorScheme = if (isDark && isOledTheme()) {
+        rawColorScheme.copy(
+            background = bg,
+            surface = bg,
+            surfaceVariant = sf,
+            surfaceContainer = sf,
+            surfaceContainerLow = bg,
+            surfaceContainerHigh = sf,
+            surfaceContainerHighest = sfv,
+            scrim = Color(0xCC000000),
+        )
+    } else rawColorScheme
     // Immersive screens stay dark even at light theme (see [ForceDarkContent]). Resolve their scheme
     // once here instead of letting every such subtree build a palette of its own.
     val forcedDarkScheme =

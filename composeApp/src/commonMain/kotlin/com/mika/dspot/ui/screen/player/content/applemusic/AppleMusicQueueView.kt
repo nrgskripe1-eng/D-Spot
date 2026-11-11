@@ -1,4 +1,4 @@
-﻿@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 
 package com.mika.dspot.ui.screen.player.content.applemusic
 
@@ -44,7 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.sp
+import com.mika.domain.utils.connectArtists
+import com.mika.dspot.extension.formatDuration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -142,7 +147,12 @@ internal fun AppleMusicQueueView(
             }
         }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    val isOled = com.mika.dspot.expect.ui.isOledTheme()
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(if (isOled) Color.Black else Color.Transparent)
+    ) {
         // statusBars + 20dp, not a bare status-bar offset: the grabber that
         // NowPlayingContentAppleMusic draws above the view Crossfade floats over this column, and
         // without the extra room the header's title slides underneath it.
@@ -168,6 +178,39 @@ internal fun AppleMusicQueueView(
             activePillContent = activePillContent,
             modifier = Modifier.padding(bottom = 8.dp),
         )
+
+        if (isOled) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF0A0A0A))
+                    .drawBehind {
+                        drawRect(
+                            color = Color.White,
+                            size = Size(4f * density, size.height)
+                        )
+                    }
+                    .padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = state.screenData.nowPlayingTitle,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = state.screenData.artistName,
+                        color = Color(0xFF666666),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
 
         val lazyListState = rememberLazyListState()
         // rememberDragDropState stores this lambda in remember(lazyListState), so it is frozen at
@@ -271,20 +314,64 @@ internal fun AppleMusicQueueView(
                         index = localIndex,
                         modifier = Modifier,
                     ) { _ ->
-                        // Owner's call: the OLD queue sheet's row component, verbatim — no bespoke
-                        // row. Long-press-drag reorders (list-level gesture above); ⋯ opens the
-                        // full song sheet with the queue's own rows, hosted by the player screen.
-                        SongFullWidthItems(
-                            track = track,
-                            isPlaying = false,
-                            modifier = Modifier.fillMaxWidth(),
-                            onClickListener = { videoId ->
-                                if (videoId == track.videoId) actions.onSeekToQueueIndex(queueIndex)
-                            },
-                            onMoreClickListener = {
-                                actions.onQueueItemMore(queueIndex, track)
-                            },
-                        )
+                        if (isOled) {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.Black)
+                                        .clickable { actions.onSeekToQueueIndex(queueIndex) }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val indexStr = (queueIndex + 1).toString().let { if (it.length < 2) "0$it" else it }
+                                    Text(
+                                        text = indexStr,
+                                        color = Color(0xFF444444),
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.width(28.dp)
+                                    )
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            text = track.title,
+                                            color = Color(0xFFCCCCCC),
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = track.artists?.mapNotNull { it.name }?.connectArtists() ?: "",
+                                            color = Color(0xFF444444),
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    val dur = track.duration ?: (track.durationSeconds?.let { formatDuration(it * 1000L) } ?: "")
+                                    Text(
+                                        text = dur,
+                                        color = Color(0xFF444444),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                androidx.compose.material3.HorizontalDivider(color = Color(0xFF0F0F0F), thickness = 0.5.dp)
+                            }
+                        } else {
+                            // Owner's call: the OLD queue sheet's row component, verbatim — no bespoke
+                            // row. Long-press-drag reorders (list-level gesture above); ⋯ opens the
+                            // full song sheet with the queue's own rows, hosted by the player screen.
+                            SongFullWidthItems(
+                                track = track,
+                                isPlaying = false,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClickListener = { videoId ->
+                                    if (videoId == track.videoId) actions.onSeekToQueueIndex(queueIndex)
+                                },
+                                onMoreClickListener = {
+                                    actions.onQueueItemMore(queueIndex, track)
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -503,10 +503,10 @@ fun App(
                     ) {
                         // On Android both materials go through the folding bar, which draws the mini
                         // player itself. Desktop keeps the always-open flat bar under its own one.
-                        val useFoldingBar = getPlatform() == Platform.Android || isLiquidGlassEnabled == TRUE
+                        val useFoldingBar = (getPlatform() == Platform.Android || isLiquidGlassEnabled == TRUE) && !com.mika.dspot.expect.ui.isOledTheme()
                         Column {
                             AnimatedVisibility(
-                                isShowMiniPlayer && !useFoldingBar && isLiquidGlassEnabled == DataStoreManager.FALSE,
+                                isShowMiniPlayer && (!useFoldingBar || com.mika.dspot.expect.ui.isOledTheme()),
                                 enter = fadeIn() + slideInHorizontally(),
                                 exit = fadeOut(),
                             ) {

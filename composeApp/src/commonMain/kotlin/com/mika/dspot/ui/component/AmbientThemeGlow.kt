@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.kmpalette.loader.rememberNetworkLoader
 import com.kmpalette.rememberDominantColorState
 import com.mika.dspot.Platform
+import com.mika.dspot.expect.ui.isOledTheme
 import com.mika.dspot.extension.angledGradientBackground
 import com.mika.dspot.extension.artworkScrimBrush
 import com.mika.dspot.extension.rgbFactor
@@ -58,6 +59,10 @@ fun AmbientThemeGlow(
     // arrives — and the animation below is what makes it breathe in rather than pop.
     tint: Color? = null,
 ) {
+    if (isOledTheme()) {
+        // No glow on OLED iOS — it ruins the pure black look
+        return
+    }
     val backgroundColor = MaterialTheme.colorScheme.background
     val isLightTheme = backgroundColor.luminance() > 0.5f
     val pageBackground =

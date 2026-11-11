@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.player.content
+package com.mika.dspot.ui.screen.player.content
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -211,13 +212,15 @@ fun NowPlayingContentAppleMusic(
     val panelBackdrop = rememberBackdrop(Color.Black)
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        Box(modifier = Modifier.matchParentSize().layerBackdrop(panelBackdrop)) {
-            AppleMusicArtworkBackdrop(state = state, actions = actions, seedColor = seedColor)
-            // Flat black only for a CANVAS (it fills the screen). A video letterboxes, so a black page
-            // turns the bars above and below it into dead black slabs — keep the artwork-tinted
-            // gradient there.
-            if (canvasBackdropAlpha > 0f) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = canvasBackdropAlpha)))
+        if (!com.mika.dspot.expect.ui.isOledTheme()) {
+            Box(modifier = Modifier.matchParentSize().layerBackdrop(panelBackdrop)) {
+                AppleMusicArtworkBackdrop(state = state, actions = actions, seedColor = seedColor)
+                // Flat black only for a CANVAS (it fills the screen). A video letterboxes, so a black page
+                // turns the bars above and below it into dead black slabs — keep the artwork-tinted
+                // gradient there.
+                if (canvasBackdropAlpha > 0f) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = canvasBackdropAlpha)))
+                }
             }
         }
         Crossfade(targetState = viewState, animationSpec = tween(300), label = "appleMusicView") { view ->
@@ -410,7 +413,8 @@ private fun AppleMusicMainView(
 
         // The page itself. A video keeps the frosted cover behind it and a fullscreen canvas the black
         // page, as before; everything else stands on the mesh, hung from where the artwork ends.
-        val meshPage = !fullscreenCanvas && !isVideoBackdrop
+        val isOled = com.mika.dspot.expect.ui.isOledTheme()
+        val meshPage = !isOled && !fullscreenCanvas && !isVideoBackdrop
         val mesh =
             if (meshPage) {
                 rememberAppleMusicMesh(
@@ -954,10 +958,17 @@ private fun AppleMusicArtworkPage(
                     // and any drift drew a hard horizontal line across the screen. Masking lets
                     // the real background show through — nothing left to match.
                     modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .alpha(coverAlpha)
-                            .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = artworkFade),
+                        if (com.mika.dspot.expect.ui.isOledTheme()) {
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                        } else {
+                            Modifier
+                                .fillMaxSize()
+                                .alpha(coverAlpha)
+                                .appleMusicVerticalFadeEdges(topFade = 0.dp, bottomFade = artworkFade)
+                        },
                 )
                 TopBandBlur(model = coverRequest, solidTo = topBandSolid, fadeTo = topBand, modifier = Modifier.alpha(coverAlpha))
             }

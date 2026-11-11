@@ -322,7 +322,9 @@ fun HomeScreen(
     // wrong colour and draws a seam where the first item stops. Same light check as App.kt's
     // isLightScheme.
     val pageBackground =
-        if (getPlatform() == Platform.Desktop) {
+        if (com.mika.dspot.expect.ui.isOledTheme()) {
+            Color.Black
+        } else if (getPlatform() == Platform.Desktop) {
             if (isLightTheme) MaterialTheme.colorScheme.surfaceContainer else desktopPanelDark
         } else {
             backgroundColor
@@ -709,7 +711,11 @@ fun HomeScreen(
         )
     }
 
-    Box {
+    Box(
+        modifier = Modifier.background(
+            if (com.mika.dspot.expect.ui.isOledTheme()) Color.Black else MaterialTheme.colorScheme.background
+        )
+    ) {
         val isDesktop = getPlatform() == Platform.Desktop
         PullToRefreshBox(
             modifier =
@@ -798,9 +804,22 @@ fun HomeScreen(
                                                 with(LocalDensity.current) { topAppBarHeightPx.toDp() },
                                             ),
                                         )
+                                        if (isDesktop) {
+                                            val hour = now().hour
+                                            val greeting = when (hour) {
+                                                in 5..11 -> "Good morning"
+                                                in 12..17 -> "Good afternoon"
+                                                else -> "Good evening"
+                                            }
+                                            Text(
+                                                text = greeting,
+                                                style = typo().bodySmall,
+                                                modifier = Modifier.padding(bottom = 2.dp),
+                                            )
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    if (index == 0 && accountInfo != null && accountShow) {
+                                    if (!isDesktop && index == 0 && accountInfo != null && accountShow) {
                                         AccountLayout(
                                             accountName = accountInfo?.first ?: "",
                                             url = accountInfo?.second ?: "",
@@ -1335,7 +1354,8 @@ fun HomeTopAppBar(navController: NavController) {
         },
         colors =
             TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
+                containerColor = if (com.mika.dspot.expect.ui.isOledTheme()) Color.Black else Color.Transparent,
+                scrolledContainerColor = if (com.mika.dspot.expect.ui.isOledTheme()) Color.Black else Color.Transparent,
             ),
     )
 }

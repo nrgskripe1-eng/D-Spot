@@ -7,6 +7,7 @@ struct iOSApp: App {
         WindowGroup {
             ContentView()
                 .ignoresSafeArea(.all)
+                .preferredColorScheme(.dark)
         }
     }
 }
