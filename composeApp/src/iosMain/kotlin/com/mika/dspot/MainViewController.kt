@@ -4,11 +4,13 @@ import androidx.compose.ui.window.ComposeUIViewController
 import com.mika.common.AppIdentity
 import com.mika.data.di.loader.loadAllModules
 import com.mika.dspot.di.viewModelModule
+import com.mika.dspot.utils.VersionManager
 import org.koin.core.context.startKoin
 import org.koin.core.context.loadKoinModules
 import org.koin.mp.KoinPlatform
 
 fun MainViewController() = ComposeUIViewController {
+    VersionManager.initialize()
     // Initialize Koin once — guard against hot-reload / multiple calls
     if (KoinPlatform.getKoinOrNull() == null) {
         startKoin {

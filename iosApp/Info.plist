@@ -29,7 +29,12 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     <key>UILaunchScreen</key>
-    <dict/>
+    <dict>
+        <key>UIImageName</key>
+        <string>LaunchLogo</string>
+        <key>UIImageRespectsSafeAreaInsets</key>
+        <false/>
+    </dict>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
