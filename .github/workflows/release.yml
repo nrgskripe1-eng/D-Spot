@@ -12,6 +12,13 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 2.3.1)'
+        required: true
+        default: '2.3.1'
+        type: string
 
 permissions:
   contents: write
@@ -25,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.parse.outputs.version }}
+      tag: ${{ steps.parse.outputs.tag }}
       version_code: ${{ steps.parse.outputs.version_code }}
     steps:
       - uses: actions/checkout@v6
@@ -33,19 +41,26 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Parse version from tag
+      - name: Parse version
         id: parse
         run: |
-          TAG="${GITHUB_REF_NAME}"          # e.g. v2.3.1
-          VERSION="${TAG#v}"                # strip leading "v" → 2.3.1
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW_VER="${{ inputs.version }}"
+            VERSION="${RAW_VER#v}"
+            TAG="v${VERSION}"
+          else
+            TAG="${GITHUB_REF_NAME}"          # e.g. v2.3.1
+            VERSION="${TAG#v}"                # strip leading "v" → 2.3.1
+          fi
 
           # Read current version-code and increment by 1
           CURRENT_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
           NEW_CODE=$((CURRENT_CODE + 1))
 
           echo "version=$VERSION"       >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"               >> "$GITHUB_OUTPUT"
           echo "version_code=$NEW_CODE" >> "$GITHUB_OUTPUT"
-          echo "Releasing version: $VERSION (code: $NEW_CODE)"
+          echo "Releasing version: $VERSION (tag: $TAG, code: $NEW_CODE)"
 
       - name: Update libs.versions.toml
         run: |
@@ -259,7 +274,7 @@ jobs:
   publish-release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-android, build-desktop]
+    needs: [bump-version, build-android, build-desktop]
     steps:
       - name: Download Full APK
         uses: actions/download-artifact@v4
@@ -290,8 +305,7 @@ jobs:
 
       - name: Rename APKs with version tag
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
+          VERSION="${{ needs.bump-version.outputs.version }}"
           # Full APK
           for f in release-files/android/*.apk; do
             mv "$f" "release-files/android/D-Spot-${VERSION}-full.apk"
@@ -304,8 +318,8 @@ jobs:
       - name: Create GitHub Release and upload artifacts
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: "D-Spot ${{ github.ref_name }}"
+          tag_name: ${{ needs.bump-version.outputs.tag }}
+          name: "D-Spot ${{ needs.bump-version.outputs.tag }}"
           draft: false
           prerelease: false
           generate_release_notes: true
