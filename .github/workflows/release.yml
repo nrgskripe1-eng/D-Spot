@@ -1,0 +1,467 @@
+name: Release
+
+# Trigger: push any tag starting with "v" (e.g. v2.3.1, v2.4.0, v3.0.0).
+# What it does:
+#   1. Bumps version-name and version-code in libs.versions.toml to match the tag.
+#   2. Commits the bump back to the branch the tag points at.
+#   3. Builds Android (Full + FOSS) and all Desktop platforms in parallel.
+#   4. Wraps macOS .zip files into polished .dmg installers.
+#   5. Publishes a GitHub Release with all artifacts attached.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. Bump version-name + version-code in libs.versions.toml and commit it back.
+  # ─────────────────────────────────────────────────────────────────────────────
+  bump-version:
+    name: Bump version in libs.versions.toml
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+      version_code: ${{ steps.parse.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need a full clone so we can push the commit back
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse version from tag
+        id: parse
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v2.3.1
+          VERSION="${TAG#v}"                # strip leading "v" → 2.3.1
+
+          # Read current version-code and increment by 1
+          CURRENT_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          NEW_CODE=$((CURRENT_CODE + 1))
+
+          echo "version=$VERSION"       >> "$GITHUB_OUTPUT"
+          echo "version_code=$NEW_CODE" >> "$GITHUB_OUTPUT"
+          echo "Releasing version: $VERSION (code: $NEW_CODE)"
+
+      - name: Update libs.versions.toml
+        run: |
+          VERSION="${{ steps.parse.outputs.version }}"
+          CODE="${{ steps.parse.outputs.version_code }}"
+
+          sed -i "s/^version-name = .*/version-name = \"$VERSION\"/" gradle/libs.versions.toml
+          sed -i "s/^version-code = .*/version-code = \"$CODE\"/"    gradle/libs.versions.toml
+
+          echo "--- Updated versions ---"
+          grep '^version-' gradle/libs.versions.toml
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gradle/libs.versions.toml
+          git commit -m "chore: bump version to ${{ steps.parse.outputs.version }} [skip ci]"
+          # Push to whichever branch HEAD is on (main, dev, etc.)
+          git push origin HEAD:$(git rev-parse --abbrev-ref HEAD) || true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2a. Build Android APKs (Full + FOSS) — runs on Ubuntu, needs bump-version.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-android:
+    name: Build Android APKs (Full + FOSS)
+    runs-on: ubuntu-latest
+    needs: bump-version
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+          # Pull the bumped commit so the version is correct in the build
+          ref: ${{ github.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "microsoft"
+          cache: 'gradle'
+
+      - name: Write secrets to local.properties
+        run: |
+          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}"              > ./local.properties
+          echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}"       >> ./local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}"          >> ./local.properties
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.BASE_64_SIGNING_KEY }}" | base64 -d > dspot.jks
+
+      - name: Build Full release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "" >> ./gradle.properties
+          echo "isFullBuild=true" >> ./gradle.properties
+          ./build_and_sign_apk.sh --release --full
+
+      - name: Upload Full APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-full
+          path: androidApp/build/outputs/apk/release/*.apk
+
+      - name: Reset gradle.properties for FOSS build
+        run: sed -i '/^isFullBuild=/d' ./gradle.properties
+
+      - name: Build FOSS release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "" >> ./gradle.properties
+          echo "isFullBuild=false" >> ./gradle.properties
+          ./build_and_sign_apk.sh --release --foss
+
+      - name: Upload FOSS APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-foss
+          path: androidApp/build/outputs/apk/release/*.apk
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2b. Build Desktop packages (Windows .msix, macOS .zip, Linux AppImage)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-desktop:
+    name: Build Desktop packages (Windows + macOS + Linux)
+    runs-on: ubuntu-22.04
+    needs: bump-version
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+          ref: ${{ github.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "microsoft"
+          cache: 'gradle'
+
+      - name: Install libfuse2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
+      - name: Write secrets to local.properties
+        run: |
+          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN_JVM }}"          > ./local.properties
+          echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}"       >> ./local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}"          >> ./local.properties
+
+      - name: Set full build flag
+        run: |
+          echo "" >> ./gradle.properties
+          echo "isFullBuild=true" >> ./gradle.properties
+
+      - name: Generate aboutLibraries.json
+        run: ./gradlew exportLibraryDefinitions
+
+      - name: Cache mpv-natives
+        uses: actions/cache@v4
+        with:
+          path: mpv-natives
+          key: mpv-natives-${{ hashFiles('composeApp/build.gradle.kts') }}
+
+      - name: Populate mpv-natives for all OSes
+        run: ./gradlew :composeApp:mpvSetupAll --no-configuration-cache
+
+      - name: Generate Conveyor config
+        run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache
+
+      - name: Run Conveyor (Linux AppImage)
+        uses: hydraulic-software/conveyor/actions/build@v22.0
+        with:
+          command: -Kapp.machines=linux.amd64.glibc make linux-app
+          agree_to_license: 1
+          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+
+      - name: Wrap Linux app tree → AppImage
+        run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
+
+      - name: Run Conveyor (Mac + Windows)
+        uses: hydraulic-software/conveyor/actions/build@v22.0
+        with:
+          command: '-Kapp.machines=[mac.amd64,mac.aarch64,windows.amd64] make site'
+          agree_to_license: 1
+          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+
+      - name: Stage AppImage into output/
+        run: cp desktopApp/build/appimage/conveyor/D-Spot-*.AppImage output/
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-appimage
+          path: output/D-Spot-*.AppImage
+
+      - name: Upload macOS zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mac-zips
+          path: output/*-mac-*.zip
+          if-no-files-found: error
+
+      - name: Bundle Windows offline installer
+        run: |
+          set -euo pipefail
+          if [ ! -f output/dspot.crt ]; then
+            echo "::error::output/dspot.crt missing — Conveyor signing must have failed"
+            exit 1
+          fi
+          msix=$(ls output/dspot-*.x64.msix 2>/dev/null | head -1)
+          if [ -z "$msix" ]; then
+            echo "::error::No dspot-*.x64.msix found in output/"
+            exit 1
+          fi
+          mkdir -p installers/
+          stage="$(mktemp -d)"
+          cp scripts/windows/install.bat "$stage/"
+          cp output/dspot.crt             "$stage/"
+          cp "$msix"                       "$stage/"
+          ( cd "$stage" && zip -q -j \
+            "${GITHUB_WORKSPACE}/installers/D-Spot-Windows-installer.zip" \
+            install.bat dspot.crt "$(basename "$msix")" )
+          rm -rf "$stage"
+          ls -lh installers/
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: installers/D-Spot-Windows-installer.zip
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2c. Build iOS IPA — runs on macOS, needs bump-version.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    needs: bump-version
+    timeout-minutes: 120
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx9216m -XX:+UseParallelGC -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+      _JAVA_OPTIONS: "-Xmx9216m"
+      KOTLIN_DAEMON_JVM_OPTIONS: "-Xmx9216m"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Cache Kotlin/Native toolchain (~/.konan)
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
+
+      - name: Setup Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build iOS IPA (no code signing)
+        run: |
+          CPU_CORES=$(sysctl -n hw.ncpu)
+          echo "Building on Apple Silicon with $CPU_CORES CPU cores..."
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -jobs "$CPU_CORES" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO \
+            build
+
+          mkdir -p build_output/Payload
+          cp -r ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Release-iphoneos/iosApp.app build_output/Payload/
+          cd build_output
+          VERSION="${{ needs.bump-version.outputs.version }}"
+          zip -r "D-Spot-${VERSION}-ios.ipa" Payload
+          cd ..
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: build_output/D-Spot-*.ipa
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. Wrap macOS .zip → polished .dmg (needs macOS runner)
+  # ─────────────────────────────────────────────────────────────────────────────
+  wrap-mac-dmg:
+    name: Wrap macOS .zip → .dmg
+    runs-on: macos-14
+    needs: build-desktop
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install create-dmg + ImageMagick
+        run: brew install create-dmg imagemagick
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download Mac .zip artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-mac-zips
+          path: mac-zips
+
+      - name: Prepare DMG background
+        run: |
+          mkdir -p build/dmg
+          magick composeApp/icon/dmg-background.png \
+            -filter Lanczos -resize 1400x800 \
+            build/dmg/dmg-bg-1400x800.png
+
+      - name: Wrap each Mac .zip into .dmg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          shopt -s nullglob
+          for zip in mac-zips/dspot-*-mac-*.zip; do
+            arch="$(basename "$zip" | sed -nE 's/.*-mac-([a-z0-9]+)\.zip/\1/p')"
+            [[ -z "$arch" ]] && { echo "Cannot infer arch from $zip" >&2; exit 1; }
+            workdir="$(mktemp -d)"
+            unzip -q "$zip" -d "$workdir"
+            app="$(find "$workdir" -maxdepth 2 -type d -name '*.app' | head -1)"
+            [[ -d "$app" ]] || { echo "No .app inside $zip" >&2; exit 1; }
+            out="dist/D-Spot-${VERSION}-mac-${arch}.dmg"
+            scripts/wrap-mac-dmg.sh \
+              "$app" \
+              build/dmg/dmg-bg-1400x800.png \
+              composeApp/icon/circle_app_icon.icns \
+              "$out"
+            rm -rf "$workdir"
+          done
+          ls -lh dist/
+
+      - name: Upload Mac .dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mac-dmg
+          path: dist/*.dmg
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 4. Publish GitHub Release with all artifacts
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-android, build-ios, wrap-mac-dmg]
+    steps:
+      - name: Download Full APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-full
+          path: release-files/android
+
+      - name: Download FOSS APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-foss
+          path: release-files/android-foss
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows
+          path: release-files/windows
+
+      - name: Download Linux AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-appimage
+          path: release-files/linux
+
+      - name: Download iOS IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa
+          path: release-files/ios
+
+      - name: Download macOS DMGs
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-mac-dmg
+          path: release-files/macos
+
+      - name: Show all release files
+        run: find release-files/ -type f | sort
+
+      - name: Rename APKs with version tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          # Full APK
+          for f in release-files/android/*.apk; do
+            mv "$f" "release-files/android/D-Spot-${VERSION}-full.apk"
+          done
+          # FOSS APK
+          for f in release-files/android-foss/*.apk; do
+            mv "$f" "release-files/android-foss/D-Spot-${VERSION}-foss.apk"
+          done
+
+      - name: Create GitHub Release and upload artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "D-Spot ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-files/android/*.apk
+            release-files/android-foss/*.apk
+            release-files/windows/*.zip
+            release-files/linux/*.AppImage
+            release-files/macos/*.dmg
+            release-files/ios/*.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

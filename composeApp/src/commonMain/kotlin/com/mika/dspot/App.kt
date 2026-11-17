@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -70,6 +71,9 @@ import com.mika.logger.Logger
 import com.mika.dspot.expect.Orientation
 import com.mika.dspot.expect.currentOrientation
 import com.mika.dspot.expect.openUrl
+import com.mika.dspot.expect.startInAppUpdate
+import com.mika.dspot.expect.installDownloadedUpdate
+import com.mika.dspot.expect.UpdateDownloadState
 import com.mika.dspot.expect.ui.layerBackdrop
 import com.mika.dspot.expect.ui.rememberBackdrop
 import com.mika.dspot.extension.copy
@@ -130,6 +134,7 @@ import dspot.composeapp.generated.resources.Res
 import dspot.composeapp.generated.resources.cancel
 import dspot.composeapp.generated.resources.do_not_show_again
 import dspot.composeapp.generated.resources.download
+import dspot.composeapp.generated.resources.downloading
 import dspot.composeapp.generated.resources.good_night
 import dspot.composeapp.generated.resources.notification
 import dspot.composeapp.generated.resources.settings
@@ -435,6 +440,8 @@ fun App(
             shouldShowUpdateDialog = true
         }
     }
+
+    var updateDownloadState by remember { mutableStateOf<UpdateDownloadState>(UpdateDownloadState.Idle) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     LaunchedEffect(navBackStackEntry) {
@@ -805,42 +812,66 @@ fun App(
 
                 if (shouldShowUpdateDialog) {
                     val response = updateData ?: return@Scaffold
+                    val isDownloading = updateDownloadState is UpdateDownloadState.Downloading
+                    val isReadyToInstall = updateDownloadState is UpdateDownloadState.ReadyToInstall
+
                     AlertDialog(
                         properties =
                             DialogProperties(
-                                dismissOnBackPress = false,
-                                dismissOnClickOutside = false,
+                                dismissOnBackPress = !isDownloading,
+                                dismissOnClickOutside = !isDownloading,
                             ),
                         onDismissRequest = {
-                            shouldShowUpdateDialog = false
-                            viewModel.showedUpdateDialog = false
+                            if (!isDownloading) {
+                                shouldShowUpdateDialog = false
+                                viewModel.showedUpdateDialog = false
+                                updateDownloadState = UpdateDownloadState.Idle
+                            }
                         },
                         confirmButton = {
                             TextButton(
+                                enabled = !isDownloading,
                                 onClick = {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
-                                    val downloadUrl = "https://dspot-web.vercel.app/api/download?platform=${getDownloadPlatform()}"
-                                    openUrl(downloadUrl)
+                                    val currentState = updateDownloadState
+                                    if (currentState is UpdateDownloadState.ReadyToInstall) {
+                                        installDownloadedUpdate(currentState.filePath)
+                                    } else {
+                                        val downloadUrl = "https://dspot-web.vercel.app/api/download?platform=${getDownloadPlatform()}"
+                                        val fileName = getUpdateFileName(response.tagName)
+                                        startInAppUpdate(downloadUrl, fileName) { state ->
+                                            updateDownloadState = state
+                                            if (state is UpdateDownloadState.ReadyToInstall && getDownloadPlatform() == "android") {
+                                                // On Android, directly pop the system installer
+                                                installDownloadedUpdate(state.filePath)
+                                            }
+                                        }
+                                    }
                                 },
                             ) {
                                 Text(
-                                    stringResource(Res.string.download),
+                                    when {
+                                        isReadyToInstall -> "Install Now"
+                                        isDownloading -> stringResource(Res.string.downloading)
+                                        else -> stringResource(Res.string.download)
+                                    },
                                     style = typo().bodySmall,
                                 )
                             }
                         },
                         dismissButton = {
-                            TextButton(
-                                onClick = {
-                                    shouldShowUpdateDialog = false
-                                    viewModel.showedUpdateDialog = false
-                                },
-                            ) {
-                                Text(
-                                    stringResource(Res.string.cancel),
-                                    style = typo().bodySmall,
-                                )
+                            if (!isDownloading) {
+                                TextButton(
+                                    onClick = {
+                                        shouldShowUpdateDialog = false
+                                        viewModel.showedUpdateDialog = false
+                                        updateDownloadState = UpdateDownloadState.Idle
+                                    },
+                                ) {
+                                    Text(
+                                        stringResource(Res.string.cancel),
+                                        style = typo().bodySmall,
+                                    )
+                                }
                             }
                         },
                         title = {
@@ -894,6 +925,52 @@ fun App(
                                         rememberScrollState(),
                                     ),
                             ) {
+                                when (val state = updateDownloadState) {
+                                    is UpdateDownloadState.Downloading -> {
+                                        val currentMb = (state.bytesDownloaded / (1024 * 1024)).toString()
+                                        val progressText = if (state.totalBytes > 0) {
+                                            val totalMb = (state.totalBytes / (1024 * 1024)).toString()
+                                            val percent = (state.progress * 100).toInt()
+                                            "Downloading: $percent% ($currentMb MB / $totalMb MB)"
+                                        } else {
+                                            "Downloading: $currentMb MB"
+                                        }
+
+                                        Text(
+                                            text = progressText,
+                                            style = typo().labelMedium,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                        )
+                                        if (state.progress >= 0f) {
+                                            LinearProgressIndicator(
+                                                progress = { state.progress },
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                            )
+                                        } else {
+                                            LinearProgressIndicator(
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                            )
+                                        }
+                                    }
+                                    is UpdateDownloadState.ReadyToInstall -> {
+                                        Text(
+                                            text = "Download complete! Click 'Install Now' to apply the update.",
+                                            style = typo().labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(bottom = 12.dp),
+                                        )
+                                    }
+                                    is UpdateDownloadState.Error -> {
+                                        Text(
+                                            text = "Download failed: ${state.message}",
+                                            style = typo().labelMedium,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(bottom = 12.dp),
+                                        )
+                                    }
+                                    else -> {}
+                                }
+
                                 Text(
                                     text = updateMessage,
                                     style = typo().labelMedium,
