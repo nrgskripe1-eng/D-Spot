@@ -38,3 +38,4 @@ on machine-generated PRs nobody proofread takes it away from contributors who di
 ## Code of conduct
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+

@@ -42,3 +42,4 @@ kotlin {
 tasks.withType<CompileArtProfileTask> {
     enabled = false
 }
+

@@ -45,3 +45,4 @@
 - SponsorBlock skipping without a toast. ([#2552](https://github.com/Mika/D-Spot/issues/2552))
 - macOS: clicking the Dock icon not bringing up the app window. ([#2552](https://github.com/Mika/D-Spot/issues/2552))
 - F-Droid build. ([#2473](https://github.com/Mika/D-Spot/issues/2473))
+
