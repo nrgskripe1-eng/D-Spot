@@ -57,6 +57,7 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in
     --full) BUILD_VARIANT="full" ;;
     --foss) BUILD_VARIANT="foss" ;;
+    --universal) BUILD_VARIANT="universal" ;;
     --release) BUILD_TYPE="release" ;;
     --debug) BUILD_TYPE="debug" ;;
     --vivo) MODULE="vivoAndroidApp"; NAME_SUFFIX="-vivo" ;;
@@ -109,7 +110,11 @@ for APK_PATH in $APK_PATHS; do
   RELEASE_NAME=$(basename "${APK_PATH/-unsigned/}")
   RELEASE_NAME="${RELEASE_NAME/app-/}"
   RELEASE_NAME="${RELEASE_NAME/$MODULE-/}"
-  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/D-Spot-$BUILD_VARIANT$NAME_SUFFIX-$(basename "$RELEASE_NAME")"
+  if [ "$BUILD_VARIANT" = "universal" ]; then
+    SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/D-Spot$NAME_SUFFIX-$(basename "$RELEASE_NAME")"
+  else
+    SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/D-Spot-$BUILD_VARIANT$NAME_SUFFIX-$(basename "$RELEASE_NAME")"
+  fi
 
   echo "[Step 4] Aligning the APK: $APK_PATH..."
   if [ ! -f "$ZIPALIGN" ]; then
