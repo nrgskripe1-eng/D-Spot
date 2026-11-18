@@ -159,15 +159,12 @@ jobs:
           path: androidApp/build/outputs/apk/release/*.apk
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 2b. Build Desktop Windows package (.msix + offline installer)
+  # 2b. Build Desktop Windows package (.msi installer)
   # ─────────────────────────────────────────────────────────────────────────────
   build-desktop:
-    name: Build Desktop Windows package
-    runs-on: ubuntu-22.04
+    name: Build Desktop Windows (.msi)
+    runs-on: windows-latest
     needs: bump-version
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v6
         with:
@@ -181,12 +178,8 @@ jobs:
           distribution: "microsoft"
           cache: 'gradle'
 
-      - name: Install libfuse2
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libfuse2
-
       - name: Write secrets to local.properties
+        shell: bash
         run: |
           echo "SENTRY_DSN=${{ secrets.SENTRY_DSN_JVM }}"          > ./local.properties
           echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
@@ -194,86 +187,38 @@ jobs:
           echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}"          >> ./local.properties
 
       - name: Set full build flag
+        shell: bash
         run: |
           echo "" >> ./gradle.properties
           echo "isFullBuild=true" >> ./gradle.properties
 
-      - name: Make scripts and gradlew executable and normalize line endings
-        run: |
-          sed -i 's/\r$//' ./gradlew
-          chmod +x ./gradlew scripts/windows/* 2>/dev/null || true
-
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
 
-      - name: Unpack prebuilt mpv-natives for Conveyor
+      - name: Unpack prebuilt mpv-natives for Windows
+        shell: bash
         run: |
           mkdir -p mpv-natives
-          for f in mpv-natives-bundle/*.tar.gz; do
+          for f in mpv-natives-bundle/*windows*.tar.gz; do
             tar -xzf "$f" -C mpv-natives/ 2>/dev/null || tar -xzf "$f"
           done
-          # Ensure directories are in mpv-natives/
-          for d in windows-x64 windows-arm64 linux-x64 macos-x64 macos-arm64; do
-            if [ -d "$d" ] && [ ! -d "mpv-natives/$d" ]; then
-              mv "$d" mpv-natives/
-            fi
-          done
+          if [ -d "windows-x64" ] && [ ! -d "mpv-natives/windows-x64" ]; then
+            mv windows-x64 mpv-natives/
+          fi
           echo "Unpacked mpv-natives directory contents:"
           ls -la mpv-natives/
 
-      - name: Generate Conveyor config
-        run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache
+      - name: Build Windows MSI installer
+        run: ./gradlew :desktopApp:packageMsi --no-configuration-cache
 
-      - name: Determine Conveyor signing key
-        id: conveyor_key
-        run: |
-          if [ -n "${{ secrets.CONVEYOR_SIGNING_KEY }}" ]; then
-            echo "key=${{ secrets.CONVEYOR_SIGNING_KEY }}" >> $GITHUB_OUTPUT
-          else
-            echo "Notice: CONVEYOR_SIGNING_KEY not set. Generating valid root key format with timestamp."
-            NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            WORDS="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art"
-            echo "key=$WORDS/$NOW" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run Conveyor (Windows only)
-        uses: hydraulic-software/conveyor/actions/build@v22.0
-        with:
-          command: '-Kapp.machines=[windows.amd64] make site'
-          agree_to_license: 1
-          signing_key: ${{ steps.conveyor_key.outputs.key }}
-
-      - name: Bundle Windows offline installer
-        run: |
-          set -euo pipefail
-          if [ ! -f output/dspot.crt ]; then
-            echo "::error::output/dspot.crt missing — Conveyor signing must have failed"
-            exit 1
-          fi
-          msix=$(ls output/dspot-*.x64.msix 2>/dev/null | head -1)
-          if [ -z "$msix" ]; then
-            echo "::error::No dspot-*.x64.msix found in output/"
-            exit 1
-          fi
-          mkdir -p installers/
-          stage="$(mktemp -d)"
-          cp scripts/windows/install.bat "$stage/"
-          cp output/dspot.crt             "$stage/"
-          cp "$msix"                       "$stage/"
-          ( cd "$stage" && zip -q -j \
-            "${GITHUB_WORKSPACE}/installers/D-Spot-Windows-installer.zip" \
-            install.bat dspot.crt "$(basename "$msix")" )
-          rm -rf "$stage"
-          ls -lh installers/
-
-      - name: Upload Windows installer
+      - name: Upload Windows MSI installer
         uses: actions/upload-artifact@v4
         with:
           name: desktop-windows
-          path: installers/D-Spot-Windows-installer.zip
+          path: desktopApp/build/compose/binaries/main/msi/*.msi
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 3. Publish GitHub Release with all artifacts (Android + Windows + Linux)
+  # 3. Publish GitHub Release with all artifacts (Android APKs + Windows MSI)
   # ─────────────────────────────────────────────────────────────────────────────
   publish-release:
     name: Publish GitHub Release
@@ -292,7 +237,7 @@ jobs:
           name: apk-foss
           path: release-files/android-foss
 
-      - name: Download Windows installer
+      - name: Download Windows MSI installer
         uses: actions/download-artifact@v4
         with:
           name: desktop-windows
@@ -324,6 +269,6 @@ jobs:
           files: |
             release-files/android/*.apk
             release-files/android-foss/*.apk
-            release-files/windows/*.zip
+            release-files/windows/*.msi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
