@@ -114,7 +114,10 @@ jobs:
           echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}"          >> ./local.properties
 
       - name: Decode signing keystore
-        run: echo "${{ secrets.BASE_64_SIGNING_KEY }}" | base64 -d > dspot.jks
+        run: |
+          if [ -n "${{ secrets.BASE_64_SIGNING_KEY }}" ]; then
+            echo "${{ secrets.BASE_64_SIGNING_KEY }}" | base64 -d > dspot.jks
+          fi
 
       - name: Make scripts and gradlew executable
         run: chmod +x ./gradlew ./build_and_sign_apk.sh
@@ -199,15 +202,6 @@ jobs:
 
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
-
-      - name: Cache mpv-natives
-        uses: actions/cache@v4
-        with:
-          path: mpv-natives
-          key: mpv-natives-${{ hashFiles('composeApp/build.gradle.kts') }}
-
-      - name: Populate mpv-natives for all OSes
-        run: ./gradlew :composeApp:mpvSetupAll --no-configuration-cache
 
       - name: Generate Conveyor config
         run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache

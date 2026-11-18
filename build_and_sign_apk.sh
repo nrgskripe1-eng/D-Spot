@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # Exit on error
 set -e
@@ -15,20 +15,18 @@ KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
 KEY_ALIAS="${KEY_ALIAS}"
 KEY_PASSWORD="${KEY_PASSWORD}"
 
-# Check if KEY_PASSWORD is set
-if [ -z "$KEY_PASSWORD" ]; then
-  echo "Error: KEY_PASSWORD environment variable must be set"
-  exit 1
-fi
-
-if [ -z "$KEYSTORE_PASSWORD" ]; then
-  echo "Error: KEYSTORE_PASSWORD environment variable must be set"
-  exit 1
-fi
-
-if [ -z "$KEY_ALIAS" ]; then
-  echo "Error: KEY_ALIAS environment variable must be set"
-  exit 1
+# Check if signing credentials are set, otherwise generate a temporary self-signed keystore
+if [ -z "$KEY_PASSWORD" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ ! -f "$KEYSTORE_PATH" ]; then
+  echo "Notice: Release keystore secrets not provided or $KEYSTORE_PATH missing."
+  echo "Generating temporary self-signed release keystore..."
+  KEYSTORE_PATH="/tmp/temp-release.jks"
+  KEYSTORE_PASSWORD="dspotpassword"
+  KEY_PASSWORD="dspotpassword"
+  KEY_ALIAS="dspot"
+  keytool -genkeypair -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
+    -keyalg RSA -keysize 2048 -validity 10000 \
+    -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+    -dname "CN=D-Spot, OU=App, O=D-Spot, L=Unknown, ST=Unknown, C=US"
 fi
 
 
