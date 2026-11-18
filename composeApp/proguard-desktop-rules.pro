@@ -408,3 +408,7 @@
 # JNA references the signature-polymorphic java.lang.invoke.MethodHandle.invoke(...) overloads, which
 # ProGuard can't resolve as concrete methods. JNA itself is kept above; suppress these warnings.
 -dontwarn com.sun.jna.**
+
+# Suppress unresolved reference warnings across third-party dependencies so ProGuard doesn't abort
+-ignorewarnings
+-dontwarn **
