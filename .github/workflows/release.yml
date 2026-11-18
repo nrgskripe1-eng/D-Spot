@@ -209,12 +209,22 @@ jobs:
       - name: Generate Conveyor config
         run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache
 
+      - name: Determine Conveyor signing key
+        id: conveyor_key
+        run: |
+          if [ -n "${{ secrets.CONVEYOR_SIGNING_KEY }}" ]; then
+            echo "key=${{ secrets.CONVEYOR_SIGNING_KEY }}" >> $GITHUB_OUTPUT
+          else
+            echo "Notice: CONVEYOR_SIGNING_KEY not set. Using self-signed fallback key."
+            echo "key=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Conveyor (Linux AppImage)
         uses: hydraulic-software/conveyor/actions/build@v22.0
         with:
           command: -Kapp.machines=linux.amd64.glibc make linux-app
           agree_to_license: 1
-          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+          signing_key: ${{ steps.conveyor_key.outputs.key }}
 
       - name: Wrap Linux app tree → AppImage
         run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
@@ -224,7 +234,7 @@ jobs:
         with:
           command: '-Kapp.machines=[mac.amd64,mac.aarch64,windows.amd64] make site'
           agree_to_license: 1
-          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+          signing_key: ${{ steps.conveyor_key.outputs.key }}
 
       - name: Stage AppImage into output/
         run: cp desktopApp/build/appimage/conveyor/D-Spot-*.AppImage output/
