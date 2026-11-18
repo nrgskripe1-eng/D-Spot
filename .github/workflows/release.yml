@@ -206,6 +206,15 @@ jobs:
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
 
+      - name: Unpack prebuilt mpv-natives for Conveyor
+        run: |
+          mkdir -p mpv-natives
+          for f in mpv-natives-bundle/*.tar.gz; do
+            tar -xzf "$f"
+          done
+          echo "Unpacked mpv-natives directory:"
+          ls -la mpv-natives/
+
       - name: Generate Conveyor config
         run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache
 
