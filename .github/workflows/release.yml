@@ -159,10 +159,10 @@ jobs:
           path: androidApp/build/outputs/apk/release/*.apk
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 2b. Build Desktop packages (Windows .msix, macOS .zip, Linux AppImage)
+  # 2b. Build Desktop Windows package (.msix + offline installer)
   # ─────────────────────────────────────────────────────────────────────────────
   build-desktop:
-    name: Build Desktop packages (Windows + macOS + Linux)
+    name: Build Desktop Windows package
     runs-on: ubuntu-22.04
     needs: bump-version
     defaults:
@@ -210,9 +210,15 @@ jobs:
         run: |
           mkdir -p mpv-natives
           for f in mpv-natives-bundle/*.tar.gz; do
-            tar -xzf "$f"
+            tar -xzf "$f" -C mpv-natives/ 2>/dev/null || tar -xzf "$f"
           done
-          echo "Unpacked mpv-natives directory:"
+          # Ensure directories are in mpv-natives/
+          for d in windows-x64 windows-arm64 linux-x64 macos-x64 macos-arm64; do
+            if [ -d "$d" ] && [ ! -d "mpv-natives/$d" ]; then
+              mv "$d" mpv-natives/
+            fi
+          done
+          echo "Unpacked mpv-natives directory contents:"
           ls -la mpv-natives/
 
       - name: Generate Conveyor config
@@ -228,38 +234,12 @@ jobs:
             echo "key=abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run Conveyor (Linux AppImage)
+      - name: Run Conveyor (Windows only)
         uses: hydraulic-software/conveyor/actions/build@v22.0
         with:
-          command: -Kapp.machines=linux.amd64.glibc make linux-app
+          command: '-Kapp.machines=[windows.amd64] make site'
           agree_to_license: 1
           signing_key: ${{ steps.conveyor_key.outputs.key }}
-
-      - name: Wrap Linux app tree → AppImage
-        run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
-
-      - name: Run Conveyor (Mac + Windows)
-        uses: hydraulic-software/conveyor/actions/build@v22.0
-        with:
-          command: '-Kapp.machines=[mac.amd64,mac.aarch64,windows.amd64] make site'
-          agree_to_license: 1
-          signing_key: ${{ steps.conveyor_key.outputs.key }}
-
-      - name: Stage AppImage into output/
-        run: cp desktopApp/build/appimage/conveyor/D-Spot-*.AppImage output/
-
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-appimage
-          path: output/D-Spot-*.AppImage
-
-      - name: Upload macOS zips (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-mac-zips
-          path: output/*-mac-*.zip
-          if-no-files-found: warn
 
       - name: Bundle Windows offline installer
         run: |
@@ -316,12 +296,6 @@ jobs:
           name: desktop-windows
           path: release-files/windows
 
-      - name: Download Linux AppImage
-        uses: actions/download-artifact@v4
-        with:
-          name: desktop-appimage
-          path: release-files/linux
-
       - name: Show all release files
         run: find release-files/ -type f | sort
 
@@ -349,6 +323,5 @@ jobs:
             release-files/android/*.apk
             release-files/android-foss/*.apk
             release-files/windows/*.zip
-            release-files/linux/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
