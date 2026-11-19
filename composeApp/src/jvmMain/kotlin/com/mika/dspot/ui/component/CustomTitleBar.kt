@@ -24,7 +24,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +38,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import com.mika.dspot.extension.DesktopWindowChrome
 import com.mika.dspot.ui.icon.Close
@@ -70,7 +71,10 @@ fun CustomTitleBar(
     containerColor: Color = Color.Black,
     titleColor: Color = Color.White,
 ) {
-    var isMaximized by remember { mutableStateOf(windowState.placement == WindowPlacement.Maximized) }
+    // Derived directly from windowState — no separate state, no lag (fixes double-click bug).
+    val isMaximized = windowState.placement == WindowPlacement.Maximized
+    val defaultWindowSize = remember { DpSize(1500.dp, 860.dp) }
+    var savedSize by remember { mutableStateOf<DpSize?>(null) }
     var dragStartX by remember { mutableStateOf(0) }
     var dragStartY by remember { mutableStateOf(0) }
 
@@ -78,8 +82,19 @@ fun CustomTitleBar(
         System.getProperty("os.name", "").contains("Mac", ignoreCase = true)
     }
 
-    LaunchedEffect(windowState.placement) {
-        isMaximized = windowState.placement == WindowPlacement.Maximized
+    val toggleMaximize: () -> Unit = {
+        if (windowState.placement == WindowPlacement.Maximized) {
+            windowState.placement = WindowPlacement.Floating
+            windowState.size = savedSize ?: defaultWindowSize
+            // Always center the window predictably when returning from maximized / fullscreen.
+            // Using WindowPosition.Aligned(Alignment.Center) directly in Compose WindowState
+            // avoids stale AWT coordinates and prevents Compose WindowLocationTracker from cascading (+48px)
+            // or throwing the window into random screen positions over time.
+            windowState.position = WindowPosition.Aligned(Alignment.Center)
+        } else {
+            savedSize = windowState.size
+            windowState.placement = WindowPlacement.Maximized
+        }
     }
 
     Box(
@@ -90,13 +105,7 @@ fun CustomTitleBar(
                 .background(containerColor)
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onDoubleTap = {
-                            if (windowState.placement == WindowPlacement.Maximized) {
-                                windowState.placement = WindowPlacement.Floating
-                            } else {
-                                windowState.placement = WindowPlacement.Maximized
-                            }
-                        },
+                        onDoubleTap = { toggleMaximize() },
                     )
                 }.pointerInput(Unit) {
                     detectDragGestures(
@@ -110,8 +119,10 @@ fun CustomTitleBar(
                             val mouseLocation = MouseInfo.getPointerInfo().location
                             if (windowState.placement == WindowPlacement.Maximized) {
                                 windowState.placement = WindowPlacement.Floating
-                                dragStartX = (windowState.size.width.value / 2).toInt()
+                                val targetWidth = (savedSize ?: defaultWindowSize).width.value
+                                dragStartX = (targetWidth / 2).toInt()
                                 dragStartY = 20
+                                windowState.size = savedSize ?: defaultWindowSize
                             }
                             window.setLocation(
                                 mouseLocation.x - dragStartX,
@@ -145,10 +156,7 @@ fun CustomTitleBar(
                         icon = WindowControlIcon.Minimize,
                     )
                     MacWindowControlButton(
-                        onClick = {
-                            windowState.placement =
-                                if (isMaximized) WindowPlacement.Floating else WindowPlacement.Maximized
-                        },
+                        onClick = { toggleMaximize() },
                         backgroundColor = Color(0xFF00CA4E),
                         hoverColor = Color(0xFF00B344),
                         icon = if (isMaximized) WindowControlIcon.Restore else WindowControlIcon.Maximize,
@@ -170,10 +178,7 @@ fun CustomTitleBar(
                     )
                     DSpotWindowsControlButton(
                         icon = if (isMaximized) WindowControlIcon.Restore else WindowControlIcon.Maximize,
-                        onClick = {
-                            windowState.placement =
-                                if (isMaximized) WindowPlacement.Floating else WindowPlacement.Maximized
-                        },
+                        onClick = { toggleMaximize() },
                         contentColor = titleColor,
                     )
                     DSpotWindowsControlButton(

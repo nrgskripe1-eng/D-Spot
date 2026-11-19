@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.component
+package com.mika.dspot.ui.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +72,7 @@ internal fun ShareImageSheet(
     seedColor: Color,
     fileNamePrefix: String,
     onDismiss: () -> Unit,
+    contentUrl: String? = null,
     belowImage: (@Composable (content: Color) -> Unit)? = null,
     image: @Composable (captureModifier: Modifier) -> Unit,
 ) {
@@ -174,7 +175,7 @@ internal fun ShareImageSheet(
                                 busy = true
                                 scope.launch {
                                     val bytes = captureController.captureAsync().await().toPngByteArray()
-                                    val ok = bytes != null && shareImage(bytes, fileName, title)
+                                    val ok = bytes != null && shareImage(bytes, fileName, title, contentUrl = contentUrl)
                                     if (!ok) showToast(shareFailedMessage, ToastGravity.Bottom)
                                     busy = false
                                 }

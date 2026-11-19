@@ -438,17 +438,6 @@ fun AccountHubScreen(
                 }
             }
 
-            // Discord (Zero Login Required)
-            item {
-                SettingGroup(title = stringResource(Res.string.discord_integration)) {
-                    SettingItem(
-                        title = stringResource(Res.string.enable_rich_presence),
-                        subtitle = "Automatically shares current song on Discord without login",
-                        switch = (richPresenceEnabled to { settingsViewModel.setDiscordRichPresenceEnabled(it) }),
-                    )
-                }
-            }
-
             // Last.fm (gated on lastfmAvailable for FOSS vs Full builds)
             if (settingsViewModel.lastfmAvailable) {
                 item {

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.expect
+package com.mika.dspot.expect
 
 /**
  * Writes [bytes] somewhere the user can find it later: the system gallery on Android, the
@@ -28,4 +28,5 @@ expect suspend fun shareImage(
     fileName: String,
     chooserTitle: String,
     mimeType: String = "image/png",
+    contentUrl: String? = null,
 ): Boolean

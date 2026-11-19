@@ -1,6 +1,7 @@
 package com.my.kizzy.ipc
 
 import com.mika.domain.data.entities.SongEntity
+import com.mika.domain.utils.MusicVideoType
 import com.my.kizzy.DiscordRPC
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -69,20 +70,24 @@ class DesktopDiscordIpc(
         if (channels.isNotEmpty()) return true
 
         val os = System.getProperty("os.name")?.lowercase().orEmpty()
+        // Discord pipe name variants: Stable, PTB, Canary, Development
+        val windowsPipeVariants = listOf("discord", "discord-ptb", "discord-canary", "discord-development")
         for (i in 0..9) {
             try {
                 if (os.contains("win")) {
-                    val pipeFile = File("\\\\.\\pipe\\discord-ipc-$i")
-                    val raf = try {
-                        RandomAccessFile(pipeFile, "rw")
-                    } catch (_: Exception) {
-                        null
-                    } ?: continue
-                    val ch = raf.channel
-                    if (performHandshake(ch)) {
-                        channels.add(ch)
-                    } else {
-                        try { ch.close() } catch (_: Exception) {}
+                    for (variant in windowsPipeVariants) {
+                        val pipeFile = File("\\\\.\\pipe\\$variant-ipc-$i")
+                        val raf = try {
+                            RandomAccessFile(pipeFile, "rw")
+                        } catch (_: Exception) {
+                            null
+                        } ?: continue
+                        val ch = raf.channel
+                        if (performHandshake(ch)) {
+                            channels.add(ch)
+                        } else {
+                            try { ch.close() } catch (_: Exception) {}
+                        }
                     }
                 } else {
                     val tempDir = System.getenv("XDG_RUNTIME_DIR")
@@ -90,16 +95,24 @@ class DesktopDiscordIpc(
                         ?: System.getenv("TMP")
                         ?: System.getenv("TEMP")
                         ?: "/tmp"
-                    val socketPath = "$tempDir/discord-ipc-$i"
-                    val socketFile = File(socketPath)
-                    if (socketFile.exists()) {
-                        val address = UnixDomainSocketAddress.of(socketPath)
-                        val socketChannel = SocketChannel.open(StandardProtocolFamily.UNIX)
-                        socketChannel.connect(address)
-                        if (performHandshake(socketChannel)) {
-                            channels.add(socketChannel)
-                        } else {
-                            try { socketChannel.close() } catch (_: Exception) {}
+                    // Try all Discord socket variants on Unix: Stable, PTB, Canary, Development
+                    val unixSocketVariants = listOf("discord", "discord-ptb", "discord-canary", "discord-development")
+                    for (variant in unixSocketVariants) {
+                        val socketPath = "$tempDir/$variant-ipc-$i"
+                        val socketFile = File(socketPath)
+                        if (socketFile.exists()) {
+                            val address = UnixDomainSocketAddress.of(socketPath)
+                            val socketChannel = SocketChannel.open(StandardProtocolFamily.UNIX)
+                            try {
+                                socketChannel.connect(address)
+                                if (performHandshake(socketChannel)) {
+                                    channels.add(socketChannel)
+                                } else {
+                                    try { socketChannel.close() } catch (_: Exception) {}
+                                }
+                            } catch (_: Exception) {
+                                try { socketChannel.close() } catch (_: Exception) {}
+                            }
                         }
                     }
                 }
@@ -174,6 +187,8 @@ class DesktopDiscordIpc(
         roomCode: String? = null,
         roomMemberCount: Int = 1,
         isRepeatOne: Boolean = false,
+        isShuffle: Boolean = false,
+        isPaused: Boolean = false,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (!connect()) return@runCatching
@@ -188,16 +203,22 @@ class DesktopDiscordIpc(
 
             val songTitle = song.title ?: "Unknown Track"
             val rawArtist = song.artistName?.filter { it.isNotBlank() }?.joinToString(", ") ?: "Unknown Artist"
-            val stateText = if (!roomCode.isNullOrBlank()) {
-                "$rawArtist • 🎧 Room $roomCode ($roomMemberCount)"
-            } else {
-                rawArtist
+
+            // State: artist line — with room or paused indicator
+            val stateText = when {
+                !roomCode.isNullOrBlank() -> "$rawArtist • 🎧 Room $roomCode ($roomMemberCount)"
+                isPaused -> "⏸ Paused • $rawArtist"
+                else -> rawArtist
             }
+
+            // small_text tooltip: surface the most useful playback flag
             val tooltipText = when {
                 isRepeatOne -> "D-Spot • 🔂 Repeat"
+                isShuffle -> "D-Spot • 🔀 Shuffle"
                 !roomCode.isNullOrBlank() -> "D-Spot • Listen Together"
                 else -> "D-Spot"
             }
+
             val albumDisplay = song.albumName ?: "D-Spot Audio"
             val thumbUrl = if (!song.thumbnails.isNullOrBlank()) song.thumbnails else DiscordRPC.APP_ICON
             val trackUrl = if (!song.videoId.isNullOrBlank()) {
@@ -206,19 +227,25 @@ class DesktopDiscordIpc(
                 "https://dspot-web.vercel.app"
             }
 
+            // Activity type: 2 = Listening (audio / podcast), 3 = Watching (music video)
+            val activityType = if (MusicVideoType.isVideoSong(song.videoType)) 3 else 2
+
             val frameJson = buildJsonObject {
                 put("cmd", "SET_ACTIVITY")
                 putJsonObject("args") {
                     put("pid", processId)
                     putJsonObject("activity") {
-                        put("type", 2)
+                        put("type", activityType)
                         put("name", songTitle)
                         put("details", songTitle)
                         put("state", stateText)
-                        putJsonObject("timestamps") {
-                            put("start", calculatedStartTime)
-                            if (effectiveDuration > 0) {
-                                put("end", currentTime + adjustedRemainingDuration)
+                        // Omit timestamps when paused — no ticking progress bar on a static card
+                        if (!isPaused) {
+                            putJsonObject("timestamps") {
+                                put("start", calculatedStartTime)
+                                if (effectiveDuration > 0) {
+                                    put("end", currentTime + adjustedRemainingDuration)
+                                }
                             }
                         }
                         putJsonObject("assets") {
@@ -237,15 +264,56 @@ class DesktopDiscordIpc(
                             }
                         }
                         put("buttons", buildJsonArray {
+                            // Button 1: direct track link
                             addJsonObject {
-                                put("label", "Listen on D-Spot")
+                                put("label", "▶ Play on D-Spot")
                                 put("url", trackUrl)
                             }
+                            // Button 2: listen together room link, or download link as fallback
                             if (!roomCode.isNullOrBlank()) {
                                 addJsonObject {
-                                    put("label", "Join Room ($roomCode)")
-                                    put("url", "https://dspot.app/app/listen?room=$roomCode")
+                                    put("label", "Listen Together 🎧")
+                                    put("url", "https://dspot-web.vercel.app/room/$roomCode")
                                 }
+                            } else {
+                                addJsonObject {
+                                    put("label", "Get D-Spot")
+                                    put("url", "https://dspot-web.vercel.app/download")
+                                }
+                            }
+                        })
+                    }
+                }
+                put("nonce", currentTime.toString())
+            }.toString()
+
+            sendFrame(frameJson)
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    suspend fun setBrowsing(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (!connect()) return@runCatching
+
+            val currentTime = Clock.System.now().toEpochMilliseconds()
+            val frameJson = buildJsonObject {
+                put("cmd", "SET_ACTIVITY")
+                putJsonObject("args") {
+                    put("pid", processId)
+                    putJsonObject("activity") {
+                        put("type", 0) // Playing / Browsing
+                        put("name", "D-Spot")
+                        put("details", "Exploring Music")
+                        put("state", "Browsing D-Spot")
+                        putJsonObject("assets") {
+                            put("large_image", DiscordRPC.APP_ICON)
+                            put("large_text", "D-Spot Music")
+                        }
+                        put("buttons", buildJsonArray {
+                            addJsonObject {
+                                put("label", "Get D-Spot")
+                                put("url", "https://dspot-web.vercel.app/download")
                             }
                         })
                     }
@@ -263,4 +331,3 @@ class DesktopDiscordIpc(
         private const val OP_CLOSE = 2
     }
 }
-

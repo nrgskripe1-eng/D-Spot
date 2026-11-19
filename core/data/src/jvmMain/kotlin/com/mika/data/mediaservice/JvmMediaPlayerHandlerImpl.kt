@@ -380,6 +380,8 @@ class JvmMediaPlayerHandlerImpl(
         val roomCode: String? = null,
         val roomMemberCount: Int = 1,
         val isRepeatOne: Boolean = false,
+        val isShuffle: Boolean = false,
+        val isPaused: Boolean = false,
     )
 
     private val rpcSnapshotFlow = MutableStateFlow<RpcSnapshot?>(null)
@@ -658,7 +660,7 @@ class JvmMediaPlayerHandlerImpl(
                                                 // after onIsPlayingChanged(false) already closed the
                                                 // RPC (Fix 1). controlState.value is a safe field
                                                 // read from Dispatchers.IO, unlike player.isPlaying.
-                                                if (!controlState.value.isPlaying) return@collectLatest
+                                                if (!controlState.value.isPlaying && !snap.isPaused) return@collectLatest
                                                 discordRPC
                                                     ?.updateSong(
                                                         snap.progressMs,
@@ -668,12 +670,17 @@ class JvmMediaPlayerHandlerImpl(
                                                         snap.roomCode,
                                                         snap.roomMemberCount,
                                                         snap.isRepeatOne,
+                                                        snap.isShuffle,
+                                                        snap.isPaused,
                                                     )
                                                     ?.onFailure { if (it !is CancellationException) Logger.e(TAG, "Discord RPC update failed: ${it.message}") }
                                             }
                                         }
-                                    nowPlayingState.value.songEntity?.let { song ->
-                                        updateDiscordRpc(song)
+                                    val currentSong = nowPlayingState.value.songEntity
+                                    if (currentSong != null) {
+                                        updateDiscordRpc(currentSong)
+                                    } else {
+                                        discordRPC?.setBrowsing()
                                     }
                                 }
                             } else {
@@ -1174,6 +1181,9 @@ class JvmMediaPlayerHandlerImpl(
                 stopProgressUpdate()
                 player.stop()
                 _nowPlayingState.value = NowPlayingTrackState.initial()
+                coroutineScope.launch {
+                    discordRPC?.setBrowsing()
+                }
             }
 
             is PlayerEvent.UpdateProgress -> {
@@ -2781,11 +2791,17 @@ class JvmMediaPlayerHandlerImpl(
             PlayerConstants.STATE_IDLE -> {
                 _simpleMediaState.value = SimpleMediaState.Initial
                 Logger.d(TAG, "onPlaybackStateChanged: Idle")
+                coroutineScope.launch {
+                    discordRPC?.setBrowsing()
+                }
             }
 
             PlayerConstants.STATE_ENDED -> {
                 _simpleMediaState.value = SimpleMediaState.Ended
                 Logger.d(TAG, "onPlaybackStateChanged: Ended")
+                coroutineScope.launch {
+                    discordRPC?.setBrowsing()
+                }
             }
 
             PlayerConstants.STATE_READY -> {
@@ -2814,8 +2830,11 @@ class JvmMediaPlayerHandlerImpl(
             stopProgressUpdate()
             mayBeSaveRecentSong()
             mayBeSavePlaybackState()
+            // Show a paused state instead of clearing the presence entirely — the user can still
+            // see what song is loaded without a progress bar ticking forward.
             if (discordRPC?.isRpcRunning() == true) {
-                discordRPC?.clearActivity()
+                nowPlayingState.value.songEntity?.let { updateDiscordRpc(it, isPaused = true) }
+                    ?: discordRPC?.clearActivity()
             }
         }
         updateNextPreviousTrackAvailability()
@@ -2917,7 +2936,7 @@ class JvmMediaPlayerHandlerImpl(
         }
     }
 
-    private fun updateDiscordRpc(song: SongEntity) {
+    private fun updateDiscordRpc(song: SongEntity, isPaused: Boolean = false) {
         coroutineScope.launch {
             // Grab the sequence number as the FIRST statement — before any suspension point — so it
             // reflects true event order. A monotonic counter (not wall-clock time) so an NTP/manual
@@ -2928,6 +2947,7 @@ class JvmMediaPlayerHandlerImpl(
             val roomMemberCount = room?.members?.size ?: 1
 
             val isRepeatOne = player.repeatMode == PlayerConstants.REPEAT_MODE_ONE
+            val isShuffle = controlState.value.isShuffle
             val snapshot =
                 RpcSnapshot(
                     song = song,
@@ -2938,6 +2958,8 @@ class JvmMediaPlayerHandlerImpl(
                     roomCode = roomCode,
                     roomMemberCount = roomMemberCount,
                     isRepeatOne = isRepeatOne,
+                    isShuffle = isShuffle,
+                    isPaused = isPaused,
                 )
             // Compare-and-keep-newest: the playbackSpeed.first() suspend above means two calls to
             // updateDiscordRpc() can interleave and resolve out of order, so a plain `.value = ...`

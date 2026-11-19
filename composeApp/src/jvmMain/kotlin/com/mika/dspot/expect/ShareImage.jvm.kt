@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.expect
+package com.mika.dspot.expect
 
 import com.mika.logger.Logger
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +32,7 @@ actual suspend fun shareImage(
     fileName: String,
     chooserTitle: String,
     mimeType: String,
+    contentUrl: String?,
 ): Boolean =
     withContext(Dispatchers.IO) {
         runCatching {

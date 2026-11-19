@@ -153,6 +153,7 @@ import com.mika.dspot.ui.icon.DownloadForOfflineOutlined
 import com.mika.dspot.ui.icon.Downloading
 import com.mika.dspot.ui.icon.Edit
 import com.mika.dspot.ui.icon.FavoriteBorder
+import com.mika.dspot.ui.icon.IosShare
 import com.mika.dspot.ui.icon.KeyboardArrowDown
 import com.mika.dspot.ui.icon.KeyboardDoubleArrowDown
 import com.mika.dspot.ui.icon.KeyboardDoubleArrowUp
@@ -259,7 +260,9 @@ import dspot.composeapp.generated.resources.saved_to_local_playlist
 import dspot.composeapp.generated.resources.scale
 import dspot.composeapp.generated.resources.set
 import dspot.composeapp.generated.resources.share
+import dspot.composeapp.generated.resources.share_to_story
 import dspot.composeapp.generated.resources.share_url
+import com.mika.dspot.ui.component.story.StoryShareSheet
 import dspot.composeapp.generated.resources.dspot_lyrics
 import dspot.composeapp.generated.resources.sleep_minutes
 import dspot.composeapp.generated.resources.sleep_timer
@@ -1373,6 +1376,7 @@ fun NowPlayingBottomSheet(
     var sleepTimerWarning by remember { mutableStateOf(false) }
     var isBottomSheetVisible by rememberSaveable { mutableStateOf(false) }
     var changePlaybackSpeedPitch by remember { mutableStateOf(false) }
+    var showStoryShareSheet by remember { mutableStateOf(false) }
     val crossfadeEnabled by dataStoreManager.crossfadeEnabled.collectAsState(DataStoreManager.FALSE)
 
     LaunchedEffect(uiState) {
@@ -1569,6 +1573,20 @@ fun NowPlayingBottomSheet(
                     Text(text = stringResource(Res.string.cancel), style = typo().labelSmall)
                 }
             },
+        )
+    }
+
+    if (showStoryShareSheet) {
+        val sharedViewModel: SharedViewModel = koinInject()
+        val screenDataState by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
+        val url = "https://music.youtube.com/watch?v=${uiState.songUIState.videoId}"
+        StoryShareSheet(
+            songTitle = uiState.songUIState.title,
+            artistName = uiState.songUIState.listArtists.toListName().connectArtists(),
+            artwork = screenDataState.bitmap,
+            seedColor = rememberSurfaceDarkColors().container,
+            contentUrl = url,
+            onDismiss = { showStoryShareSheet = false },
         )
     }
 
@@ -1859,6 +1877,12 @@ fun NowPlayingBottomSheet(
                                 changePlaybackSpeedPitch = true
                             }
                         }
+                    }
+                    ActionButton(
+                        icon = SimpIcons.IosShare,
+                        text = Res.string.share_to_story,
+                    ) {
+                        showStoryShareSheet = true
                     }
                     ActionButton(
                         icon = SimpIcons.Share,

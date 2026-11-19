@@ -127,6 +127,12 @@ import com.mika.dspot.ui.component.ActionButton
 import com.mika.dspot.ui.component.AmbientThemeGlow
 import com.mika.dspot.ui.component.CenterLoadingBox
 import com.mika.dspot.ui.component.EndOfPage
+import androidx.compose.material3.VerticalDivider
+import com.mika.dspot.ui.icon.Headphones
+import com.mika.dspot.ui.icon.Info
+import com.mika.dspot.ui.icon.LibraryMusic
+import com.mika.dspot.ui.icon.Sensors
+import com.mika.dspot.ui.icon.Tune
 import com.mika.dspot.ui.component.LoadingDialog
 import com.mika.dspot.ui.component.RippleIconButton
 import com.mika.dspot.ui.component.SettingGroup
@@ -468,9 +474,22 @@ import dspot.composeapp.generated.resources.youtube_account
 import dspot.composeapp.generated.resources.youtube_subtitle_language
 import dspot.composeapp.generated.resources.youtube_subtitle_language_message
 import dspot.composeapp.generated.resources.youtube_transcript
+import dspot.composeapp.generated.resources.integrations
+import dspot.composeapp.generated.resources.about
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+
+private enum class SettingTab(
+    val labelRes: org.jetbrains.compose.resources.StringResource,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    INTERFACE(Res.string.user_interface, SimpIcons.Tune),
+    CONTENT(Res.string.content, SimpIcons.LibraryMusic),
+    AUDIO(Res.string.audio, SimpIcons.Headphones),
+    INTEGRATIONS(Res.string.integrations, SimpIcons.Sensors),
+    ABOUT(Res.string.about, SimpIcons.Info),
+}
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -686,88 +705,74 @@ fun SettingScreen(
     // taller than the glow, so the glow has fully left before the branch ever switches — no jump.
     // graphicsLayer reads the state in the DRAW phase, so scrolling redraws without recomposing.
     // Tinted with the app's own primary rather than the song playing: this page is about the app.
-    AmbientThemeGlow(
-        tint = MaterialTheme.colorScheme.primary,
-        modifier =
-            Modifier.graphicsLayer {
-                translationY =
-                    if (settingListState.firstVisibleItemIndex == 0) {
-                        -settingListState.firstVisibleItemScrollOffset.toFloat()
-                    } else {
-                        -size.height
-                    }
-            },
-    )
-    LazyColumn(
-        state = settingListState,
-        contentPadding = innerPadding,
-        modifier =
-            Modifier
-                .padding(horizontal = listSidePadding)
-                .hazeSource(hazeState),
-    ) {
+    val isDesktop = getPlatform() == Platform.Desktop
+    var selectedDesktopTab by rememberSaveable { mutableStateOf(SettingTab.INTERFACE) }
+
+    val settingsContent: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
         // ── user_interface: Login/Sync + UI ─────────────────────────────────
         val showUserInterface =
-            matchesQuery(
-                "login", "sync", "user interface", "theme", "dark", "light",
-                "now playing", "style", "lyrics style", "apple music", "spotify",
-                "romanization", "theme color", "custom color", "liquid glass",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.INTERFACE
+            } else {
+                matchesQuery(
+                    "login", "sync", "user interface", "theme", "dark", "light",
+                    "now playing", "style", "lyrics style", "apple music", "spotify",
+                    "romanization", "theme color", "custom color", "liquid glass",
+                )
+            }
         item(key = "user_interface") {
             Column {
-                // Was its own item. Folded in so item 0 is taller than the glow — the glow's
-                // translation tracks item 0's offset exactly and parks once it scrolls past, and a
-                // 64dp item 0 would have switched branches while the glow was still half-visible.
-                // The toolbar's in-list copy, stretched across the list's side margin so it sits exactly
-                // where the pinned copy appears; the list's top padding already clears the status bar.
-                SettingTopBar(
-                    onBack = { navController.navigateUp() },
-                    windowInsets = WindowInsets(0),
-                    modifier =
-                        Modifier.layout { measurable, constraints ->
-                            val bleed = listSidePadding.roundToPx()
-                            val width = constraints.maxWidth + 2 * bleed
-                            val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                            layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+                if (!isDesktop) {
+                    SettingTopBar(
+                        onBack = { navController.navigateUp() },
+                        windowInsets = WindowInsets(0),
+                        modifier =
+                            Modifier.layout { measurable, constraints ->
+                                val bleed = listSidePadding.roundToPx()
+                                val width = constraints.maxWidth + 2 * bleed
+                                val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+                                layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+                            },
+                    )
+                    // Search bar for settings
+                    androidx.compose.material3.OutlinedTextField(
+                        value = settingSearchQuery,
+                        onValueChange = { settingSearchQuery = it },
+                        placeholder = { Text(stringResource(Res.string.search)) },
+                        leadingIcon = {
+                            androidx.compose.material3.Icon(
+                                imageVector = SimpIcons.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
                         },
-                )
-                // Search bar for settings
-                androidx.compose.material3.OutlinedTextField(
-                    value = settingSearchQuery,
-                    onValueChange = { settingSearchQuery = it },
-                    placeholder = { Text(stringResource(Res.string.search)) },
-                    leadingIcon = {
-                        androidx.compose.material3.Icon(
-                            imageVector = SimpIcons.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                    trailingIcon = {
-                        if (settingSearchQuery.isNotEmpty()) {
-                            IconButton(onClick = { settingSearchQuery = "" }) {
-                                androidx.compose.material3.Icon(
-                                    imageVector = SimpIcons.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
+                        trailingIcon = {
+                            if (settingSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { settingSearchQuery = "" }) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = SimpIcons.Close,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
                             }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color.Transparent,
-                    ),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.Transparent,
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    )
+                }
                 // Above every section, and inside item 0 rather than an item of its own, for the
                 // glow reason above.
                 // Login/Sync group — visible when query matches it
-                if (matchesQuery("login", "sync", "connect")) SettingGroup(
+                val showDevices = if (isDesktop) selectedDesktopTab == SettingTab.INTERFACE else matchesQuery("login", "sync", "connect")
+                if (showDevices) SettingGroup(
                     title = stringResource(Res.string.login_sync_section),
                     modifier = Modifier.onSizeChanged { devicesGroupHeightPx = it.height },
                 ) {
@@ -796,34 +801,6 @@ fun SettingScreen(
                             DataStoreManager.THEME_MODE_LIGHT to stringResource(Res.string.theme_mode_light),
                             DataStoreManager.THEME_MODE_AMOLED to stringResource(Res.string.theme_mode_amoled),
                         )
-                    SettingItem(
-                        title = stringResource(Res.string.theme),
-                        subtitle = themeModeLabels.firstOrNull { it.first == themeMode }?.second ?: "",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.theme) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect = themeModeLabels.map { (it.first == themeMode) to it.second },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            val selected = state.selectOne?.getSelected()
-                                            themeModeLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                sharedViewModel.setThemeMode(it)
-                                            }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    // The Apple Music treatments ARE the blur — the frosted page behind the player, and
-                    // the depth of field on the lyrics — and Modifier.blur is a documented no-op below
-                    // Android 12, so on an older device they render as a flat, wrong-looking version of
-                    // themselves. The requirement is spelled out on the option itself rather than left
-                    // for the user to discover after switching.
                     val requiresAndroid12 = " (" + stringResource(Res.string.requires_android_12) + ")"
                     val nowPlayingStyleLabels =
                         listOf(
@@ -832,55 +809,38 @@ fun SettingScreen(
                             DataStoreManager.NOW_PLAYING_STYLE_APPLE_MUSIC to
                                 stringResource(Res.string.now_playing_style_apple_music) + requiresAndroid12,
                         )
-                    SettingItem(
-                        title = stringResource(Res.string.now_playing_style),
-                        subtitle = nowPlayingStyleLabels.firstOrNull { it.first == nowPlayingStyle }?.second ?: "",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.now_playing_style) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect = nowPlayingStyleLabels.map { (it.first == nowPlayingStyle) to it.second },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            val selected = state.selectOne?.getSelected()
-                                            nowPlayingStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                sharedViewModel.setNowPlayingStyle(it)
-                                            }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    // Hidden outright below Android 12 rather than offered with one option: the Apple
-                    // Music treatment IS the blur, and Modifier.blur is a documented no-op there, so
-                    // the choice would be between Classic and a broken-looking Classic.
-                    if (isLyricsBlurSupported()) {
-                        val lyricsStyleLabels =
-                            listOf(
-                                DataStoreManager.LYRICS_STYLE_CLASSIC to stringResource(Res.string.lyrics_style_classic),
-                                DataStoreManager.LYRICS_STYLE_APPLE_MUSIC to
-                                    stringResource(Res.string.lyrics_style_apple_music) + requiresAndroid12,
-                            )
+                    val lyricsStyleLabels =
+                        listOf(
+                            DataStoreManager.LYRICS_STYLE_CLASSIC to stringResource(Res.string.lyrics_style_classic),
+                            DataStoreManager.LYRICS_STYLE_APPLE_MUSIC to
+                                stringResource(Res.string.lyrics_style_apple_music) + requiresAndroid12,
+                        )
+                    val colorSourceLabels =
+                        buildList {
+                            add(DataStoreManager.THEME_COLOR_DEFAULT to stringResource(Res.string.theme_color_default))
+                            if (isWallpaperDynamicColorSupported()) {
+                                add(DataStoreManager.THEME_COLOR_WALLPAPER to stringResource(Res.string.theme_color_wallpaper))
+                            }
+                            add(DataStoreManager.THEME_COLOR_CUSTOM to stringResource(Res.string.theme_color_custom))
+                        }
+
+                    val themeItem = @Composable {
                         SettingItem(
-                            title = stringResource(Res.string.lyrics_style),
-                            subtitle = lyricsStyleLabels.firstOrNull { it.first == lyricsStyle }?.second ?: "",
+                            title = stringResource(Res.string.theme),
+                            subtitle = themeModeLabels.firstOrNull { it.first == themeMode }?.second ?: "",
                             onClick = {
                                 viewModel.setAlertData(
                                     SettingAlertState(
-                                        title = runBlocking { getString(Res.string.lyrics_style) },
+                                        title = runBlocking { getString(Res.string.theme) },
                                         selectOne =
                                             SettingAlertState.SelectData(
-                                                listSelect = lyricsStyleLabels.map { (it.first == lyricsStyle) to it.second },
+                                                listSelect = themeModeLabels.map { (it.first == themeMode) to it.second },
                                             ),
                                         confirm =
                                             runBlocking { getString(Res.string.change) } to { state ->
                                                 val selected = state.selectOne?.getSelected()
-                                                lyricsStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                    sharedViewModel.setLyricsStyle(it)
+                                                themeModeLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                    sharedViewModel.setThemeMode(it)
                                                 }
                                             },
                                         dismiss = runBlocking { getString(Res.string.cancel) },
@@ -888,6 +848,111 @@ fun SettingScreen(
                                 )
                             },
                         )
+                    }
+
+                    val nowPlayingStyleItem = @Composable {
+                        SettingItem(
+                            title = stringResource(Res.string.now_playing_style),
+                            subtitle = nowPlayingStyleLabels.firstOrNull { it.first == nowPlayingStyle }?.second ?: "",
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = runBlocking { getString(Res.string.now_playing_style) },
+                                        selectOne =
+                                            SettingAlertState.SelectData(
+                                                listSelect = nowPlayingStyleLabels.map { (it.first == nowPlayingStyle) to it.second },
+                                            ),
+                                        confirm =
+                                            runBlocking { getString(Res.string.change) } to { state ->
+                                                val selected = state.selectOne?.getSelected()
+                                                nowPlayingStyleLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                    sharedViewModel.setNowPlayingStyle(it)
+                                                }
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                    }
+
+                    val lyricsStyleItem = @Composable {
+                        if (isLyricsBlurSupported()) {
+                            SettingItem(
+                                title = stringResource(Res.string.lyrics_style),
+                                subtitle = lyricsStyleLabels.firstOrNull { it.first == lyricsStyle }?.second ?: "",
+                                onClick = {
+                                    viewModel.setAlertData(
+                                        SettingAlertState(
+                                            title = runBlocking { getString(Res.string.lyrics_style) },
+                                            selectOne =
+                                                SettingAlertState.SelectData(
+                                                    listSelect = lyricsStyleLabels.map { (it.first == lyricsStyle) to it.second },
+                                                ),
+                                            confirm =
+                                                runBlocking { getString(Res.string.change) } to { state ->
+                                                    val selected = state.selectOne?.getSelected()
+                                                    lyricsStyleLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                        sharedViewModel.setLyricsStyle(it)
+                                                    }
+                                                },
+                                            dismiss = runBlocking { getString(Res.string.cancel) },
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+
+                    val themeColorItem = @Composable {
+                        SettingItem(
+                            title = stringResource(Res.string.theme_color),
+                            subtitle = colorSourceLabels.firstOrNull { it.first == themeColorSource }?.second ?: "",
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = runBlocking { getString(Res.string.theme_color) },
+                                        selectOne =
+                                            SettingAlertState.SelectData(
+                                                listSelect = colorSourceLabels.map { (it.first == themeColorSource) to it.second },
+                                            ),
+                                        confirm =
+                                            runBlocking { getString(Res.string.change) } to { state ->
+                                                val selected = state.selectOne?.getSelected()
+                                                colorSourceLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                    sharedViewModel.setThemeColorSource(it)
+                                                    if (it == DataStoreManager.THEME_COLOR_CUSTOM) {
+                                                        showColorPickerDialog = true
+                                                    }
+                                                }
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                    }
+
+                    if (isDesktop) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Box(Modifier.weight(1f)) { themeItem() }
+                            Box(Modifier.weight(1f)) { nowPlayingStyleItem() }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Box(Modifier.weight(1f)) { lyricsStyleItem() }
+                            Box(Modifier.weight(1f)) { themeColorItem() }
+                        }
+                    } else {
+                        themeItem()
+                        nowPlayingStyleItem()
+                        lyricsStyleItem()
+                        themeColorItem()
                     }
 
                     // Independent of BOTH style settings, and not gated on Android 12: this changes
@@ -968,40 +1033,6 @@ fun SettingScreen(
                             )
                         },
                     )
-                    val colorSourceLabels =
-                        buildList {
-                            add(DataStoreManager.THEME_COLOR_DEFAULT to stringResource(Res.string.theme_color_default))
-                            if (isWallpaperDynamicColorSupported()) {
-                                add(DataStoreManager.THEME_COLOR_WALLPAPER to stringResource(Res.string.theme_color_wallpaper))
-                            }
-                            add(DataStoreManager.THEME_COLOR_CUSTOM to stringResource(Res.string.theme_color_custom))
-                        }
-                    SettingItem(
-                        title = stringResource(Res.string.theme_color),
-                        subtitle = colorSourceLabels.firstOrNull { it.first == themeColorSource }?.second ?: "",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.theme_color) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect = colorSourceLabels.map { (it.first == themeColorSource) to it.second },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            val selected = state.selectOne?.getSelected()
-                                            colorSourceLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                sharedViewModel.setThemeColorSource(it)
-                                                if (it == DataStoreManager.THEME_COLOR_CUSTOM) {
-                                                    showColorPickerDialog = true
-                                                }
-                                            }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
                     if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM) {
                         SettingItem(
                             title = stringResource(Res.string.custom_color),
@@ -1024,13 +1055,17 @@ fun SettingScreen(
         }
         // ── content ────────────────────────────────────────────────────────
         val showContent =
-            matchesQuery(
-                "content", "youtube account", "language", "content country",
-                "audio language", "quality", "download quality", "video quality",
-                "auto download", "liked songs", "play video", "radio audio",
-                "sync follow", "send back", "listening data", "google",
-                "explicit", "youtube playlist", "proxy", "lockscreen", "animated canvas",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.CONTENT
+            } else {
+                matchesQuery(
+                    "content", "youtube account", "language", "content country",
+                    "audio language", "quality", "download quality", "video quality",
+                    "auto download", "liked songs", "play video", "radio audio",
+                    "sync follow", "send back", "listening data", "google",
+                    "explicit", "youtube playlist", "proxy", "lockscreen", "animated canvas",
+                )
+            }
         item(key = "content") {
             if (showContent) SettingGroup(title = stringResource(Res.string.content)) {
                 SettingItem(
@@ -1522,11 +1557,15 @@ fun SettingScreen(
         }
         // ── playback ───────────────────────────────────────────────────────
         val showPlayback =
-            matchesQuery(
-                "playback", "equalizer", "audio delay", "reverb", "crossfade",
-                "save playback", "shuffle", "repeat", "kill service",
-                "shake to shuffle", "earphone", "waveform", "dj mode",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.AUDIO
+            } else {
+                matchesQuery(
+                    "playback", "equalizer", "audio delay", "reverb", "crossfade",
+                    "save playback", "shuffle", "repeat", "kill service",
+                    "shake to shuffle", "earphone", "waveform", "dj mode",
+                )
+            }
         item(key = "playback") {
             if (showPlayback) SettingGroup(title = stringResource(Res.string.playback)) {
                 // Under Playback rather than Audio because that whole group sits inside an
@@ -1718,9 +1757,13 @@ fun SettingScreen(
         // and the button that erases it belong together.
         // ── listening history ──────────────────────────────────────────────
         val showListeningHistory =
-            matchesQuery(
-                "listening history", "tracking", "clear history", "local tracking",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.CONTENT
+            } else {
+                matchesQuery(
+                    "listening history", "tracking", "clear history", "local tracking",
+                )
+            }
         item(key = "listening_history") {
             if (showListeningHistory) SettingGroup(title = stringResource(Res.string.listening_history)) {
                 SettingItem(
@@ -1749,11 +1792,15 @@ fun SettingScreen(
         }
         // ── lyrics ─────────────────────────────────────────────────────────
         val showLyrics =
-            matchesQuery(
-                "lyrics", "provider", "lrclib", "better lyrics", "youtube transcript",
-                "offset", "translation", "subtitle", "romanization",
-                "contributor", "database",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.CONTENT
+            } else {
+                matchesQuery(
+                    "lyrics", "provider", "lrclib", "better lyrics", "youtube transcript",
+                    "offset", "translation", "subtitle", "romanization",
+                    "contributor", "database",
+                )
+            }
         item(key = "lyrics") {
             if (showLyrics) SettingGroup(title = stringResource(Res.string.lyrics)) {
                 SettingItem(
@@ -1956,10 +2003,14 @@ fun SettingScreen(
         }
         // ── AI ─────────────────────────────────────────────────────────────
         val showAI =
-            matchesQuery(
-                "ai", "openai", "gemini", "api key", "model", "base url",
-                "headers", "translation", "custom model",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.INTEGRATIONS
+            } else {
+                matchesQuery(
+                    "ai", "openai", "gemini", "api key", "model", "base url",
+                    "headers", "translation", "custom model",
+                )
+            }
         item(key = "AI") {
             if (showAI) SettingGroup(title = stringResource(Res.string.ai)) {
                 SettingItem(
@@ -2145,9 +2196,13 @@ fun SettingScreen(
         }
         // ── spotify ────────────────────────────────────────────────────────
         val showSpotify =
-            matchesQuery(
-                "spotify", "canvas", "lyrics", "animated artwork", "log in", "log out",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.INTEGRATIONS
+            } else {
+                matchesQuery(
+                    "spotify", "canvas", "lyrics", "animated artwork", "log in", "log out",
+                )
+            }
         item(key = "spotify") {
             if (showSpotify) SettingGroup(title = stringResource(Res.string.spotify)) {
                 SettingItem(
@@ -2173,26 +2228,29 @@ fun SettingScreen(
             }
         }
         // ── discord ────────────────────────────────────────────────────────
-        val showDiscord =
-            matchesQuery(
-                "discord", "rich presence",
-            )
-        item(key = "discord") {
-            if (showDiscord) SettingGroup(title = stringResource(Res.string.discord_integration)) {
-                SettingItem(
-                    title = stringResource(Res.string.enable_rich_presence),
-                    subtitle = "Automatically shares current song on Discord without login",
-                    switch = (richPresenceEnabled to { viewModel.setDiscordRichPresenceEnabled(it) }),
-                )
+        // Discord Rich Presence is automatically active on Desktop via local IPC when Discord is running.
+        val showDiscord = isDesktop && selectedDesktopTab == SettingTab.INTEGRATIONS
+        if (showDiscord) {
+            item(key = "discord") {
+                SettingGroup(title = stringResource(Res.string.discord_integration)) {
+                    SettingItem(
+                        title = stringResource(Res.string.discord_integration),
+                        subtitle = "Active automatically via your Discord app. Manage activity privacy in Discord Settings.",
+                    )
+                }
             }
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
         // build whose local.properties has no key.
         // ── last.fm ────────────────────────────────────────────────────────
         val showLastfm =
-            matchesQuery(
-                "lastfm", "last.fm", "scrobbling", "scrobble", "log in", "log out",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.INTEGRATIONS
+            } else {
+                matchesQuery(
+                    "lastfm", "last.fm", "scrobbling", "scrobble", "log in", "log out",
+                )
+            }
         if (viewModel.lastfmAvailable) {
             item(key = "lastfm") {
                 if (showLastfm) SettingGroup(title = stringResource(Res.string.lastfm_integration)) {
@@ -2230,9 +2288,13 @@ fun SettingScreen(
         }
         // ── sponsor block ──────────────────────────────────────────────────
         val showSponsorBlock =
-            matchesQuery(
-                "sponsorblock", "sponsor", "skip", "segments", "categories",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.ABOUT
+            } else {
+                matchesQuery(
+                    "sponsorblock", "sponsor", "skip", "segments", "categories",
+                )
+            }
         item(key = "sponsor_block") {
             if (showSponsorBlock) SettingGroup(
                 title = stringResource(Res.string.sponsorBlock),
@@ -2623,10 +2685,14 @@ fun SettingScreen(
         }
         // ── backup ─────────────────────────────────────────────────────────
         val showBackup =
-            matchesQuery(
-                "backup", "restore", "import", "export", "playlist", "data",
-                "duplicate", "sync", "audio cutter",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.ABOUT
+            } else {
+                matchesQuery(
+                    "backup", "restore", "import", "export", "playlist", "data",
+                    "duplicate", "sync", "audio cutter",
+                )
+            }
         item(key = "backup") {
             if (showBackup) SettingGroup(
                 title = stringResource(Res.string.backup),
@@ -2813,10 +2879,14 @@ fun SettingScreen(
         }
         // ── about us ───────────────────────────────────────────────────────
         val showAbout =
-            matchesQuery(
-                "about", "version", "changelog", "update", "author", "twitter",
-                "x.com", "blog", "donate", "coffee", "third party", "libraries",
-            )
+            if (isDesktop) {
+                selectedDesktopTab == SettingTab.ABOUT
+            } else {
+                matchesQuery(
+                    "about", "version", "changelog", "update", "author", "twitter",
+                    "x.com", "blog", "donate", "coffee", "third party", "libraries",
+                )
+            }
         item(key = "about_us") {
             if (showAbout) SettingGroup(title = stringResource(Res.string.about_us)) {
                 SettingItem(
@@ -2939,6 +3009,159 @@ fun SettingScreen(
         }
         item(key = "end") {
             EndOfPage()
+        }
+    }
+
+    if (isDesktop) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(MaterialTheme.colorScheme.background),
+        ) {
+            // Left Sidebar
+            Column(
+                modifier =
+                    Modifier
+                        .width(260.dp)
+                        .fillMaxHeight()
+                        .padding(vertical = 16.dp, horizontal = 12.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
+                    RippleIconButton(
+                        SimpIcons.ArrowBackIosNew,
+                        Modifier.size(32.dp),
+                        true,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    ) {
+                        navController.navigateUp()
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(Res.string.settings),
+                        style = typo().titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                SettingTab.entries.forEach { tab ->
+                    val isSelected = selectedDesktopTab == tab
+                    Surface(
+                        onClick = { selectedDesktopTab = tab },
+                        shape = RoundedCornerShape(12.dp),
+                        color =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            } else {
+                                Color.Transparent
+                            },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .padding(vertical = 2.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 14.dp),
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                    },
+                            )
+                            Spacer(Modifier.width(14.dp))
+                            Text(
+                                text = stringResource(tab.labelRes),
+                                style = MaterialTheme.typography.titleSmall,
+                                color =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                    },
+                            )
+                        }
+                    }
+                }
+            }
+
+            VerticalDivider(
+                modifier = Modifier.fillMaxHeight(),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                thickness = 0.5.dp,
+            )
+
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                LazyColumn(
+                    state = settingListState,
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .widthIn(max = 960.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    content = settingsContent,
+                )
+            }
+        }
+    } else {
+        AmbientThemeGlow(
+            tint = MaterialTheme.colorScheme.primary,
+            modifier =
+                Modifier.graphicsLayer {
+                    translationY =
+                        if (settingListState.firstVisibleItemIndex == 0) {
+                            -settingListState.firstVisibleItemScrollOffset.toFloat()
+                        } else {
+                            -size.height
+                        }
+                },
+        )
+        LazyColumn(
+            state = settingListState,
+            contentPadding = innerPadding,
+            modifier =
+                Modifier
+                    .padding(horizontal = listSidePadding)
+                    .hazeSource(hazeState),
+            content = settingsContent,
+        )
+
+        val settingBarTint = MaterialTheme.colorScheme.background
+        AnimatedVisibility(
+            visible = showPinnedBar,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically(),
+        ) {
+            SettingTopBar(
+                onBack = { navController.navigateUp() },
+                modifier = Modifier.hazeBlur(HazeInput.Sources(hazeState), barBlurStyle(settingBarTint, 0.3f)),
+            )
         }
     }
     importState?.let { progress ->
@@ -3353,26 +3576,6 @@ fun SettingScreen(
                 },
             )
         }
-    }
-
-    // The pinned copy of the toolbar, frosted: the frost waits for the Devices group to go under it,
-    // because an always-on frost dimmed the glow behind the bar into a black band, which is exactly
-    // where the glow carries its colour.
-    // Captured outside the haze scope — HazeEffectScope is not composable (same move as
-    // AlbumScreen's mutedPaletteBg capture).
-    val settingBarTint = MaterialTheme.colorScheme.background
-    AnimatedVisibility(
-        visible = showPinnedBar,
-        enter = fadeIn() + slideInVertically(),
-        exit = fadeOut() + slideOutVertically(),
-    ) {
-        SettingTopBar(
-            onBack = { navController.navigateUp() },
-            // The house recipe from AlbumScreen's bars, thinned: ultraThin's built-in tint stacked
-            // on this page's dark ground read as a solid lid. 0.3 keeps the blur doing the work and
-            // the tint only settling legibility.
-            modifier = Modifier.hazeBlur(HazeInput.Sources(hazeState), barBlurStyle(settingBarTint, 0.3f)),
-        )
     }
 }
 

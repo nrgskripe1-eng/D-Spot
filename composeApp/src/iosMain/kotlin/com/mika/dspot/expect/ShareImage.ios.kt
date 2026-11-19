@@ -18,6 +18,7 @@ actual suspend fun shareImage(
     fileName: String,
     chooserTitle: String,
     mimeType: String,
+    contentUrl: String?,
 ): Boolean {
     return true
 }

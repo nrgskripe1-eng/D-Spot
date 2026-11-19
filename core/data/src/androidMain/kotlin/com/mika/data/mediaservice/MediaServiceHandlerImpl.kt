@@ -303,6 +303,9 @@ internal class MediaServiceHandlerImpl(
         val durationMs: Long,
         val speed: Float,
         val seq: Long,
+        val isRepeatOne: Boolean = false,
+        val isShuffle: Boolean = false,
+        val isPaused: Boolean = false,
     )
 
     private val rpcSnapshotFlow = MutableStateFlow<RpcSnapshot?>(null)
@@ -579,9 +582,12 @@ internal class MediaServiceHandlerImpl(
                                             // its snapshot lands here after onIsPlayingChanged(false)
                                             // already closed the RPC (Fix 1). controlState.value is a
                                             // safe field read from Dispatchers.IO, unlike player.isPlaying.
-                                            if (!controlState.value.isPlaying) return@collectLatest
+                                            if (!controlState.value.isPlaying && !snap.isPaused) return@collectLatest
                                             discordRPC
-                                                ?.updateSong(snap.progressMs, snap.durationMs, snap.speed, snap.song)
+                                                ?.updateSong(snap.progressMs, snap.durationMs, snap.speed, snap.song,
+                                                    isRepeatOne = snap.isRepeatOne,
+                                                    isShuffle = snap.isShuffle,
+                                                    isPaused = snap.isPaused)
                                                 ?.onFailure { if (it !is CancellationException) Logger.e(TAG, "Discord RPC update failed: ${it.message}") }
                                         }
                                     }
@@ -2751,7 +2757,8 @@ internal class MediaServiceHandlerImpl(
             mayBeSaveRecentSong()
             mayBeSavePlaybackState()
             if (discordRPC?.isRpcRunning() == true) {
-                discordRPC?.closeRPC()
+                nowPlayingState.value.songEntity?.let { updateDiscordRpc(it, isPaused = true) }
+                    ?: discordRPC?.closeRPC()
             }
         }
         updateNextPreviousTrackAvailability()
@@ -2875,12 +2882,14 @@ internal class MediaServiceHandlerImpl(
         }
     }
 
-    private fun updateDiscordRpc(song: SongEntity) {
+    private fun updateDiscordRpc(song: SongEntity, isPaused: Boolean = false) {
         coroutineScope.launch {
             // Grab the sequence number as the FIRST statement — before any suspension point — so it
             // reflects true event order. A monotonic counter (not wall-clock time) so an NTP/manual
             // clock step backward can't freeze the ordering guard in the sender (Fix A).
             val seq = rpcEventSeq.incrementAndGet()
+            val isRepeatOne = player.repeatMode == PlayerConstants.REPEAT_MODE_ONE
+            val isShuffle = controlState.value.isShuffle
             val snapshot =
                 RpcSnapshot(
                     song = song,
@@ -2888,6 +2897,9 @@ internal class MediaServiceHandlerImpl(
                     durationMs = getPlayerDuration(),
                     speed = dataStoreManager.playbackSpeed.first(),
                     seq = seq,
+                    isRepeatOne = isRepeatOne,
+                    isShuffle = isShuffle,
+                    isPaused = isPaused,
                 )
             // Compare-and-keep-newest: the playbackSpeed.first() suspend above means two calls to
             // updateDiscordRpc() can interleave and resolve out of order, so a plain `.value = ...`

@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.expect
+package com.mika.dspot.expect
 
 import android.content.ContentValues
 import android.content.Intent
@@ -67,6 +67,7 @@ actual suspend fun shareImage(
     fileName: String,
     chooserTitle: String,
     mimeType: String,
+    contentUrl: String?,
 ): Boolean =
     withContext(Dispatchers.IO) {
         runCatching {
@@ -79,14 +80,37 @@ actual suspend fun shareImage(
             file.writeBytes(bytes)
 
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.FileProvider", file)
+
+            // Direct Story Intents: Try Instagram Stories if installed
+            val instagramIntent = Intent("com.instagram.share.ADD_TO_STORY").apply {
+                setDataAndType(uri, mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra("content_url", contentUrl)
+                }
+            }
+
+            // Fallback: Standard Intent.ACTION_SEND with EXTRA_STREAM and EXTRA_TEXT for the song link
             val sendIntent =
                 Intent(Intent.ACTION_SEND).apply {
                     type = mimeType
                     putExtra(Intent.EXTRA_STREAM, uri)
+                    if (!contentUrl.isNullOrBlank()) {
+                        putExtra(Intent.EXTRA_TEXT, contentUrl)
+                    }
                     // Without this the receiving app gets a uri it is not allowed to open.
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-            val chooser = Intent.createChooser(sendIntent, chooserTitle).apply { addFlags(FLAG_ACTIVITY_NEW_TASK) }
+
+            val pm = context.packageManager
+            if (instagramIntent.resolveActivity(pm) != null) {
+                // If Instagram is installed, build a chooser that features standard sharing while granting permissions
+                context.grantUriPermission("com.instagram.android", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(sendIntent, chooserTitle).apply {
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+            }
             context.startActivity(chooser)
             true
         }.getOrElse { error ->

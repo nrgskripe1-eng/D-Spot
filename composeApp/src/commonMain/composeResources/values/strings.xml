@@ -108,6 +108,7 @@
     <string name="singles">Singles</string>
     <string name="related_artists">Related Artists</string>
     <string name="about">About</string>
+    <string name="integrations">Integrations</string>
     <string name="let_s_start_with_a_radio">LET'S START WITH A RADIO</string>
     <string name="let_s_pick_a_playlist_for_you">LET'S PICK A PLAYLIST FOR YOU</string>
     <string name="moods_amp_moment"><![CDATA[Moods & Moment]]></string>
@@ -845,6 +846,8 @@
     <string name="share_lyrics_background">Background</string>
     <string name="share_lyrics_permission_denied">Storage permission is needed to save the image</string>
     <string name="share_lyrics_no_lyrics">This song has no lyrics to share</string>
+    <string name="share_to_story">Share to Story / My Day</string>
+    <string name="share_story_card">Story Card</string>
     <string name="wrapped" translatable="false">Wrapped</string>
     <string name="wrapped_year" translatable="false">Wrapped %1$s</string>
     <string name="wrapped_tap_to_begin">Tap to begin</string>

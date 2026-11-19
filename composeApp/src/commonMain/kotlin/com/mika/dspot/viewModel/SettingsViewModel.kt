@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.viewModel
+package com.mika.dspot.viewModel
 
 import androidx.lifecycle.viewModelScope
 import coil3.PlatformContext
@@ -190,7 +190,7 @@ class SettingsViewModel(
     private val _discordLoggedIn = MutableStateFlow(false)
     val discordLoggedIn: StateFlow<Boolean> = _discordLoggedIn
 
-    private val _richPresenceEnabled = MutableStateFlow(false)
+    private val _richPresenceEnabled = MutableStateFlow(true)
     val richPresenceEnabled: StateFlow<Boolean> = _richPresenceEnabled
 
     /**

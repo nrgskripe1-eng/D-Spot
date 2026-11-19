@@ -1,4 +1,4 @@
-﻿package com.mika.data.dataStore
+package com.mika.data.dataStore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -1649,7 +1649,7 @@ internal class DataStoreManagerImpl(
 
     override val richPresenceEnabled: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[RICH_PRESENCE] ?: FALSE
+            preferences[RICH_PRESENCE] ?: TRUE
         }
 
     override suspend fun setRichPresenceEnabled(enabled: Boolean) {

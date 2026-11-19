@@ -11,12 +11,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import coil3.ImageLoader
@@ -302,9 +304,10 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     }
 
     governedApplication {
-        // Main Window
+        // Main Window - center-aligned by default so it never relies on WindowLocationTracker cascade
         val windowState =
             rememberWindowState(
+                position = WindowPosition.Aligned(Alignment.Center),
                 size = DpSize(1500.dp, 860.dp),
             )
         var isVisible by remember { mutableStateOf(true) }

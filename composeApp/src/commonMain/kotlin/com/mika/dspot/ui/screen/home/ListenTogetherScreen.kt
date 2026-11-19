@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.ui.screen.home
+package com.mika.dspot.ui.screen.home
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -262,7 +262,7 @@ fun ListenTogetherScreen(
                     TitleBlock(inRoom = state.inRoom)
                     ConnectionLine(state.connection, viewModel::connect, viewModel::disconnect)
                     AnimatedVisibility(visible = state.inRoom) {
-                        RoomCodePoster(state, copyCode, shareCode)
+                        RoomCodePoster(state, copyCode, shareCode, viewModel::connect)
                     }
                 }
 
@@ -294,7 +294,7 @@ fun ListenTogetherScreen(
                 TitleBlock(inRoom = state.inRoom)
                 ConnectionLine(state.connection, viewModel::connect, viewModel::disconnect)
                 AnimatedVisibility(visible = state.inRoom) {
-                    RoomCodePoster(state, copyCode, shareCode)
+                    RoomCodePoster(state, copyCode, shareCode, viewModel::connect)
                 }
                 WorkArea(state, displayName, codeInput, viewModel, { managing = it }, openSettings)
             }
@@ -367,6 +367,13 @@ private fun ColumnScope.WorkArea(
                 canManage = state.isHost,
                 onManage = onManage,
             )
+            state.roomCode?.let { code ->
+                RoomChatSection(
+                    roomCode = code,
+                    currentUsername = displayName.ifBlank { "Host" },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
             FooterActions(onLeave = viewModel::leaveRoom, onSettings = onSettings)
         }
 
@@ -434,8 +441,8 @@ private fun CreditFooter() {
     }
 }
 
-/** Prefix for the share button; the code alone means nothing to the recipient. */
-private const val SHARE_PREFIX = "Join my D-Spot room with code "
+/** Direct share link pointing to the official web host. */
+private const val SHARE_PREFIX = "https://dspot-web.vercel.app/room/"
 
 // ───────────────────────────────── structure ─────────────────────────────────
 
@@ -581,6 +588,7 @@ private fun RoomCodePoster(
     state: ListenTogetherRoom,
     onCopyCode: () -> Unit,
     onShareCode: () -> Unit,
+    onConnect: () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
@@ -634,6 +642,7 @@ private fun RoomCodePoster(
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 2.dp),
             ) {
                 // A silent clipboard write is indistinguishable from a dead button, and this one
@@ -645,6 +654,17 @@ private fun RoomCodePoster(
                     }
                 }
                 GlyphButton(SimpIcons.Share, onShareCode)
+                
+                // Reconnect action button when connecting or disconnected
+                Text(
+                    text = "Reconnect",
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable { onConnect() }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
             }
         }
     }
