@@ -964,12 +964,19 @@ fun App(
                                         }
                                     }
                                     is UpdateDownloadState.ReadyToInstall -> {
-                                        Text(
-                                            text = "Download complete! Click 'Install Now' to apply the update.",
-                                            style = typo().labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(bottom = 12.dp),
-                                        )
+                                        Column(modifier = Modifier.padding(bottom = 12.dp)) {
+                                            Text(
+                                                text = "Download complete! Click 'Install Now' to apply the update.",
+                                                style = typo().labelMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "📁 Saved to: ${state.filePath}",
+                                                style = typo().bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                     is UpdateDownloadState.Error -> {
                                         val displayError = if (state.message.contains("http", ignoreCase = true) || state.message.contains("timeout", ignoreCase = true)) {

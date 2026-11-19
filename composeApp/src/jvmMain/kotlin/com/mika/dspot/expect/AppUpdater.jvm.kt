@@ -19,11 +19,17 @@ actual fun startInAppUpdate(
         try {
             onProgress(UpdateDownloadState.Downloading(0f, 0L, 0L))
 
-            val tempDir = File(System.getProperty("java.io.tmpdir"), "dspot-update")
-            if (!tempDir.exists()) {
-                tempDir.mkdirs()
+            // Save directly to user's standard Downloads folder
+            val userHome = System.getProperty("user.home")
+            val downloadsDir = if (userHome != null) {
+                File(userHome, "Downloads")
+            } else {
+                File(System.getProperty("java.io.tmpdir"), "dspot-update")
             }
-            val targetFile = File(tempDir, fileName)
+            if (!downloadsDir.exists()) {
+                downloadsDir.mkdirs()
+            }
+            val targetFile = File(downloadsDir, fileName)
             if (targetFile.exists()) {
                 targetFile.delete()
             }

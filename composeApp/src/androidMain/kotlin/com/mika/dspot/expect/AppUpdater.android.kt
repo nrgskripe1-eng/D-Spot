@@ -2,6 +2,7 @@ package com.mika.dspot.expect
 
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.mika.logger.Logger
@@ -24,7 +25,13 @@ actual fun startInAppUpdate(
             onProgress(UpdateDownloadState.Downloading(0f, 0L, 0L))
 
             val context: Context = getKoin().get()
-            val updateDir = File(context.cacheDir, "updates")
+            // Prefer public Downloads folder, fallback to externalFilesDir or cacheDir
+            val publicDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val updateDir = if (publicDownloads != null && (publicDownloads.exists() || publicDownloads.mkdirs())) {
+                publicDownloads
+            } else {
+                context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: File(context.cacheDir, "updates")
+            }
             if (!updateDir.exists()) {
                 updateDir.mkdirs()
             }

@@ -1579,13 +1579,29 @@ fun NowPlayingBottomSheet(
     if (showStoryShareSheet) {
         val sharedViewModel: SharedViewModel = koinInject()
         val screenDataState by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
+        val timelineState by sharedViewModel.timeline.collectAsStateWithLifecycle()
         val url = "https://music.youtube.com/watch?v=${uiState.songUIState.videoId}"
+
+        val currentText = if (timelineState.current > 0L) {
+            com.mika.dspot.extension.formatDuration(timelineState.current)
+        } else {
+            "00:00"
+        }
+        val totalText = if (timelineState.total > 0L) {
+            com.mika.dspot.extension.formatDuration(timelineState.total)
+        } else {
+            "03:45"
+        }
+
         StoryShareSheet(
             songTitle = uiState.songUIState.title,
             artistName = uiState.songUIState.listArtists.toListName().connectArtists(),
             artwork = screenDataState.bitmap,
             seedColor = rememberSurfaceDarkColors().container,
             contentUrl = url,
+            albumName = uiState.songUIState.album?.name,
+            currentDurationText = currentText,
+            totalDurationText = totalText,
             onDismiss = { showStoryShareSheet = false },
         )
     }

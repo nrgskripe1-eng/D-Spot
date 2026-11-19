@@ -21,6 +21,9 @@ fun StoryShareSheet(
     seedColor: Color,
     contentUrl: String?,
     onDismiss: () -> Unit,
+    albumName: String? = null,
+    currentDurationText: String = "01:24",
+    totalDurationText: String = "03:56",
 ) {
     ShareImageSheet(
         title = stringResource(Res.string.share_to_story),
@@ -34,6 +37,10 @@ fun StoryShareSheet(
             artistName = artistName,
             artwork = artwork,
             background = seedColor,
+            albumName = albumName,
+            currentDurationText = currentDurationText,
+            totalDurationText = totalDurationText,
+            isSpinning = false, // static at nice angle for image capture
             modifier = captureModifier,
         )
     }
