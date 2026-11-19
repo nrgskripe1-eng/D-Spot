@@ -156,6 +156,10 @@ class SharedViewModel(
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate
 
+    // Emits true when a manual/auto check finds no newer release (already up-to-date).
+    private val _isUpToDate = MutableStateFlow(false)
+    val isUpToDate: StateFlow<Boolean> = _isUpToDate
+
     private var _liked: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val liked: SharedFlow<Boolean> = _liked.asSharedFlow()
 
@@ -1146,6 +1150,9 @@ class SharedViewModel(
         // Raised before the coroutine starts, so Home's launch banner, which reads it right after
         // startup, can never miss a check that is already under way but not yet marked.
         _isCheckingUpdate.value = true
+        // Reset so the LaunchedEffect in App.kt fires again on the next result.
+        showedUpdateDialog = false
+        _isUpToDate.value = false
         viewModelScope.launch {
             val updateChannel = dataStoreManager.updateChannel.first()
             dataStoreManager.putString(
@@ -1159,6 +1166,9 @@ class SharedViewModel(
                         is Resource.Success if (data != null) -> {
                             _updateResponse.value = data
                             showedUpdateDialog = true
+                            if (!VersionManager.isBehind(data.tagName)) {
+                                _isUpToDate.value = true
+                            }
                         }
 
                         else -> {
@@ -1174,6 +1184,9 @@ class SharedViewModel(
                         is Resource.Success if (data != null) -> {
                             _updateResponse.value = data
                             showedUpdateDialog = true
+                            if (!VersionManager.isBehind(data.tagName)) {
+                                _isUpToDate.value = true
+                            }
                         }
 
                         else -> {

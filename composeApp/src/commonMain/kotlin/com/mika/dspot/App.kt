@@ -127,6 +127,8 @@ import kotlinx.datetime.format
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.char
 import kotlinx.datetime.toLocalDateTime
+import multiplatform.network.cmptoast.ToastGravity
+import multiplatform.network.cmptoast.showToast
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -136,6 +138,7 @@ import dspot.composeapp.generated.resources.do_not_show_again
 import dspot.composeapp.generated.resources.download
 import dspot.composeapp.generated.resources.downloading
 import dspot.composeapp.generated.resources.good_night
+import dspot.composeapp.generated.resources.no_update
 import dspot.composeapp.generated.resources.notification
 import dspot.composeapp.generated.resources.settings
 import dspot.composeapp.generated.resources.sleep_timer_off
@@ -438,6 +441,13 @@ fun App(
         // F-Droid-channel user to update on each launch: that channel's tag carries no leading "v".
         if (viewModel.showedUpdateDialog && VersionManager.isBehind(response.tagName)) {
             shouldShowUpdateDialog = true
+        }
+    }
+
+    val isUpToDate by viewModel.isUpToDate.collectAsStateWithLifecycle()
+    LaunchedEffect(isUpToDate) {
+        if (isUpToDate) {
+            showToast(getString(Res.string.no_update), ToastGravity.Bottom)
         }
     }
 
