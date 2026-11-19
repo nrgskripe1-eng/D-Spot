@@ -37,9 +37,9 @@ actual fun startInAppUpdate(
                 val urlObj = URL(currentUrl)
                 connection = (urlObj.openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = true
-                    connectTimeout = 30000
-                    readTimeout = 60000
-                    setRequestProperty("User-Agent", "D-Spot-Desktop-Updater")
+                    connectTimeout = 60000
+                    readTimeout = 0 // 0 means no timeout while downloading large files
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 }
                 connection.connect()
 

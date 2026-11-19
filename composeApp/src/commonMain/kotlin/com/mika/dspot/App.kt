@@ -972,8 +972,13 @@ fun App(
                                         )
                                     }
                                     is UpdateDownloadState.Error -> {
+                                        val displayError = if (state.message.contains("http", ignoreCase = true) || state.message.contains("timeout", ignoreCase = true)) {
+                                            "Connection timeout. Please check your network and try again."
+                                        } else {
+                                            state.message
+                                        }
                                         Text(
-                                            text = "Download failed: ${state.message}",
+                                            text = "Download failed: $displayError",
                                             style = typo().labelMedium,
                                             color = MaterialTheme.colorScheme.error,
                                             modifier = Modifier.padding(bottom = 12.dp),
