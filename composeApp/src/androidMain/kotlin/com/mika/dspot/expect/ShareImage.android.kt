@@ -80,37 +80,63 @@ actual suspend fun shareImage(
             file.writeBytes(bytes)
 
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.FileProvider", file)
+            val pm = context.packageManager
 
-            // Direct Story Intents: Try Instagram Stories if installed
-            val instagramIntent = Intent("com.instagram.share.ADD_TO_STORY").apply {
-                setDataAndType(uri, mimeType)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                if (!contentUrl.isNullOrBlank()) {
-                    putExtra("content_url", contentUrl)
+            // Grant read URI permission to key story platforms
+            listOf("com.facebook.katana", "com.facebook.orca", "com.instagram.android").forEach { pkg ->
+                try {
+                    context.grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Throwable) {
                 }
             }
 
-            // Fallback: Standard Intent.ACTION_SEND with EXTRA_STREAM and EXTRA_TEXT for the song link
-            val sendIntent =
-                Intent(Intent.ACTION_SEND).apply {
-                    type = mimeType
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    if (!contentUrl.isNullOrBlank()) {
-                        putExtra(Intent.EXTRA_TEXT, contentUrl)
-                    }
-                    // Without this the receiving app gets a uri it is not allowed to open.
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Target 1: Facebook Stories Intent
+            val fbStoryIntent = Intent("com.facebook.stories.ADD_TO_STORY").apply {
+                setDataAndType(uri, mimeType)
+                putExtra("interactive_asset_uri", uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra("content_url", contentUrl)
                 }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+            }
 
-            val pm = context.packageManager
-            if (instagramIntent.resolveActivity(pm) != null) {
-                // If Instagram is installed, build a chooser that features standard sharing while granting permissions
-                context.grantUriPermission("com.instagram.android", uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Target 2: Instagram Stories Intent
+            val igStoryIntent = Intent("com.instagram.share.ADD_TO_STORY").apply {
+                setDataAndType(uri, mimeType)
+                putExtra("interactive_asset_uri", uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra("content_url", contentUrl)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            // Base Send Intent for general chooser (WhatsApp, Telegram, etc.)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra(Intent.EXTRA_TEXT, contentUrl)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
             val chooser = Intent.createChooser(sendIntent, chooserTitle).apply {
                 addFlags(FLAG_ACTIVITY_NEW_TASK)
+
+                val initialIntents = mutableListOf<Intent>()
+                if (fbStoryIntent.resolveActivity(pm) != null) {
+                    initialIntents.add(fbStoryIntent)
+                }
+                if (igStoryIntent.resolveActivity(pm) != null) {
+                    initialIntents.add(igStoryIntent)
+                }
+                if (initialIntents.isNotEmpty()) {
+                    putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents.toTypedArray())
+                }
             }
+
             context.startActivity(chooser)
             true
         }.getOrElse { error ->

@@ -19,11 +19,11 @@ expect fun getDownloadPlatform(): String
 fun getUpdateFileName(version: String): String {
     val cleanVersion = version.removePrefix("v")
     return when (getDownloadPlatform()) {
-        "android" -> "dspot-v$cleanVersion.apk"
-        "windows" -> "dspot-setup-v$cleanVersion.exe"
-        "macos" -> "dspot-v$cleanVersion.dmg"
-        "linux" -> "dspot-v$cleanVersion.AppImage"
-        else -> "dspot-v$cleanVersion.bin"
+        "android" -> "D-Spot-$cleanVersion.apk"
+        "windows" -> "D-Spot-$cleanVersion.msi"
+        "macos" -> "D-Spot-$cleanVersion.dmg"
+        "linux" -> "D-Spot-$cleanVersion.AppImage"
+        else -> "D-Spot-$cleanVersion.bin"
     }
 }
 

@@ -1,18 +1,13 @@
 package com.mika.dspot.expect
 
 import com.mika.logger.Logger
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.onDownload
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readRemaining
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.io.readByteArray
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlin.system.exitProcess
 
 actual fun startInAppUpdate(
@@ -21,9 +16,9 @@ actual fun startInAppUpdate(
     onProgress: (UpdateDownloadState) -> Unit,
 ) {
     CoroutineScope(Dispatchers.IO).launch {
-        var client: HttpClient? = null
         try {
-            client = HttpClient(CIO)
+            onProgress(UpdateDownloadState.Downloading(0f, 0L, 0L))
+
             val tempDir = File(System.getProperty("java.io.tmpdir"), "dspot-update")
             if (!tempDir.exists()) {
                 tempDir.mkdirs()
@@ -33,42 +28,69 @@ actual fun startInAppUpdate(
                 targetFile.delete()
             }
 
-            var totalBytesReported = -1L
-            var currentBytes = 0L
+            var currentUrl = downloadUrl
+            var connection: HttpURLConnection? = null
+            var redirectCount = 0
 
-            val response = client.get(downloadUrl) {
-                onDownload { bytesSentTotal, contentLength ->
-                    if (contentLength != null && contentLength > 0) {
-                        totalBytesReported = contentLength
-                        currentBytes = bytesSentTotal
-                        val progressFraction = (bytesSentTotal.toFloat() / contentLength.toFloat()).coerceIn(0f, 1f)
-                        onProgress(UpdateDownloadState.Downloading(progressFraction, bytesSentTotal, contentLength))
+            // Manually resolve HTTP -> HTTPS redirects (like Vercel 302 -> GitHub Release)
+            while (redirectCount < 10) {
+                val urlObj = URL(currentUrl)
+                connection = (urlObj.openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = true
+                    connectTimeout = 30000
+                    readTimeout = 60000
+                    setRequestProperty("User-Agent", "D-Spot-Desktop-Updater")
+                }
+                connection.connect()
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                    responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                    responseCode == 307 ||
+                    responseCode == 308
+                ) {
+                    val location = connection.getHeaderField("Location")
+                    if (!location.isNullOrEmpty()) {
+                        currentUrl = location
+                        connection.disconnect()
+                        redirectCount++
+                        continue
                     }
                 }
+                break
             }
 
-            val channel: ByteReadChannel = response.bodyAsChannel()
-            targetFile.outputStream().buffered().use { output ->
-                while (!channel.isClosedForRead) {
-                    val packet = channel.readRemaining(8192L)
-                    while (!packet.exhausted()) {
-                        val bytes = packet.readByteArray()
-                        output.write(bytes)
-                        if (totalBytesReported <= 0) {
-                            currentBytes += bytes.size
-                            onProgress(UpdateDownloadState.Downloading(-1f, currentBytes, -1L))
+            val conn = connection ?: throw IllegalStateException("Could not establish connection to $downloadUrl")
+            val contentLength = conn.contentLengthLong
+
+            conn.inputStream.use { input ->
+                FileOutputStream(targetFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalDownloaded = 0L
+
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalDownloaded += bytesRead
+
+                        val progressFraction = if (contentLength > 0L) {
+                            (totalDownloaded.toFloat() / contentLength.toFloat()).coerceIn(0f, 1f)
+                        } else {
+                            -1f
                         }
+                        onProgress(UpdateDownloadState.Downloading(progressFraction, totalDownloaded, contentLength))
                     }
+                    output.flush()
                 }
             }
+            conn.disconnect()
 
             Logger.d("AppUpdater", "Desktop update downloaded successfully to: ${targetFile.absolutePath}")
             onProgress(UpdateDownloadState.ReadyToInstall(targetFile.absolutePath))
         } catch (e: Exception) {
             Logger.e("AppUpdater", "Failed to download update on Desktop: ${e.message}")
             onProgress(UpdateDownloadState.Error(e.message ?: "Failed to download update"))
-        } finally {
-            client?.close()
         }
     }
 }

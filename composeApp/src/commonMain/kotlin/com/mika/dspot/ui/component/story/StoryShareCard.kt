@@ -200,18 +200,17 @@ fun StoryShareCard(
                 )
             }
 
-            // Footer: Signature D-Spot badge
+            // Footer: Signature D-Spot branding
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(content.copy(alpha = 0.12f))
-                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .size(16.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(content),
                     contentAlignment = Alignment.Center,
@@ -220,17 +219,27 @@ fun StoryShareCard(
                         painter = painterResource(Res.drawable.mono),
                         contentDescription = null,
                         tint = background.shareTintOn(content),
-                        modifier = Modifier.size(11.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                Spacer(modifier = Modifier.width(7.dp))
-                Text(
-                    text = "D-Spot",
-                    color = content,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp,
-                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "D-Spot",
+                        color = content,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                    )
+                    Text(
+                        text = "music.dspot.app",
+                        color = secondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }

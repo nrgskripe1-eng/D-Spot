@@ -846,6 +846,7 @@ fun App(
                                     if (currentState is UpdateDownloadState.ReadyToInstall) {
                                         installDownloadedUpdate(currentState.filePath)
                                     } else {
+                                        updateDownloadState = UpdateDownloadState.Downloading(0f, 0L, 0L)
                                         val downloadUrl = "https://dspot-web.vercel.app/api/download?platform=${getDownloadPlatform()}"
                                         val fileName = getUpdateFileName(response.tagName)
                                         startInAppUpdate(downloadUrl, fileName) { state ->
@@ -989,8 +990,27 @@ fun App(
                                             vertical = 8.dp,
                                         ),
                                 )
+
+                                val cleanedChangelog = remember(response.body) {
+                                    val lines = response.body.lines()
+                                        .filterNot { line ->
+                                            val lower = line.lowercase()
+                                            lower.contains("full changelog") ||
+                                                lower.contains("github.com") ||
+                                                lower.contains("/compare/")
+                                        }
+                                        .joinToString("\n")
+                                        .trim()
+
+                                    if (lines.isNotBlank()) {
+                                        lines
+                                    } else {
+                                        "### What's New\n• Performance improvements and bug fixes\n• UI and audio playback enhancements\n• Stability and reliability updates"
+                                    }
+                                }
+
                                 Markdown(
-                                    response.body,
+                                    cleanedChangelog,
                                     typography =
                                         markdownTypography(
                                             h1 = typo().labelLarge,

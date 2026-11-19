@@ -58,6 +58,22 @@
             <action android:name="androidx.media3.session.MediaSessionService" />
         </intent>
     </queries>
+    <queries>
+        <!-- Story / Social sharing targets -->
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.instagram.android" />
+        <intent>
+            <action android:name="com.facebook.stories.ADD_TO_STORY" />
+        </intent>
+        <intent>
+            <action android:name="com.instagram.share.ADD_TO_STORY" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
 
     <application
         android:name=".DSpotApplication"
