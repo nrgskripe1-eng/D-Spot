@@ -97,7 +97,15 @@ echo "[Step 2] Building APK..."
 echo "APK built successfully."
 
 # Step 3: Locate the built APKs
-APK_PATHS=$(find "$APK_OUTPUT_DIR" -name "*.apk")
+if [ "$BUILD_VARIANT" = "universal" ]; then
+  # Target ONLY the universal APK (which works on all phone architectures)
+  APK_PATHS=$(find "$APK_OUTPUT_DIR" -name "*universal*.apk")
+  if [ -z "$APK_PATHS" ]; then
+    APK_PATHS=$(find "$APK_OUTPUT_DIR" -name "*.apk")
+  fi
+else
+  APK_PATHS=$(find "$APK_OUTPUT_DIR" -name "*.apk")
+fi
 if [ -z "$APK_PATHS" ]; then
   echo "Error: APKs not found in $APK_OUTPUT_DIR"
   exit 1

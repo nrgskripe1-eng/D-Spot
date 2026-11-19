@@ -229,9 +229,13 @@ jobs:
       - name: Rename APK with version tag
         run: |
           VERSION="${{ needs.bump-version.outputs.version }}"
-          for f in release-files/android/*.apk; do
-            mv "$f" "release-files/android/D-Spot-${VERSION}.apk"
-          done
+          # Pick the universal APK if multiple exist, or the single signed APK
+          UNIVERSAL_APK=$(find release-files/android -name "*universal*.apk" -o -name "D-Spot*.apk" | head -n 1)
+          if [ -n "$UNIVERSAL_APK" ]; then
+            cp "$UNIVERSAL_APK" "release-files/android/D-Spot-${VERSION}.apk"
+            # Remove any split architecture APKs so ONLY the universal D-Spot-${VERSION}.apk is published
+            find release-files/android -type f -name "*.apk" ! -name "D-Spot-${VERSION}.apk" -delete
+          fi
 
       - name: Create GitHub Release and upload artifacts
         uses: softprops/action-gh-release@v2
