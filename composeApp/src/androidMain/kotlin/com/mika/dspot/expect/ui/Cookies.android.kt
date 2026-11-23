@@ -4,7 +4,6 @@ import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
-import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -39,17 +38,6 @@ actual fun PlatformWebView(
     aboveContent: @Composable (BoxScope.() -> Unit),
     onPageFinished: (String) -> Unit,
 ) {
-    // For Google login URLs, clear the WebView cookie store so that Google presents
-    // the account chooser instead of silently reusing an already-signed-in session.
-    // This only wipes the WebView's own cookies; the app's stored credentials live
-    // in DataStore and are unaffected. Desktop login is handled by JcefBrowser and
-    // is not touched here.
-    val isGoogleLoginUrl = initUrl.contains("accounts.google.com")
-    if (isGoogleLoginUrl) {
-        CookieManager.getInstance().removeAllCookies(null)
-        CookieManager.getInstance().flush()
-    }
-
     Box {
         AndroidView(
             factory = { ctx ->
@@ -72,15 +60,6 @@ actual fun PlatformWebView(
                         }
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
-
-                    // Clear session storage so Google cannot auto-select an account
-                    // from a cached session that was left by a previous login attempt.
-                    if (isGoogleLoginUrl) {
-                        clearCache(true)
-                        clearHistory()
-                        clearFormData()
-                        WebStorage.getInstance().deleteAllData()
-                    }
 
                     loadUrl(initUrl)
                 }

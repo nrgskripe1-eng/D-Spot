@@ -34,30 +34,30 @@ internal class AccountRepositoryImpl(
                     Logger.e(TAG, "getAccountInfo: ${it.message}", it)
                     emit(emptyList())
                 }
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
 
     override fun insertGoogleAccount(googleAccountEntity: GoogleAccountEntity) =
         flow {
             emit(localDataSource.insertGoogleAccount(googleAccountEntity))
-        }.flowOn(Dispatchers.Default)
+        }.flowOn(Dispatchers.IO)
 
     override fun getGoogleAccounts(): Flow<List<GoogleAccountEntity>?> =
         flow<List<GoogleAccountEntity>?> { emit(localDataSource.getGoogleAccounts()) }.flowOn(
-            Dispatchers.Default,
+            Dispatchers.IO,
         )
 
     override fun getUsedGoogleAccount(): Flow<GoogleAccountEntity?> =
         flow<GoogleAccountEntity?> { emit(localDataSource.getUsedGoogleAccount()) }.flowOn(
-            Dispatchers.Default,
+            Dispatchers.IO,
         )
 
     override suspend fun deleteGoogleAccount(email: String) =
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             localDataSource.deleteGoogleAccount(email)
         }
 
     override fun updateGoogleAccountUsed(
         email: String,
         isUsed: Boolean,
-    ): Flow<Int> = flow { emit(localDataSource.updateGoogleAccountUsed(email, isUsed)) }.flowOn(Dispatchers.Default)
+    ): Flow<Int> = flow { emit(localDataSource.updateGoogleAccountUsed(email, isUsed)) }.flowOn(Dispatchers.IO)
 }

@@ -91,6 +91,7 @@ fun LoginScreen(
     // Hide bottom navigation when entering this screen
     LaunchedEffect(Unit) {
         hideBottomNavigation()
+        createWebViewCookieManager().removeAllCookies()
     }
 
     // Show bottom navigation when leaving this screen
@@ -119,15 +120,13 @@ fun LoginScreen(
                                 devLoginSheet = false
                             },
                             onDone = { cookie ->
-                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                                coroutineScope.launch {
                                     val success = settingsViewModel.addAccount(cookie)
-                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        if (success) {
-                                            viewModel.makeToast(getString(Res.string.login_success))
-                                            navController.navigateUp()
-                                        } else {
-                                            viewModel.makeToast(getString(Res.string.login_failed))
-                                        }
+                                    if (success) {
+                                        viewModel.makeToast(getString(Res.string.login_success))
+                                        navController.navigateUp()
+                                    } else {
+                                        viewModel.makeToast(getString(Res.string.login_failed))
                                     }
                                 }
                             },
@@ -137,31 +136,24 @@ fun LoginScreen(
                 }
             ) { url ->
                 Logger.d("LogInScreen", "Current URL: $url")
-                val isYouTubeMusic = url == Config.YOUTUBE_MUSIC_MAIN_URL ||
-                    url.startsWith("https://music.youtube.com") ||
-                    url.startsWith("http://music.youtube.com")
-                if (isYouTubeMusic) {
-                    coroutineScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-                        var cookieStr = ""
-                        repeat(5) { attempt ->
-                            cookieStr = createWebViewCookieManager().getCookie(url)
-                            if (cookieStr.isNotEmpty()) return@repeat
-                            kotlinx.coroutines.delay(400)
-                            Logger.d("LogInScreen", "Cookie retry attempt ${attempt + 1}")
-                        }
+                if (url == Config.YOUTUBE_MUSIC_MAIN_URL) {
+                    coroutineScope.launch {
+                        val success =
+                            createWebViewCookieManager()
+                                .getCookie(url)
+                                .takeIf {
+                                    it.isNotEmpty()
+                                }?.let {
+                                    settingsViewModel.addAccount(it)
+                                } ?: false
 
-                        val success = cookieStr
-                            .takeIf { it.isNotEmpty() }
-                            ?.let { settingsViewModel.addAccount(it) }
-                            ?: false
+                        createWebViewCookieManager().removeAllCookies()
 
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            if (success) {
-                                viewModel.makeToast(getString(Res.string.login_success))
-                                navController.navigateUp()
-                            } else {
-                                viewModel.makeToast(getString(Res.string.login_failed))
-                            }
+                        if (success) {
+                            viewModel.makeToast(getString(Res.string.login_success))
+                            navController.navigateUp()
+                        } else {
+                            viewModel.makeToast(getString(Res.string.login_failed))
                         }
                     }
                 }
