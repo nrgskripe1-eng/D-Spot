@@ -15,20 +15,17 @@ KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
 KEY_ALIAS="${KEY_ALIAS}"
 KEY_PASSWORD="${KEY_PASSWORD}"
 
-# Check if signing credentials are set, otherwise generate a temporary self-signed keystore
+# Check if custom signing credentials are set, otherwise use the permanent repository keystore
 if [ -z "$KEY_PASSWORD" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ ! -f "$KEYSTORE_PATH" ]; then
-  KEYSTORE_PATH="/tmp/temp-release.jks"
-  KEYSTORE_PASSWORD="dspotpassword"
-  KEY_PASSWORD="dspotpassword"
-  KEY_ALIAS="dspot"
-  if [ ! -f "$KEYSTORE_PATH" ]; then
-    echo "Notice: Release keystore secrets not provided. Generating temporary self-signed release keystore..."
-    keytool -genkeypair -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
-      -keyalg RSA -keysize 2048 -validity 10000 \
-      -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
-      -dname "CN=D-Spot, OU=App, O=D-Spot, L=Unknown, ST=Unknown, C=US"
+  if [ -f "./dspot-release.jks" ]; then
+    KEYSTORE_PATH="./dspot-release.jks"
+    KEYSTORE_PASSWORD="dspotrelease2026"
+    KEY_PASSWORD="dspotrelease2026"
+    KEY_ALIAS="dspot"
+    echo "Notice: Using permanent release keystore: $KEYSTORE_PATH"
   else
-    echo "Notice: Using existing temporary release keystore: $KEYSTORE_PATH"
+    echo "Error: Neither custom signing secrets nor permanent dspot-release.jks found! Aborting to prevent signature mismatch."
+    exit 1
   fi
 fi
 

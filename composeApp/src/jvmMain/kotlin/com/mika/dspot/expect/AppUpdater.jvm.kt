@@ -112,8 +112,12 @@ actual fun installDownloadedUpdate(filePath: String) {
         val os = System.getProperty("os.name")?.lowercase().orEmpty()
         when {
             os.contains("windows") -> {
-                // Windows executable / installer
-                ProcessBuilder(file.absolutePath).start()
+                // Silent MSI install on Windows (no setup wizard)
+                if (file.name.endsWith(".msi", ignoreCase = true)) {
+                    ProcessBuilder("msiexec", "/i", file.absolutePath, "/qn", "/norestart").start()
+                } else {
+                    ProcessBuilder(file.absolutePath).start()
+                }
                 exitProcess(0)
             }
             os.contains("mac") -> {
