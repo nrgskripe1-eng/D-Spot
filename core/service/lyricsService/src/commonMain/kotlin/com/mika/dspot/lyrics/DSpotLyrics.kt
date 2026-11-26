@@ -183,8 +183,12 @@ class DSpotLyrics {
     suspend fun searchLrclibLyrics(
         q_track: String,
         q_artist: String,
-    ) = httpClient.get("https://lrclib.net/api/search") {
+        durationSeconds: Int? = null,
+    ) = httpClient.get("https://dspot-web.vercel.app/api/lyrics") {
         buildDefaultHeaders()
+        parameter("track", q_track)
+        parameter("artist", q_artist)
+        durationSeconds?.let { parameter("duration", it) }
         parameter("q", "$q_artist $q_track")
     }
 

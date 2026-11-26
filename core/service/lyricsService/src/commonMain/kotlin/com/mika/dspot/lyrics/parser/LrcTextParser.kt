@@ -1,19 +1,20 @@
-﻿package com.mika.dspot.lyrics.parser
+package com.mika.dspot.lyrics.parser
 
 import com.mika.domain.extension.decodeHtmlEntities
 import com.mika.dspot.lyrics.domain.Lyrics
 
 fun parseSyncedLyrics(data: String): Lyrics {
-    val regex = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2})\\](.+)")
+    val regex = Regex("\\[(\\d{1,2}):(\\d{2})\\.(\\d{2,3})\\](.+)")
     val lines = data.lines()
     val linesLyrics = ArrayList<Lyrics.LyricsX.Line>()
     lines.map { line ->
-        val matchResult = regex.matchEntire(line)
+        val matchResult = regex.matchEntire(line.trim())
         if (matchResult != null) {
-            val minutes = matchResult.groupValues[1].toLong()
-            val seconds = matchResult.groupValues[2].toLong()
-            val milliseconds = matchResult.groupValues[3].toLong()
-            val timeInMillis = minutes * 60_000L + seconds * 1000L + milliseconds
+            val minutes = matchResult.groupValues[1].toLongOrNull() ?: 0L
+            val seconds = matchResult.groupValues[2].toLongOrNull() ?: 0L
+            val subSeconds = matchResult.groupValues[3].toLongOrNull() ?: 0L
+            val millisPart = if (matchResult.groupValues[3].length == 3) subSeconds else subSeconds * 10L
+            val timeInMillis = minutes * 60_000L + seconds * 1000L + millisPart
             // Trim, don't drop a fixed first character. Most providers leave a space after
             // "]", but LRCLIB packs the text right against it — "[00:27.12]boy, you got me"
             // — so removeRange(0, 1) ate the first letter of every single line.

@@ -128,10 +128,11 @@ class DSpotLyricsClient {
                 .searchLrclibLyrics(
                     q_track = q_track,
                     q_artist = q_artist,
+                    durationSeconds = duration,
                 ).body<List<LrclibObject>>()
         val lrclibObject: LrclibObject? =
-            if (duration != null) {
-                rs.find { it.duration != null && abs(it.duration.toInt() - duration) <= 10 }
+            if (duration != null && duration > 0) {
+                rs.find { it.duration != null && abs(it.duration.toInt() - duration) <= 10 } ?: rs.firstOrNull()
             } else {
                 rs.firstOrNull()
             }
