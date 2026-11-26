@@ -2910,12 +2910,7 @@ fun SettingScreen(
                 )
                 SettingItem(
                     title = stringResource(Res.string.update_channel),
-                    subtitle =
-                        if (updateChannel == DataStoreManager.FDROID) {
-                            "F-Droid"
-                        } else {
-                            "D-Spot GitHub Release"
-                        },
+                    subtitle = "D-Spot GitHub Release",
                     onClick = {
                         viewModel.setAlertData(
                             SettingAlertState(
@@ -2924,19 +2919,12 @@ fun SettingScreen(
                                     SettingAlertState.SelectData(
                                         listSelect =
                                             listOf(
-                                                (updateChannel == DataStoreManager.FDROID) to "F-Droid",
-                                                (updateChannel == DataStoreManager.GITHUB) to "D-Spot GitHub Release",
+                                                true to "D-Spot GitHub Release",
                                             ),
                                     ),
                                 confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setUpdateChannel(
-                                            when (state.selectOne?.getSelected()) {
-                                                "F-Droid" -> DataStoreManager.FDROID
-                                                "D-Spot GitHub Release" -> DataStoreManager.GITHUB
-                                                else -> DataStoreManager.GITHUB
-                                            },
-                                        )
+                                    runBlocking { getString(Res.string.change) } to {
+                                        viewModel.setUpdateChannel(DataStoreManager.GITHUB)
                                     },
                                 dismiss = runBlocking { getString(Res.string.cancel) },
                             ),
