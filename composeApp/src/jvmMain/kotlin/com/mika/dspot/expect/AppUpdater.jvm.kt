@@ -136,3 +136,43 @@ actual fun installDownloadedUpdate(filePath: String) {
         Logger.e("AppUpdater", "Failed to launch installer: ${e.message}")
     }
 }
+
+private fun getDesktopUpdateDir(): File {
+    val userHome = System.getProperty("user.home")
+    return if (userHome != null) {
+        File(userHome, "Downloads")
+    } else {
+        File(System.getProperty("java.io.tmpdir"), "dspot-update")
+    }
+}
+
+actual fun getDownloadedUpdatePath(fileName: String): String? {
+    return try {
+        val file = File(getDesktopUpdateDir(), fileName)
+        if (file.exists() && file.length() > 1024L * 1024L) {
+            file.absolutePath
+        } else {
+            null
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+actual fun cleanupDownloadedUpdates(currentVersion: String) {
+    try {
+        val dir = getDesktopUpdateDir()
+        val cleanCurrent = currentVersion.removePrefix("v")
+        dir.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.startsWith("D-Spot-") && (file.name.endsWith(".msi") || file.name.endsWith(".exe"))) {
+                val fileVer = file.name.removePrefix("D-Spot-").substringBeforeLast(".")
+                if (fileVer == cleanCurrent) {
+                    file.delete()
+                    Logger.d("AppUpdater", "Cleaned up installed desktop installer: ${file.name}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Logger.e("AppUpdater", "Failed to cleanup old desktop installers: ${e.message}")
+    }
+}

@@ -128,3 +128,45 @@ actual fun installDownloadedUpdate(filePath: String) {
         Logger.e("AppUpdater", "Failed to trigger Android install intent: ${e.message}")
     }
 }
+
+private fun getAndroidUpdateDir(context: Context): File {
+    val publicDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    return if (publicDownloads != null && (publicDownloads.exists() || publicDownloads.mkdirs())) {
+        publicDownloads
+    } else {
+        context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: File(context.cacheDir, "updates")
+    }
+}
+
+actual fun getDownloadedUpdatePath(fileName: String): String? {
+    return try {
+        val context: Context = getKoin().get()
+        val file = File(getAndroidUpdateDir(context), fileName)
+        if (file.exists() && file.length() > 1024L * 1024L) {
+            file.absolutePath
+        } else {
+            null
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+actual fun cleanupDownloadedUpdates(currentVersion: String) {
+    try {
+        val context: Context = getKoin().get()
+        val dir = getAndroidUpdateDir(context)
+        val cleanCurrent = currentVersion.removePrefix("v")
+        dir.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.startsWith("D-Spot-") && file.name.endsWith(".apk")) {
+                val fileVer = file.name.removePrefix("D-Spot-").removeSuffix(".apk")
+                if (fileVer == cleanCurrent) {
+                    file.delete()
+                    Logger.d("AppUpdater", "Cleaned up installed APK: ${file.name}")
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Logger.e("AppUpdater", "Failed to cleanup old APKs: ${e.message}")
+    }
+}

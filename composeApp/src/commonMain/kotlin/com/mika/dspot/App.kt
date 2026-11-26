@@ -73,6 +73,8 @@ import com.mika.dspot.expect.currentOrientation
 import com.mika.dspot.expect.openUrl
 import com.mika.dspot.expect.startInAppUpdate
 import com.mika.dspot.expect.installDownloadedUpdate
+import com.mika.dspot.expect.getDownloadedUpdatePath
+import com.mika.dspot.expect.cleanupDownloadedUpdates
 import com.mika.dspot.expect.UpdateDownloadState
 import com.mika.dspot.expect.ui.layerBackdrop
 import com.mika.dspot.expect.ui.rememberBackdrop
@@ -451,6 +453,10 @@ fun App(
         }
     }
 
+    LaunchedEffect(Unit) {
+        cleanupDownloadedUpdates(VersionManager.getVersionName())
+    }
+
     var updateDownloadState by remember { mutableStateOf<UpdateDownloadState>(UpdateDownloadState.Idle) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -822,6 +828,14 @@ fun App(
 
                 if (shouldShowUpdateDialog) {
                     val response = updateData ?: return@Scaffold
+                    LaunchedEffect(shouldShowUpdateDialog, response.tagName) {
+                        if (updateDownloadState is UpdateDownloadState.Idle) {
+                            val existingPath = getDownloadedUpdatePath(getUpdateFileName(response.tagName))
+                            if (existingPath != null) {
+                                updateDownloadState = UpdateDownloadState.ReadyToInstall(existingPath)
+                            }
+                        }
+                    }
                     val isDownloading = updateDownloadState is UpdateDownloadState.Downloading
                     val isReadyToInstall = updateDownloadState is UpdateDownloadState.ReadyToInstall
 

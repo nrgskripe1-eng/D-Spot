@@ -15,3 +15,7 @@ expect fun startInAppUpdate(
 
 expect fun installDownloadedUpdate(filePath: String)
 
+expect fun getDownloadedUpdatePath(fileName: String): String?
+
+expect fun cleanupDownloadedUpdates(currentVersion: String)
+

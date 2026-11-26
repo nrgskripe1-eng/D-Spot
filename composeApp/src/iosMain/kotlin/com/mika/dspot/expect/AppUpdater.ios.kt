@@ -17,3 +17,9 @@ actual fun installDownloadedUpdate(filePath: String) {
     // No-op on iOS
 }
 
+actual fun getDownloadedUpdatePath(fileName: String): String? = null
+
+actual fun cleanupDownloadedUpdates(currentVersion: String) {
+    // No-op on iOS
+}
+
