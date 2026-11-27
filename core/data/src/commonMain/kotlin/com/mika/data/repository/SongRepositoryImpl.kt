@@ -534,9 +534,9 @@ internal class SongRepositoryImpl(
                     val client = io.ktor.client.HttpClient()
                     try {
                         val bytes = client.get(streamUrl).body<ByteArray>()
-                        val outPath = path.toPath()
                         val header = bytes.decodeToString(0, minOf(bytes.size, 32))
                         if (header.trimStart().startsWith("#EXTM3U")) {
+                            val outPath = "$path.ts".toPath()
                             val playlistText = bytes.decodeToString()
                             val segmentUrls =
                                 playlistText
@@ -556,6 +556,7 @@ internal class SongRepositoryImpl(
                                 }
                             }
                         } else {
+                            val outPath = "$path.mp3".toPath()
                             okio.FileSystem.SYSTEM.write(outPath) {
                                 write(bytes)
                             }
