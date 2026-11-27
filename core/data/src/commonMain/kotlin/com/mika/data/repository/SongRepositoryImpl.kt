@@ -535,8 +535,30 @@ internal class SongRepositoryImpl(
                     try {
                         val bytes = client.get(streamUrl).body<ByteArray>()
                         val outPath = path.toPath()
-                        okio.FileSystem.SYSTEM.write(outPath) {
-                            write(bytes)
+                        val header = bytes.decodeToString(0, minOf(bytes.size, 32))
+                        if (header.trimStart().startsWith("#EXTM3U")) {
+                            val playlistText = bytes.decodeToString()
+                            val segmentUrls =
+                                playlistText
+                                    .lineSequence()
+                                    .map { it.trim() }
+                                    .filter { it.isNotEmpty() && !it.startsWith("#") }
+                                    .toList()
+                            if (segmentUrls.isEmpty()) {
+                                error("Empty HLS playlist")
+                            }
+                            okio.FileSystem.SYSTEM.write(outPath) {
+                                segmentUrls.forEachIndexed { index, segUrl ->
+                                    val segBytes = client.get(segUrl).body<ByteArray>()
+                                    write(segBytes)
+                                    val pct = ((index + 1).toFloat() / segmentUrls.size) * 100f
+                                    emit(DownloadProgress(audioDownloadProgress = pct))
+                                }
+                            }
+                        } else {
+                            okio.FileSystem.SYSTEM.write(outPath) {
+                                write(bytes)
+                            }
                         }
                     } finally {
                         client.close()
