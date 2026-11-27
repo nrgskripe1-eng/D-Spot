@@ -1,4 +1,4 @@
-﻿@file:OptIn(ExperimentalTime::class)
+@file:OptIn(ExperimentalTime::class)
 
 package com.mika.data.repository
 
@@ -57,7 +57,7 @@ internal class LyricsCanvasRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
     private val spotify: Spotify,
-    private val simpMusicLyrics: DSpotLyricsClient,
+    private val dspotLyrics: DSpotLyricsClient,
     private val aiClient: AiClient,
 ) : LyricsCanvasRepository {
     /**
@@ -295,7 +295,7 @@ internal class LyricsCanvasRepositoryImpl(
                 // than no answer at all here.
                 val byAlbum =
                     albumName?.let { name ->
-                        simpMusicLyrics
+                        dspotLyrics
                             .searchAMAlbum("$name $artist".cleanForSearch(), limit = AM_SEARCH_LIMIT)
                             .onFailure { Logger.e(AM_ARTWORK_TAG, "album search failed: ${it.message}") }
                             .getOrNull()
@@ -307,7 +307,7 @@ internal class LyricsCanvasRepositoryImpl(
                 // this goes through songs; the album name, when known, still decides between the
                 // several albums a track can legitimately appear on.
                 val album =
-                    byAlbum ?: simpMusicLyrics
+                    byAlbum ?: dspotLyrics
                         .searchAMSongsWithAlbums("${song.title} $artist".cleanForSearch(), limit = AM_SEARCH_LIMIT)
                         .onFailure { Logger.e(AM_ARTWORK_TAG, "song search failed: ${it.message}") }
                         .getOrNull()
@@ -336,7 +336,7 @@ internal class LyricsCanvasRepositoryImpl(
                 // platforms different results for the same track. Falls back to the master url,
                 // which still plays — just not as cheaply.
                 val url =
-                    simpMusicLyrics
+                    dspotLyrics
                         .selectAMRendition(master, AM_MIN_RENDITION_WIDTH)
                         .getOrNull()
                         ?: master
@@ -511,9 +511,22 @@ internal class LyricsCanvasRepositoryImpl(
         duration: Int?,
     ): Flow<Resource<Lyrics>> =
         flow {
-            Logger.w("Lyrics", "getLrclibLyricsData: $sartist $strack $duration")
+            val cleanedTitle =
+                strack
+                    .replace(Regex("""\([^)]*\)|\[[^\]]*]"""), " ")
+                    .replace(Regex("""(?i)\b(slowed|reverb|hardtekk|remix|unreleased|demo|freestyle|edit|bootleg)\b"""), " ")
+                    .replace(Regex("""\s+"""), " ")
+                    .trim()
+            val (effectiveArtist, effectiveTrack) =
+                if (" - " in cleanedTitle) {
+                    val parts = cleanedTitle.split(" - ", limit = 2)
+                    parts[0].trim() to parts[1].trim()
+                } else {
+                    sartist to cleanedTitle
+                }
+            Logger.w("Lyrics", "getLrclibLyricsData: $effectiveArtist $effectiveTrack $duration")
             val qartist =
-                sartist
+                effectiveArtist
                     .replace(
                         Regex("\\((feat\\.|ft.|cùng với|con|mukana|com|avec|合作音乐人: ) "),
                         " ",
@@ -534,7 +547,7 @@ internal class LyricsCanvasRepositoryImpl(
                     ).replace("  ", " ")
                     .replace(Regex("([()])"), "")
                     .replace(".", " ")
-            simpMusicLyrics
+            dspotLyrics
                 .searchLrclibLyrics(qtrack, qartist, duration)
                 .onSuccess {
                     it?.let { emit(Resource.Success<Lyrics>(it.toLyrics())) }
@@ -573,7 +586,7 @@ internal class LyricsCanvasRepositoryImpl(
                     ).replace("  ", " ")
                     .replace(Regex("([()])"), "")
                     .replace(".", " ")
-            simpMusicLyrics
+            dspotLyrics
                 .searchBetterLyrics(qtrack, qartist, duration)
                 .onSuccess { ttml ->
                     if (ttml.isNullOrEmpty()) {
@@ -590,7 +603,7 @@ internal class LyricsCanvasRepositoryImpl(
 
     override fun getArtistEditorial(artistName: String): Flow<Resource<ArtistEditorial>> =
         flow {
-            simpMusicLyrics
+            dspotLyrics
                 .searchAMArtist(artistName, limit = 1)
                 .onSuccess { artists ->
                     val id = artists.firstOrNull()?.id
@@ -602,7 +615,7 @@ internal class LyricsCanvasRepositoryImpl(
                         emit(Resource.Success(ArtistEditorial(logo = null, motion = null)))
                         return@onSuccess
                     }
-                    simpMusicLyrics
+                    dspotLyrics
                         .getAMArtist(id)
                         .onSuccess { artist ->
                             val attributes = artist?.attributes
@@ -660,7 +673,7 @@ internal class LyricsCanvasRepositoryImpl(
 
     /** Falls back to the master, which still plays — just not as cheaply. */
     private suspend fun resolveAMRendition(master: String): String =
-        simpMusicLyrics
+        dspotLyrics
             .selectAMRendition(master, AM_MIN_RENDITION_WIDTH)
             .getOrNull() ?: master
 
@@ -684,7 +697,7 @@ internal class LyricsCanvasRepositoryImpl(
         }.flowOn(Dispatchers.Default)
 
     // D-Spot Lyrics
-    private val simpMusicLyricsTag = "DSpotLyricsRepository"
+    private val dspotLyricsTag = "DSpotLyricsRepository"
 
     /** A 404 only means nobody has added lyrics for this song yet; anything else is a real failure. */
     private fun logDSpotLyricsFailure(
@@ -693,21 +706,21 @@ internal class LyricsCanvasRepositoryImpl(
     ) {
         val message = "$what: ${error.message}"
         if ((error as? DSpotLyricsApiException)?.code == 404) {
-            Logger.d(simpMusicLyricsTag, message)
+            Logger.d(dspotLyricsTag, message)
         } else {
-            Logger.e(simpMusicLyricsTag, message)
+            Logger.e(dspotLyricsTag, message)
         }
     }
 
     override fun getDSpotLyrics(videoId: String): Flow<Resource<Lyrics>> =
         flow {
-            simpMusicLyrics
+            dspotLyrics
                 .getLyrics(videoId)
                 .onSuccess { lyrics ->
-                    Logger.d(simpMusicLyricsTag, "Lyrics found: $lyrics")
+                    Logger.d(dspotLyricsTag, "Lyrics found: $lyrics")
                     val result = lyrics.firstOrNull()
                     if (result == null) {
-                        Logger.w(simpMusicLyricsTag, "No lyrics found for videoId: $videoId")
+                        Logger.w(dspotLyricsTag, "No lyrics found for videoId: $videoId")
                         emit(Resource.Error<Lyrics>("No lyrics found"))
                         return@onSuccess
                     }
@@ -720,7 +733,7 @@ internal class LyricsCanvasRepositoryImpl(
                                 ),
                         )
                     if (appLyrics == null) {
-                        Logger.w(simpMusicLyricsTag, "Failed to convert lyrics for videoId: $videoId")
+                        Logger.w(dspotLyricsTag, "Failed to convert lyrics for videoId: $videoId")
                         emit(Resource.Error<Lyrics>("Failed to convert lyrics"))
                         return@onSuccess
                     }
@@ -740,10 +753,10 @@ internal class LyricsCanvasRepositoryImpl(
         language: String,
     ): Flow<Resource<Lyrics>> =
         flow {
-            simpMusicLyrics
+            dspotLyrics
                 .getTranslatedLyrics(videoId, language)
                 .onSuccess { lyrics ->
-                    Logger.d(simpMusicLyricsTag, "Translated Lyrics found: ${lyrics.toLyrics()}")
+                    Logger.d(dspotLyricsTag, "Translated Lyrics found: ${lyrics.toLyrics()}")
                     emit(
                         Resource.Success<Lyrics>(
                             lyrics
@@ -768,13 +781,13 @@ internal class LyricsCanvasRepositoryImpl(
         upvote: Boolean,
     ): Flow<Resource<String>> =
         flow {
-            simpMusicLyrics
+            dspotLyrics
                 .voteLyrics(lyricsId, upvote)
                 .onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Vote Lyrics Success: $it")
+                    Logger.d(dspotLyricsTag, "Vote Lyrics Success: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Vote Lyrics Error: ${it.message}")
+                    Logger.e(dspotLyricsTag, "Vote Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote lyrics"))
                 }
         }.flowOn(Dispatchers.Default)
@@ -784,13 +797,13 @@ internal class LyricsCanvasRepositoryImpl(
         upvote: Boolean,
     ): Flow<Resource<String>> =
         flow {
-            simpMusicLyrics
+            dspotLyrics
                 .voteTranslatedLyrics(translatedLyricsId, upvote)
                 .onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Vote Translated Lyrics Success: $it")
+                    Logger.d(dspotLyricsTag, "Vote Translated Lyrics Success: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Vote Translated Lyrics Error: ${it.message}")
+                    Logger.e(dspotLyricsTag, "Vote Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to vote translated lyrics"))
                 }
         }.flowOn(Dispatchers.Default)
@@ -823,7 +836,7 @@ internal class LyricsCanvasRepositoryImpl(
                     null
                 }
             val (contributorName, contributorEmail) = dataStoreManager.contributorName.first() to dataStoreManager.contributorEmail.first()
-            simpMusicLyrics
+            dspotLyrics
                 .insertLyrics(
                     LyricsBody(
                         videoId = track.videoId,
@@ -839,10 +852,10 @@ internal class LyricsCanvasRepositoryImpl(
                         trackType = if (track.thumbnails?.firstOrNull()?.let { it.width == it.height && it.width > 0 } == true) "SONG" else "VIDEO",
                     ),
                 ).onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Inserted Lyrics: $it")
+                    Logger.d(dspotLyricsTag, "Inserted Lyrics: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Insert Lyrics Error: ${it.message}")
+                    Logger.e(dspotLyricsTag, "Insert Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert lyrics"))
                 }
         }.flowOn(Dispatchers.Default)
@@ -862,7 +875,7 @@ internal class LyricsCanvasRepositoryImpl(
                 return@flow
             }
             val (contributorName, contributorEmail) = dataStoreManager.contributorName.first() to dataStoreManager.contributorEmail.first()
-            simpMusicLyrics
+            dspotLyrics
                 .insertTranslatedLyrics(
                     TranslatedLyricsBody(
                         videoId = track.videoId,
@@ -872,10 +885,10 @@ internal class LyricsCanvasRepositoryImpl(
                         contributorEmail = contributorEmail,
                     ),
                 ).onSuccess {
-                    Logger.d(simpMusicLyricsTag, "Inserted Translated Lyrics: $it")
+                    Logger.d(dspotLyricsTag, "Inserted Translated Lyrics: $it")
                     emit(Resource.Success(it.id))
                 }.onFailure {
-                    Logger.e(simpMusicLyricsTag, "Insert Translated Lyrics Error: ${it.message}")
+                    Logger.e(dspotLyricsTag, "Insert Translated Lyrics Error: ${it.message}")
                     emit(Resource.Error<String>(it.message ?: "Failed to insert translated lyrics"))
                 }
         }.flowOn(Dispatchers.Default)

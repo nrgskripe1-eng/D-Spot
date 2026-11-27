@@ -1,4 +1,4 @@
-﻿package com.mika.dspot.extension
+package com.mika.dspot.extension
 
 import com.eygraber.uri.Uri
 
@@ -43,6 +43,26 @@ fun String.toAppDeepLinkOrNull(): Uri? {
                 "playlist" -> uri.getQueryParameter("list")?.let { Uri.parse("$APP_SCHEME://playlist?list=$it") }
                 "channel" -> segments.getOrNull(1)?.let { Uri.parse("$APP_SCHEME://channel/$it") }
                 else -> null
+            }
+
+        "open.spotify.com" -> {
+            // Handle optional locale prefix like /intl-en/track/...
+            val normalizedSegments =
+                if (segments.firstOrNull()?.startsWith("intl-") == true) segments.drop(1) else segments
+            val type = normalizedSegments.getOrNull(0)
+            val id = normalizedSegments.getOrNull(1)?.takeIf { it.isNotBlank() }
+            if (type in setOf("track", "album", "playlist", "user") && id != null) {
+                Uri.parse("$APP_SCHEME://spotify?type=$type&id=$id")
+            } else {
+                null
+            }
+        }
+
+        "soundcloud.com", "m.soundcloud.com", "on.soundcloud.com" ->
+            if (segments.isNotEmpty()) {
+                Uri.parse("$APP_SCHEME://soundcloud?url=$trimmed")
+            } else {
+                null
             }
 
         else -> null

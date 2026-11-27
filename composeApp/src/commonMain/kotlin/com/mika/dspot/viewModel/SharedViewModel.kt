@@ -77,6 +77,9 @@ import com.mika.dspot.utils.decodePromos
 import com.mika.dspot.utils.shownPromoIds
 import com.mika.dspot.utils.withShownPromo
 import com.mika.dspot.viewModel.base.BaseViewModel
+import io.ktor.client.request.get
+import io.ktor.client.request.parameter
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -591,6 +594,76 @@ class SharedViewModel(
 
     fun setIntent(intent: GenericIntent?) {
         _intent.value = intent
+    }
+
+    fun resolveSoundCloudLink(
+        url: String,
+        onNavigatePlaylist: (String) -> Unit,
+        onNavigateArtist: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val resolved = com.mika.data.soundcloud.SoundCloudClient().resolveUrl(url)
+            when (resolved) {
+                is com.mika.data.soundcloud.SoundCloudClient.ResolveResult.Track -> {
+                    loadSharedMediaItem(resolved.videoId)
+                }
+                is com.mika.data.soundcloud.SoundCloudClient.ResolveResult.Playlist -> {
+                    onNavigatePlaylist(resolved.playlistId)
+                }
+                is com.mika.data.soundcloud.SoundCloudClient.ResolveResult.Artist -> {
+                    onNavigateArtist(resolved.channelId)
+                }
+                null -> {
+                    makeToast("Could not resolve SoundCloud link")
+                }
+            }
+        }
+    }
+
+    fun resolveSpotifyLink(
+        type: String,
+        id: String,
+        onNavigateSearch: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val spotifyUrl = "https://open.spotify.com/$type/$id"
+            val title = runCatching {
+                val client = io.ktor.client.HttpClient()
+                try {
+                    val respText = client.get("https://open.spotify.com/oembed") {
+                        parameter("url", spotifyUrl)
+                    }.bodyAsText()
+                    val jsonObj = kotlinx.serialization.json.Json.parseToJsonElement(respText) as? kotlinx.serialization.json.JsonObject
+                    (jsonObj?.get("title") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                } finally {
+                    client.close()
+                }
+            }.getOrNull()
+
+            if (title.isNullOrBlank()) {
+                makeToast("Could not resolve Spotify link")
+                return@launch
+            }
+
+            if (type == "track") {
+                val searchRepo = org.koin.mp.KoinPlatform.getKoin().get<com.mika.domain.repository.SearchRepository>()
+                var matchedId: String? = null
+                searchRepo.getSearchDataSong(title).collect { res ->
+                    if (res is Resource.Success<*>) {
+                        @Suppress("UNCHECKED_CAST")
+                        val list = res.data as? List<com.mika.domain.data.model.searchResult.songs.SongsResult>
+                        matchedId = list?.firstOrNull()?.videoId
+                    }
+                }
+                if (matchedId != null) {
+                    loadSharedMediaItem(matchedId!!)
+                } else {
+                    onNavigateSearch(title)
+                }
+            } else {
+                onNavigateSearch(title)
+            }
+        }
     }
 
     /**

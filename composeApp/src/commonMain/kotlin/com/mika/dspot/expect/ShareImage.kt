@@ -30,3 +30,10 @@ expect suspend fun shareImage(
     mimeType: String = "image/png",
     contentUrl: String? = null,
 ): Boolean
+
+expect suspend fun shareVideo(
+    videoBytes: ByteArray,
+    fileName: String,
+    chooserTitle: String,
+    contentUrl: String? = null,
+): Boolean

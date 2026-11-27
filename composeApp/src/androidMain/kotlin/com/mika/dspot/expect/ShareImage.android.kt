@@ -144,3 +144,79 @@ actual suspend fun shareImage(
             false
         }
     }
+
+actual suspend fun shareVideo(
+    videoBytes: ByteArray,
+    fileName: String,
+    chooserTitle: String,
+    contentUrl: String?,
+): Boolean =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val context: AppCompatActivity = getKoin().get()
+            val dir = File(context.cacheDir, "shared_videos").apply { mkdirs() }
+            val file = File(dir, fileName)
+            file.writeBytes(videoBytes)
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.FileProvider", file)
+            val pm = context.packageManager
+
+            listOf("com.facebook.katana", "com.facebook.orca", "com.instagram.android").forEach { pkg ->
+                try {
+                    context.grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Throwable) {
+                }
+            }
+
+            // Facebook Stories for video
+            val fbStoryIntent = Intent("com.facebook.stories.ADD_TO_STORY").apply {
+                setDataAndType(uri, "video/mp4")
+                putExtra("interactive_asset_uri", uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra("content_url", contentUrl)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            // Instagram Stories for video
+            val igStoryIntent = Intent("com.instagram.share.ADD_TO_STORY").apply {
+                setDataAndType(uri, "video/mp4")
+                putExtra("interactive_asset_uri", uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra("content_url", contentUrl)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "video/mp4"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                if (!contentUrl.isNullOrBlank()) {
+                    putExtra(Intent.EXTRA_TEXT, contentUrl)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(sendIntent, chooserTitle).apply {
+                addFlags(FLAG_ACTIVITY_NEW_TASK)
+                val initialIntents = mutableListOf<Intent>()
+                if (fbStoryIntent.resolveActivity(pm) != null) {
+                    initialIntents.add(fbStoryIntent)
+                }
+                if (igStoryIntent.resolveActivity(pm) != null) {
+                    initialIntents.add(igStoryIntent)
+                }
+                if (initialIntents.isNotEmpty()) {
+                    putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents.toTypedArray())
+                }
+            }
+
+            context.startActivity(chooser)
+            true
+        }.getOrElse { error ->
+            Logger.e(TAG, "Could not share video $fileName: ${error.message}")
+            false
+        }
+    }

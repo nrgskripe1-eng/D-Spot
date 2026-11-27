@@ -1,4 +1,4 @@
-﻿package com.mika.media3.ui
+package com.mika.media3.ui
 
 import android.app.PictureInPictureParams
 import android.content.Context
@@ -287,7 +287,8 @@ fun MediaPlayerViewWithSubtitle(
         // What the ear is hearing right now, rather than where the player is.
         val nowMs = timelineState.current - lyricsOffsetMs
         if (nowMs > 0L) {
-            lines.indices.forEach { i ->
+            var foundLineIndex = -1
+            for (i in lines.indices) {
                 val sentence = lines[i]
                 val startTimeMs = sentence.startTimeMs.toLong()
 
@@ -300,23 +301,32 @@ fun MediaPlayerViewWithSubtitle(
                         startTimeMs + 60000
                     }
                 if (nowMs in startTimeMs..endTimeMs) {
-                    currentLineIndex = i
+                    foundLineIndex = i
+                    break
                 }
             }
-            translatedLines?.indices?.forEach { i ->
-                val sentence = translatedLines[i]
-                val startTimeMs = sentence.startTimeMs.toLong()
+            if (foundLineIndex != -1) {
+                currentLineIndex = foundLineIndex
+            }
+            if (translatedLines != null) {
+                var foundTranslatedIndex = -1
+                for (i in translatedLines.indices) {
+                    val sentence = translatedLines[i]
+                    val startTimeMs = sentence.startTimeMs.toLong()
 
-                // estimate the end time of the current sentence based on the start time of the next sentence
-                val endTimeMs =
-                    if (i < translatedLines.size - 1) {
-                        translatedLines[i + 1].startTimeMs.toLong()
-                    } else {
-                        // if this is the last sentence, set the end time to be some default value (e.g., 1 minute after the start time)
-                        startTimeMs + 60000
+                    val endTimeMs =
+                        if (i < translatedLines.size - 1) {
+                            translatedLines[i + 1].startTimeMs.toLong()
+                        } else {
+                            startTimeMs + 60000
+                        }
+                    if (nowMs in startTimeMs..endTimeMs) {
+                        foundTranslatedIndex = i
+                        break
                     }
-                if (nowMs in startTimeMs..endTimeMs) {
-                    currentTranslatedLineIndex = i
+                }
+                if (foundTranslatedIndex != -1) {
+                    currentTranslatedLineIndex = foundTranslatedIndex
                 }
             }
             if (lines.isNotEmpty() &&

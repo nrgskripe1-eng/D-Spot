@@ -15,6 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -396,6 +402,23 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
             transparent = !nativeTitleBar,
             state = windowState,
             visible = isVisible,
+            onPreviewKeyEvent = { event ->
+                if (event.type == KeyEventType.KeyDown && (event.isCtrlPressed || event.isMetaPressed)) {
+                    when (event.key) {
+                        Key.K, Key.F -> {
+                            sharedViewModel.setIntent(
+                                com.mika.domain.data.model.intent.GenericIntent(
+                                    data = com.eygraber.uri.Uri.parse("dspot://search"),
+                                ),
+                            )
+                            true
+                        }
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            },
         ) {
             // Returning from macOS System Settings is the only reliable time to learn whether the
             // user enabled notifications after denying the one-shot system prompt.

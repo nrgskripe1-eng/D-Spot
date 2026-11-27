@@ -238,6 +238,9 @@ fun SearchScreen(
     val historyState = rememberLazyListState()
     val moodGridState = rememberLazyGridState()
     val resultsState = rememberLazyListState()
+    LaunchedEffect(activeQuery, searchScreenState.searchType) {
+        resultsState.scrollToItem(0)
+    }
     var searchBarHeightPx by remember { mutableIntStateOf(0) }
     val searchBarHeight = if (isDesktop) {
         if (searchUIType == SearchUIType.SEARCH_RESULTS) 56.dp else 12.dp

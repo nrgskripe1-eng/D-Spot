@@ -1,4 +1,4 @@
-﻿@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import com.android.build.gradle.internal.tasks.CompileArtProfileTask
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -90,6 +90,9 @@ kotlin {
                 // Add KMP dependencies here
                 // Kotlinx serialization
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
 
                 // DataStore
                 implementation(libs.datastore.preferences)

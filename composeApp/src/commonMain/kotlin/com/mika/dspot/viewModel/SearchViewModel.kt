@@ -18,6 +18,7 @@ import com.mika.domain.utils.toQueryList
 import com.mika.logger.LogLevel
 import com.mika.logger.Logger
 import com.mika.dspot.viewModel.base.BaseViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -118,6 +119,7 @@ class SearchViewModel(
     val moodArtwork: StateFlow<Map<String, String>> get() = _moodArtwork.asStateFlow()
 
     private val requestedArtwork = mutableSetOf<String>()
+    private var searchJob: Job? = null
 
     var regionCode: String? = null
     var language: String? = null
@@ -196,7 +198,8 @@ class SearchViewModel(
 
     fun searchSongs(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataSong(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -219,7 +222,8 @@ class SearchViewModel(
     fun searchAll(query: String) {
         _activeSearchQuery.value = query
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             var song = ArrayList<SongsResult>()
             val video = ArrayList<VideosResult>()
             var album = ArrayList<AlbumsResult>()
@@ -370,7 +374,8 @@ class SearchViewModel(
 
     fun searchAlbums(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataAlbum(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -395,7 +400,8 @@ class SearchViewModel(
 
     fun searchFeaturedPlaylist(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataFeaturedPlaylist(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -420,7 +426,8 @@ class SearchViewModel(
 
     fun searchPodcast(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataPodcast(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -445,7 +452,8 @@ class SearchViewModel(
 
     fun searchArtists(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataArtist(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -470,7 +478,8 @@ class SearchViewModel(
 
     fun searchPlaylists(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataPlaylist(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {
@@ -495,7 +504,8 @@ class SearchViewModel(
 
     fun searchVideos(query: String) {
         _searchScreenUIState.value = SearchScreenUIState.Loading
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             searchRepository.getSearchDataVideo(query).collect { values ->
                 when (values) {
                     is Resource.Success -> {

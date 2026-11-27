@@ -1,4 +1,4 @@
-﻿package com.mika.spotify
+package com.mika.spotify
 
 import com.mika.spotify.auth.SpotifyAuth
 import com.mika.spotify.model.response.spotify.CanvasResponse
@@ -94,5 +94,19 @@ class Spotify {
         clientToken: String,
     ) = runCatching {
         spotifyClient.getSpotifyCanvas(trackId, token, clientToken).body<CanvasResponse>()
+    }
+
+    suspend fun getUserPlaylists(
+        accessToken: String,
+        limit: Int = 50,
+    ) = runCatching {
+        spotifyClient.getUserPlaylists(accessToken, limit)
+    }
+
+    suspend fun getUserLikedTracks(
+        accessToken: String,
+        limit: Int = 50,
+    ) = runCatching {
+        spotifyClient.getUserLikedTracks(accessToken, limit)
     }
 }

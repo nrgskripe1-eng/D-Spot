@@ -1,4 +1,4 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.common.ITAG
 import com.mika.common.MERGING_DATA_TYPE
@@ -7,6 +7,8 @@ import com.mika.common.VIDEO_QUALITY
 import com.mika.data.db.datasource.LocalDataSource
 import com.mika.data.mapping.toSponsorSkipSegments
 import com.mika.data.mapping.toTrack
+import com.mika.data.soundcloud.SC_ID_PREFIX
+import com.mika.data.soundcloud.SoundCloudClient
 import com.mika.domain.data.entities.NewFormatEntity
 import com.mika.domain.data.model.browse.album.Track
 import com.mika.domain.data.model.mediaService.SponsorSkipSegments
@@ -33,6 +35,7 @@ internal class StreamRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
 ) : StreamRepository {
+    private val soundCloudClient by lazy { SoundCloudClient() }
     override suspend fun insertNewFormat(newFormat: NewFormatEntity) =
         withContext(Dispatchers.Default) {
             localDataSource.insertNewFormat(newFormat)
@@ -91,6 +94,12 @@ internal class StreamRepositoryImpl(
         muxed: Boolean,
     ): Flow<String?> =
         flow {
+            if (videoId.startsWith(SC_ID_PREFIX)) {
+                val scStreamUrl = runCatching { soundCloudClient.getStreamUrl(videoId) }.getOrNull()
+                Logger.i("Stream", "$videoId: SoundCloud stream ${if (scStreamUrl == null) "missing" else "found"}")
+                emit(scStreamUrl)
+                return@flow
+            }
             val itag =
                 if (isDownloading) {
                     QUALITY.itagOf(dataStoreManager.downloadQuality.first())

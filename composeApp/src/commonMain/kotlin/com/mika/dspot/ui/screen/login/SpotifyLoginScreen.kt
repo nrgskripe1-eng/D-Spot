@@ -182,14 +182,18 @@ fun SpotifyLoginScreen(
                     url.contains("open.spotify.com") ||
                     (cookie.contains("sp_dc=") && !url.contains("/login"))
                 if (isSpotifyLoginDone) {
-                    cookie
-                        .takeIf {
-                            it.isNotEmpty()
-                        }?.let {
-                            viewModel.saveSpotifySpdc(it)
-                            viewModel.makeToast(getStringBlocking(Res.string.login_success))
-                            navController.navigateUp()
-                        }
+                    val resolvedCookie =
+                        cookie.takeIf { it.isNotEmpty() }
+                            ?: cookieManager.getCookie("https://open.spotify.com/").takeIf { it.isNotEmpty() }
+                            ?: cookieManager.getCookie(Config.SPOTIFY_ACCOUNT_URL).takeIf { it.isNotEmpty() }
+                    if (resolvedCookie != null) {
+                        viewModel.saveSpotifySpdc(resolvedCookie)
+                        settingsViewModel.setSpotifyLogIn(true)
+                        viewModel.makeToast(getStringBlocking(Res.string.login_success))
+                    } else {
+                        viewModel.makeToast("Login failed")
+                    }
+                    navController.navigateUp()
                 }
             }
         }

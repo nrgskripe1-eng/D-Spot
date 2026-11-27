@@ -1,8 +1,10 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.data.db.datasource.LocalDataSource
 import com.mika.data.extension.getFullDataFromDB
 import com.mika.data.parser.parseArtistData
+import com.mika.data.soundcloud.SC_ID_PREFIX
+import com.mika.data.soundcloud.SoundCloudClient
 import com.mika.domain.data.entities.ArtistEntity
 import com.mika.domain.data.entities.ArtistMotionEntity
 import com.mika.domain.data.model.browse.artist.ArtistBrowse
@@ -25,6 +27,7 @@ internal class ArtistRepositoryImpl(
     private val youTube: YouTube,
     private val dataStoreManager: DataStoreManager,
 ) : ArtistRepository {
+    private val soundCloudClient by lazy { SoundCloudClient() }
     override fun getAllArtists(limit: Int): Flow<List<ArtistEntity>> =
         flow {
             emit(localDataSource.getAllArtists(limit))
@@ -151,6 +154,15 @@ internal class ArtistRepositoryImpl(
 
     override fun getArtistData(channelId: String): Flow<Resource<ArtistBrowse>> =
         flow {
+            if (channelId.startsWith(SC_ID_PREFIX)) {
+                val scArtist = runCatching { soundCloudClient.getArtistBrowse(channelId) }.getOrNull()
+                if (scArtist != null) {
+                    emit(Resource.Success<ArtistBrowse>(scArtist))
+                } else {
+                    emit(Resource.Error<ArtistBrowse>("Failed to load artist"))
+                }
+                return@flow
+            }
             runCatching {
                 youTube
                     .artist(channelId)

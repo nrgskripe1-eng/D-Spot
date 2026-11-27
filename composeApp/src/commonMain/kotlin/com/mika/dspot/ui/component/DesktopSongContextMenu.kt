@@ -100,6 +100,7 @@ import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.list.AlbumDestination
 import com.mika.dspot.ui.navigation.destination.list.ArtistDestination
 import com.mika.domain.data.model.searchResult.songs.Artist
+import com.mika.dspot.ui.icon.AccessAlarm
 import com.mika.dspot.ui.icon.ArrowForwardIos
 import com.mika.dspot.viewModel.NowPlayingBottomSheetUIEvent
 import com.mika.dspot.viewModel.NowPlayingBottomSheetUIState
@@ -237,6 +238,7 @@ fun DesktopSongContextMenu(
     // Sub-sheets rendered outside the Popup so they can open their own windows.
     var showAddToPlaylist    by remember { mutableStateOf(false) }
     var showArtistSubmenu   by remember { mutableStateOf(false) }
+    var showSleepTimer      by remember { mutableStateOf(false) }
     // Bounds (in window coords) of the "Artists" row, used to anchor the submenu.
     var artistsRowBounds    by remember { mutableStateOf<IntRect?>(null) }
 
@@ -267,6 +269,15 @@ fun DesktopSongContextMenu(
             onDismiss = { showArtistSubmenu = false },
         )
     }
+    if (showSleepTimer) {
+        SleepTimerBottomSheet(
+            onDismiss = { showSleepTimer = false },
+            onSetTimer = { minutes ->
+                viewModel.onUIEvent(NowPlayingBottomSheetUIEvent.SetSleepTimer(minutes = minutes))
+                showSleepTimer = false
+            },
+        )
+    }
 
     // ── Keyboard-navigation item list ─────────────────────────────────────────
     val albumEnabled = uiState.songUIState.album != null
@@ -287,7 +298,8 @@ fun DesktopSongContextMenu(
                 add("album"   to albumEnabled)
                 add("radio"   to true)
                 add("queue"   to queueEnabled)
-                add("share"   to true)
+                add("share"       to true)
+                add("sleepTimer"  to true)
             }
         }
     }
@@ -347,6 +359,7 @@ fun DesktopSongContextMenu(
             }
             "queue"       -> viewModel.onUIEvent(NowPlayingBottomSheetUIEvent.AddToQueue)
             "share"       -> { viewModel.onUIEvent(NowPlayingBottomSheetUIEvent.Share); onDismiss() }
+            "sleepTimer"  -> showSleepTimer = true
         }
     }
 
@@ -436,6 +449,7 @@ fun DesktopSongContextMenu(
                 },
                 onAddToQueue    = { viewModel.onUIEvent(NowPlayingBottomSheetUIEvent.AddToQueue) },
                 onShare         = { viewModel.onUIEvent(NowPlayingBottomSheetUIEvent.Share); onDismiss() },
+                onSleepTimer    = { showSleepTimer = true },
             )
         }
     }
@@ -466,6 +480,7 @@ private fun MenuContent(
     onRadio: () -> Unit,
     onAddToQueue: () -> Unit,
     onShare: () -> Unit,
+    onSleepTimer: () -> Unit,
 ) {
     Column {
         // ── Header ─────────────────────────────────────────────────────────────
@@ -660,6 +675,14 @@ private fun MenuContent(
             text     = stringResource(Res.string.share),
             selected = focusedIndex == keyAt("share"),
             onClick  = onShare,
+        )
+
+        MenuDivider()
+        MenuItem(
+            icon     = SimpIcons.AccessAlarm,
+            text     = "Sleep Timer",
+            selected = focusedIndex == keyAt("sleepTimer"),
+            onClick  = onSleepTimer,
         )
 
         Spacer(Modifier.height(4.dp))

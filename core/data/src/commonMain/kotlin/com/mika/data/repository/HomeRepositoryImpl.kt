@@ -1,4 +1,4 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.data.mapping.toHomeContent
 import com.mika.data.parser.parseChart
@@ -6,6 +6,7 @@ import com.mika.data.parser.parseGenreObject
 import com.mika.data.parser.parseMixedContent
 import com.mika.data.parser.parseMoodsMomentObject
 import com.mika.data.parser.parseNewRelease
+import com.mika.data.soundcloud.SoundCloudClient
 import com.mika.domain.data.model.home.BrowsePage
 import com.mika.domain.data.model.home.HomeItem
 import com.mika.domain.data.model.home.chart.Chart
@@ -52,6 +53,7 @@ internal class HomeRepositoryImpl(
     private val dataStoreManager: DataStoreManager,
     private val youTube: YouTube,
 ) : HomeRepository {
+    private val soundCloudClient by lazy { SoundCloudClient() }
     /**
      * Same posture as the Room converters: a cache written by an older build must not crash the
      * app after the model gains a field, so unknown keys are dropped rather than rejected.
@@ -202,6 +204,11 @@ internal class HomeRepositoryImpl(
 //                                    count++
 //                                }
 //                        }
+                        val scSections = runCatching { soundCloudClient.getHomeSections() }.getOrDefault(emptyList())
+                        if (scSections.isNotEmpty()) {
+                            val insertIdx = minOf(2, list.size)
+                            list.addAll(insertIdx, scSections)
+                        }
                         Logger.d("Repository", "List size: ${list.size}")
                         emit(Resource.Success(continueParam to list.toList()))
                     }.onFailure { error ->

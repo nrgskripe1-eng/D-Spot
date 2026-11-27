@@ -23,3 +23,13 @@ actual suspend fun shareImage(
     return true
 }
 
+@OptIn(ExperimentalForeignApi::class)
+actual suspend fun shareVideo(
+    videoBytes: ByteArray,
+    fileName: String,
+    chooserTitle: String,
+    contentUrl: String?,
+): Boolean {
+    return true
+}
+

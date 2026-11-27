@@ -45,6 +45,23 @@ actual suspend fun shareImage(
         }
     }
 
+actual suspend fun shareVideo(
+    videoBytes: ByteArray,
+    fileName: String,
+    chooserTitle: String,
+    contentUrl: String?,
+): Boolean =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val file = writeToDownloads(videoBytes, fileName)
+            revealInFileManager(file)
+            true
+        }.getOrElse { error ->
+            Logger.e(TAG, "Could not share video $fileName: ${error.message}")
+            false
+        }
+    }
+
 private fun writeToDownloads(
     bytes: ByteArray,
     fileName: String,

@@ -848,6 +848,8 @@
     <string name="share_lyrics_no_lyrics">This song has no lyrics to share</string>
     <string name="share_to_story">Share to Story / My Day</string>
     <string name="share_story_card">Story Card</string>
+    <string name="share_as_video">Video Story</string>
+    <string name="generating_video">Generating Story Video…</string>
     <string name="wrapped" translatable="false">Wrapped</string>
     <string name="wrapped_year" translatable="false">Wrapped %1$s</string>
     <string name="wrapped_tap_to_begin">Tap to begin</string>

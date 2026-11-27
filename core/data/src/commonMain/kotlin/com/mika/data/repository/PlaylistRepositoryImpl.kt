@@ -8,6 +8,8 @@ import com.mika.data.mapping.toYouTubeWatchEndpoint
 import com.mika.data.parser.parseLibraryPlaylist
 import com.mika.data.parser.parseNextLibraryPlaylist
 import com.mika.data.parser.parsePlaylistData
+import com.mika.data.soundcloud.SC_ID_PREFIX
+import com.mika.data.soundcloud.SoundCloudClient
 import com.mika.domain.data.entities.ArtistEntity
 import com.mika.domain.data.entities.PlaylistEntity
 import com.mika.domain.data.entities.SetVideoIdEntity
@@ -51,6 +53,7 @@ internal class PlaylistRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
 ) : PlaylistRepository {
+    private val soundCloudClient by lazy { SoundCloudClient() }
     override fun getAllPlaylists(limit: Int): Flow<List<PlaylistEntity>> =
         flow {
             emit(localDataSource.getAllPlaylists(limit))
@@ -441,6 +444,15 @@ internal class PlaylistRepositoryImpl(
         viewString: String,
     ): Flow<Resource<Pair<PlaylistBrowse, String?>>> =
         flow {
+            if (playlistId.startsWith(SC_ID_PREFIX)) {
+                val scPlaylist = runCatching { soundCloudClient.getPlaylistBrowse(playlistId) }.getOrNull()
+                if (scPlaylist != null) {
+                    emit(Resource.Success<Pair<PlaylistBrowse, String?>>(Pair(scPlaylist, null)))
+                } else {
+                    emit(Resource.Error<Pair<PlaylistBrowse, String?>>("Failed to load playlist"))
+                }
+                return@flow
+            }
             runCatching {
                 var id = ""
                 id +=

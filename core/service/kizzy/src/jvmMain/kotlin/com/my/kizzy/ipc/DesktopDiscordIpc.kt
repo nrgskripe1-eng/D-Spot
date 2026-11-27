@@ -219,7 +219,9 @@ class DesktopDiscordIpc(
                 else -> "D-Spot"
             }
 
-            val albumDisplay = song.albumName ?: "D-Spot Audio"
+            val albumDisplay = song.albumName?.takeIf { it.length >= 2 } ?: "D-Spot Audio"
+            val safeTitle = if (songTitle.length < 2) "$songTitle " else songTitle
+            val safeState = if (stateText.length < 2) "$stateText " else stateText
             val thumbUrl = if (!song.thumbnails.isNullOrBlank()) song.thumbnails else DiscordRPC.APP_ICON
             val trackUrl = if (!song.videoId.isNullOrBlank()) {
                 "https://dspot.app/app/watch?v=${song.videoId}"
@@ -236,9 +238,9 @@ class DesktopDiscordIpc(
                     put("pid", processId)
                     putJsonObject("activity") {
                         put("type", activityType)
-                        put("name", songTitle)
-                        put("details", songTitle)
-                        put("state", stateText)
+                        put("name", safeTitle)
+                        put("details", safeTitle)
+                        put("state", safeState)
                         // Omit timestamps when paused — no ticking progress bar on a static card
                         if (!isPaused) {
                             putJsonObject("timestamps") {

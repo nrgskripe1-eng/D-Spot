@@ -1,4 +1,4 @@
-﻿package com.mika.spotify
+package com.mika.spotify
 
 import com.mika.ktorext.curl.CurlLogger
 import com.mika.ktorext.encoding.brotli
@@ -278,6 +278,24 @@ class SpotifyClient {
         val safariVersion = "${Random.nextInt(530, 537)}.${Random.nextInt(30, 36)}"
 
         return "Mozilla/5.0 (Macintosh; Intel Mac OS X $macOSVersion) AppleWebKit/$webKitVersion (KHTML, like Gecko) Chrome/$chromeVersion Safari/$safariVersion"
+    }
+
+    suspend fun getUserPlaylists(
+        accessToken: String,
+        limit: Int = 50,
+    ) = spotifyClient.get("https://api.spotify.com/v1/me/playlists") {
+        userAgent(USER_AGENT)
+        header("Authorization", "Bearer $accessToken")
+        parameter("limit", limit)
+    }
+
+    suspend fun getUserLikedTracks(
+        accessToken: String,
+        limit: Int = 50,
+    ) = spotifyClient.get("https://api.spotify.com/v1/me/tracks") {
+        userAgent(USER_AGENT)
+        header("Authorization", "Bearer $accessToken")
+        parameter("limit", limit)
     }
 
     companion object {

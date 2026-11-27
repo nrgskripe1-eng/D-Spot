@@ -248,7 +248,7 @@ class Ytmusic {
                 val cookie = customCookie ?: this@Ytmusic.cookie
                 cookie?.let { cookie ->
                     append("Cookie", cookie)
-                    if ("SAPISID" !in cookieMap || "__Secure-3PAPISID" !in cookieMap) return@let
+                    if ("SAPISID" !in cookieMap && "__Secure-3PAPISID" !in cookieMap) return@let
                     val currentTime = now().toInstant(TimeZone.currentSystemDefault()).epochSeconds / 1000
                     val sapisidCookie = cookieMap["SAPISID"] ?: cookieMap["__Secure-3PAPISID"]
                     val sapisidHash = sha1("$currentTime $sapisidCookie https://music.youtube.com")
@@ -264,7 +264,7 @@ class Ytmusic {
     @OptIn(ExperimentalTime::class)
     internal fun getAuthorizationHeader(): String? =
         cookie?.let { cookie ->
-            if ("SAPISID" !in cookieMap || "__Secure-3PAPISID" !in cookieMap) null
+            if ("SAPISID" !in cookieMap && "__Secure-3PAPISID" !in cookieMap) null
             val currentTime = now().toInstant(TimeZone.currentSystemDefault()).epochSeconds / 1000
             val sapisidCookie = cookieMap["SAPISID"] ?: cookieMap["__Secure-3PAPISID"]
             val sapisidHash = sha1("$currentTime $sapisidCookie https://music.youtube.com")

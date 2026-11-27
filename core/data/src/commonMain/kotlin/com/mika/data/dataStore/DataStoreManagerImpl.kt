@@ -17,6 +17,7 @@ import com.mika.domain.manager.DataStoreManager.Values.AI_PROVIDER_GEMINI
 import com.mika.domain.manager.DataStoreManager.Values.FALSE
 import com.mika.domain.manager.DataStoreManager.Values.GITHUB
 import com.mika.domain.manager.DataStoreManager.Values.LOCAL_PLAYLIST_FILTER_OLDER_FIRST
+import com.mika.domain.manager.DataStoreManager.Values.LRCLIB
 import com.mika.domain.manager.DataStoreManager.Values.PROXY_TYPE_HTTP
 import com.mika.domain.manager.DataStoreManager.Values.PROXY_TYPE_SOCKS
 import com.mika.domain.manager.DataStoreManager.Values.REPEAT_ALL
@@ -482,7 +483,7 @@ internal class DataStoreManagerImpl(
 
     override val lyricsProvider =
         settingsDataStore.data.map { preferences ->
-            preferences[LYRICS_PROVIDER] ?: SIMPMUSIC
+            preferences[LYRICS_PROVIDER] ?: LRCLIB
         }
 
     override suspend fun setLyricsProvider(provider: String) {

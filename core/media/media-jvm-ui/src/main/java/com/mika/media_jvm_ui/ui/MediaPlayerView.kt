@@ -1,4 +1,4 @@
-﻿package com.mika.media_jvm_ui.ui
+package com.mika.media_jvm_ui.ui
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
@@ -201,7 +201,7 @@ fun MediaPlayerViewWithSubtitleJvm(
     val state by mediaPlayerHandler.nowPlayingState.collectAsState()
     val videoFrames by player.currentVideoFrames.collectAsState()
 
-    val showArtwork = videoFrames == null
+    val showArtwork = videoFrames == null || state.songEntity?.videoId?.startsWith("sc_") == true
 
     val artworkUri = state.songEntity?.thumbnails
 
@@ -214,7 +214,8 @@ fun MediaPlayerViewWithSubtitleJvm(
         // What the ear is hearing right now, rather than where the player is.
         val nowMs = timelineState.current - lyricsOffsetMs
         if (nowMs > 0L) {
-            lines.indices.forEach { i ->
+            var foundLineIndex = -1
+            for (i in lines.indices) {
                 val sentence = lines[i]
                 val startTimeMs = sentence.startTimeMs.toLong()
                 val endTimeMs =
@@ -224,20 +225,31 @@ fun MediaPlayerViewWithSubtitleJvm(
                         startTimeMs + 60000
                     }
                 if (nowMs in startTimeMs..endTimeMs) {
-                    currentLineIndex = i
+                    foundLineIndex = i
+                    break
                 }
             }
-            translatedLines?.indices?.forEach { i ->
-                val sentence = translatedLines[i]
-                val startTimeMs = sentence.startTimeMs.toLong()
-                val endTimeMs =
-                    if (i < translatedLines.size - 1) {
-                        translatedLines[i + 1].startTimeMs.toLong()
-                    } else {
-                        startTimeMs + 60000
+            if (foundLineIndex != -1) {
+                currentLineIndex = foundLineIndex
+            }
+            if (translatedLines != null) {
+                var foundTranslatedIndex = -1
+                for (i in translatedLines.indices) {
+                    val sentence = translatedLines[i]
+                    val startTimeMs = sentence.startTimeMs.toLong()
+                    val endTimeMs =
+                        if (i < translatedLines.size - 1) {
+                            translatedLines[i + 1].startTimeMs.toLong()
+                        } else {
+                            startTimeMs + 60000
+                        }
+                    if (nowMs in startTimeMs..endTimeMs) {
+                        foundTranslatedIndex = i
+                        break
                     }
-                if (nowMs in startTimeMs..endTimeMs) {
-                    currentTranslatedLineIndex = i
+                }
+                if (foundTranslatedIndex != -1) {
+                    currentTranslatedLineIndex = foundTranslatedIndex
                 }
             }
             if (lines.isNotEmpty() &&

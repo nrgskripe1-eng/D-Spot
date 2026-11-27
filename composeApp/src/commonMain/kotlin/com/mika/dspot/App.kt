@@ -92,6 +92,7 @@ import com.mika.dspot.ui.icon.SimpIcons
 import com.mika.dspot.ui.navigation.destination.home.AnalyticsDestination
 import com.mika.dspot.ui.navigation.destination.home.HomeDestination
 import com.mika.dspot.ui.navigation.destination.home.NotificationDestination
+import com.mika.dspot.ui.navigation.destination.search.SearchDestination
 import com.mika.dspot.ui.navigation.destination.home.WrappedDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDestination
 import com.mika.dspot.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
@@ -288,6 +289,38 @@ fun App(
                     "watch" -> {
                         data.getQueryParameter("v")?.let { videoId ->
                             viewModel.loadSharedMediaItem(videoId)
+                        }
+                    }
+
+                    "search" -> {
+                        navController.navigate(SearchDestination)
+                    }
+
+                    "soundcloud" -> {
+                        data.getQueryParameter("url")?.let { scUrl ->
+                            viewModel.resolveSoundCloudLink(
+                                url = scUrl,
+                                onNavigatePlaylist = { playlistId ->
+                                    navController.navigate(PlaylistDestination(playlistId = playlistId))
+                                },
+                                onNavigateArtist = { channelId ->
+                                    navController.navigate(ArtistDestination(channelId = channelId))
+                                },
+                            )
+                        }
+                    }
+
+                    "spotify" -> {
+                        val type = data.getQueryParameter("type")
+                        val id = data.getQueryParameter("id")
+                        if (!type.isNullOrBlank() && !id.isNullOrBlank()) {
+                            viewModel.resolveSpotifyLink(
+                                type = type,
+                                id = id,
+                                onNavigateSearch = { query ->
+                                    navController.navigate(SearchDestination)
+                                },
+                            )
                         }
                     }
 

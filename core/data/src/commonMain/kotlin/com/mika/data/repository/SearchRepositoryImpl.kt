@@ -1,7 +1,8 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.data.db.datasource.LocalDataSource
 import com.mika.data.mapping.toDomainSearchSuggestions
+import com.mika.data.soundcloud.SoundCloudClient
 import com.mika.data.parser.parsePodcast
 import com.mika.data.parser.search.parseSearchAlbum
 import com.mika.data.parser.search.parseSearchArtist
@@ -29,6 +30,7 @@ internal class SearchRepositoryImpl(
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
 ) : SearchRepository {
+    private val soundCloudClient by lazy { SoundCloudClient() }
     override fun getSearchHistory(): Flow<List<SearchHistory>> =
         flow {
             emit(localDataSource.getSearchHistory())
@@ -43,6 +45,20 @@ internal class SearchRepositoryImpl(
         withContext(Dispatchers.Default) {
             localDataSource.deleteSearchHistory()
         }
+
+    private fun normalizeSearchKey(title: String?, artist: String?): String {
+        val cleanTitle = (title ?: "")
+            .lowercase()
+            .replace(Regex("""\([^)]*\)|\[[^\]]*]"""), " ")
+            .replace(Regex("""\b(feat\.?|ft\.?)\b.*"""), " ")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        val cleanArtist = (artist ?: "")
+            .lowercase()
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+        return "$cleanTitle|$cleanArtist"
+    }
 
     override fun getSearchDataSong(query: String): Flow<Resource<ArrayList<SongsResult>>> =
         flow {
@@ -70,6 +86,19 @@ internal class SearchRepositoryImpl(
                                     countinueParam = null
                                     count++
                                 }
+                        }
+
+                        val scSongs = runCatching { soundCloudClient.searchTracks(query) }.getOrDefault(emptyList())
+                        val existingKeys = listSongs.map {
+                            normalizeSearchKey(it.title, it.artists?.firstOrNull()?.name)
+                        }.toHashSet()
+                        scSongs.forEach { scSong ->
+                            val key = normalizeSearchKey(scSong.title, scSong.artists?.firstOrNull()?.name)
+                            if (key !in existingKeys) {
+                                val insertIdx = minOf(5, listSongs.size)
+                                listSongs.add(insertIdx, scSong)
+                                existingKeys.add(key)
+                            }
                         }
 
                         emit(Resource.Success<ArrayList<SongsResult>>(listSongs))
@@ -145,6 +174,16 @@ internal class SearchRepositoryImpl(
                                     count++
                                 }
                         }
+                        val scPlaylists = runCatching { soundCloudClient.searchPlaylists(query) }.getOrDefault(emptyList())
+                        val existingPlaylistKeys = listPlaylist.map { it.title.lowercase().trim() }.toHashSet()
+                        scPlaylists.forEach { scPlaylist ->
+                            val key = scPlaylist.title.lowercase().trim()
+                            if (key !in existingPlaylistKeys) {
+                                val insertIdx = minOf(3, listPlaylist.size)
+                                listPlaylist.add(insertIdx, scPlaylist)
+                                existingPlaylistKeys.add(key)
+                            }
+                        }
                         emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
                     }.onFailure { e ->
                         Logger.d("Search", "Error: ${e.message}")
@@ -180,6 +219,16 @@ internal class SearchRepositoryImpl(
                                     count++
                                 }
                         }
+                        val scPlaylists = runCatching { soundCloudClient.searchPlaylists(query) }.getOrDefault(emptyList())
+                        val existingPlaylistKeys = listPlaylist.map { it.title.lowercase().trim() }.toHashSet()
+                        scPlaylists.forEach { scPlaylist ->
+                            val key = scPlaylist.title.lowercase().trim()
+                            if (key !in existingPlaylistKeys) {
+                                val insertIdx = minOf(3, listPlaylist.size)
+                                listPlaylist.add(insertIdx, scPlaylist)
+                                existingPlaylistKeys.add(key)
+                            }
+                        }
                         emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
                     }.onFailure { e ->
                         Logger.d("Search", "Error: ${e.message}")
@@ -214,6 +263,16 @@ internal class SearchRepositoryImpl(
                                     countinueParam = null
                                     count++
                                 }
+                        }
+                        val scArtists = runCatching { soundCloudClient.searchArtists(query) }.getOrDefault(emptyList())
+                        val existingArtistKeys = listArtist.map { it.artist.lowercase().trim() }.toHashSet()
+                        scArtists.forEach { scArtist ->
+                            val key = scArtist.artist.lowercase().trim()
+                            if (key !in existingArtistKeys) {
+                                val insertIdx = minOf(3, listArtist.size)
+                                listArtist.add(insertIdx, scArtist)
+                                existingArtistKeys.add(key)
+                            }
                         }
                         emit(Resource.Success<ArrayList<ArtistsResult>>(listArtist))
                     }.onFailure { e ->
@@ -284,6 +343,16 @@ internal class SearchRepositoryImpl(
                                     countinueParam = null
                                     count++
                                 }
+                        }
+                        val scPlaylists = runCatching { soundCloudClient.searchPlaylists(query) }.getOrDefault(emptyList())
+                        val existingPlaylistKeys = listPlaylist.map { it.title.lowercase().trim() }.toHashSet()
+                        scPlaylists.forEach { scPlaylist ->
+                            val key = scPlaylist.title.lowercase().trim()
+                            if (key !in existingPlaylistKeys) {
+                                val insertIdx = minOf(3, listPlaylist.size)
+                                listPlaylist.add(insertIdx, scPlaylist)
+                                existingPlaylistKeys.add(key)
+                            }
                         }
                         emit(Resource.Success<ArrayList<PlaylistsResult>>(listPlaylist))
                     }.onFailure { e ->

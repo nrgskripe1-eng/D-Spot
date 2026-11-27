@@ -145,9 +145,9 @@ actual fun PlatformWebView(
                             val mgr = org.cef.network.CefCookieManager.getGlobalManager()
 
                             // Retry loop to allow all authentication cookies and redirects to settle
-                            for (attempt in 1..15) {
+                            for (attempt in 1..25) {
                                 mgr?.flushStore(null)
-                                kotlinx.coroutines.delay(250)
+                                kotlinx.coroutines.delay(200)
                                 val cookies = JcefCookieManager().getCookie(YOUTUBE_MUSIC_CANONICAL)
                                 if (cookies.contains("SAPISID") || cookies.contains("LOGIN_INFO") ||
                                     cookies.contains("__Secure") || cookies.contains("SSID")
@@ -165,11 +165,14 @@ actual fun PlatformWebView(
                                     }
                                 } catch (_: Throwable) {}
 
+                                // Keep browser hidden/closed regardless so YouTube Music UI never appears.
                                 if (validCookies.isNotEmpty()) {
                                     onPageFinished(YOUTUBE_MUSIC_CANONICAL)
                                 } else {
-                                    // If authentication cookies were not found, allow user to retry
-                                    isLoginCompleted = false
+                                    // Even if retry loop expired, pass whatever cookies we have;
+                                    // LogInScreen will handle validation and display failed toast if invalid.
+                                    val fallbackCookies = JcefCookieManager().getCookie(YOUTUBE_MUSIC_CANONICAL)
+                                    onPageFinished(YOUTUBE_MUSIC_CANONICAL)
                                 }
                             }
                         }
@@ -205,16 +208,20 @@ actual fun PlatformWebView(
                         }
 
                         // 2. Spotify login detection:
+                        // Trigger as soon as the browser navigates to /status or open.spotify.com
+                        // without waiting for !isLoading, since accounts.spotify.com is an SPA
+                        // and open.spotify.com can stall loading in JCEF.
                         val isStatusUrl = currentUrl.contains("accounts.spotify.com") && currentUrl.contains("/status")
                         val isOpenSpotify = currentUrl.contains("open.spotify.com")
                         val hasAuthToken = currentUrl.contains("access_token=") || currentUrl.contains("code=")
-                        if ((isStatusUrl || isOpenSpotify || hasAuthToken) && !isLoading) {
+                        if (isStatusUrl || isOpenSpotify || hasAuthToken) {
                             isLoginCompleted = true
                             browser.stopLoad()
-                            SwingUtilities.invokeLater { browser.close(true) }
-
-                            state.value = WebViewState.Finished
-                            onPageFinished(currentUrl)
+                            SwingUtilities.invokeLater {
+                                state.value = WebViewState.Finished
+                                onPageFinished(currentUrl)
+                                browser.close(true)
+                            }
                             return@JcefBrowser
                         }
 

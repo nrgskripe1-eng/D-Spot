@@ -1,4 +1,4 @@
-﻿package com.mika.data.repository
+package com.mika.data.repository
 
 import com.mika.common.MERGING_DATA_TYPE
 import com.mika.data.db.datasource.LocalDataSource
@@ -6,6 +6,11 @@ import com.mika.data.extension.getFullDataFromDB
 import com.mika.data.mapping.toListTrack
 import com.mika.data.mapping.toSongItemForDownload
 import com.mika.data.mapping.toWatchEndpoint
+import com.mika.data.soundcloud.SC_ID_PREFIX
+import com.mika.data.soundcloud.SoundCloudClient
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import okio.Path.Companion.toPath
 import com.mika.domain.data.entities.QueueEntity
 import com.mika.domain.data.entities.DownloadState
 import com.mika.domain.data.entities.SongEntity
@@ -516,8 +521,40 @@ internal class SongRepositoryImpl(
         path: String,
         videoId: String,
         isVideo: Boolean,
-    ): Flow<DownloadProgress> =
-        youTube
+    ): Flow<DownloadProgress> {
+        if (videoId.startsWith(SC_ID_PREFIX)) {
+            return flow {
+                emit(DownloadProgress(audioDownloadProgress = 0f))
+                val streamUrl = runCatching { SoundCloudClient().getStreamUrl(videoId) }.getOrNull()
+                if (streamUrl.isNullOrBlank()) {
+                    emit(DownloadProgress(errorMessage = "Could not get SoundCloud stream URL", isError = true))
+                    return@flow
+                }
+                val result = runCatching {
+                    val client = io.ktor.client.HttpClient()
+                    try {
+                        val bytes = client.get(streamUrl).body<ByteArray>()
+                        val outPath = path.toPath()
+                        okio.FileSystem.SYSTEM.write(outPath) {
+                            write(bytes)
+                        }
+                    } finally {
+                        client.close()
+                    }
+                }
+                if (result.isSuccess) {
+                    emit(DownloadProgress(audioDownloadProgress = 100f, isDone = true))
+                } else {
+                    emit(
+                        DownloadProgress(
+                            errorMessage = result.exceptionOrNull()?.message ?: "Download failed",
+                            isError = true,
+                        ),
+                    )
+                }
+            }.flowOn(Dispatchers.Default)
+        }
+        return youTube
             .download(
                 track.toSongItemForDownload(),
                 path,
@@ -534,9 +571,19 @@ internal class SongRepositoryImpl(
                     isDone = it.isDone,
                 )
             }
+    }
 
     override fun getRelatedData(videoId: String): Flow<Resource<Pair<List<Track>, String?>>> =
         flow {
+            if (videoId.startsWith(SC_ID_PREFIX)) {
+                val related = runCatching { SoundCloudClient().getRelatedTracks(videoId) }.getOrDefault(emptyList())
+                if (related.isNotEmpty()) {
+                    emit(Resource.Success<Pair<List<Track>, String?>>(related to null))
+                } else {
+                    emit(Resource.Error<Pair<List<Track>, String?>>("No related tracks"))
+                }
+                return@flow
+            }
             runCatching {
                 youTube
                     .next(WatchEndpoint(videoId = videoId))
