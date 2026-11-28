@@ -2194,39 +2194,6 @@ fun SettingScreen(
                 )
             }
         }
-        // ── spotify ────────────────────────────────────────────────────────
-        val showSpotify =
-            if (isDesktop) {
-                selectedDesktopTab == SettingTab.INTEGRATIONS
-            } else {
-                matchesQuery(
-                    "spotify", "canvas", "lyrics", "animated artwork", "log in", "log out",
-                )
-            }
-        item(key = "spotify") {
-            if (showSpotify) SettingGroup(title = stringResource(Res.string.spotify)) {
-                SettingItem(
-                    title = stringResource(Res.string.enable_spotify_lyrics),
-                    subtitle = stringResource(Res.string.spotify_lyrícs_info),
-                    switch = (spotifyLyrics to { viewModel.setSpotifyLyrics(it) }),
-                    isEnable = spotifyLoggedIn,
-                )
-                SettingItem(
-                    title = stringResource(Res.string.enable_canvas),
-                    subtitle = stringResource(Res.string.canvas_info),
-                    switch = (spotifyCanvas to { viewModel.setSpotifyCanvas(it) }),
-                    isEnable = spotifyLoggedIn,
-                )
-                // Sits with the canvas because it replaces it, but carries no isEnable: the two
-                // rows above need a Spotify session and this one needs no account at all, so
-                // gating it on spotifyLoggedIn would lock it away from the users it works for.
-                SettingItem(
-                    title = stringResource(Res.string.enable_animated_artwork),
-                    subtitle = stringResource(Res.string.animated_artwork_info),
-                    switch = (amAnimatedArtwork to { viewModel.setAMAnimatedArtwork(it) }),
-                )
-            }
-        }
         // ── discord ────────────────────────────────────────────────────────
         // Discord Rich Presence is automatically active on Desktop via local IPC when Discord is running.
         val showDiscord = isDesktop && selectedDesktopTab == SettingTab.INTEGRATIONS

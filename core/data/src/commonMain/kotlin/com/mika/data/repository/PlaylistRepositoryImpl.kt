@@ -506,35 +506,128 @@ internal class PlaylistRepositoryImpl(
                         ?.firstOrNull()?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("url") }
                         ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
                     val trackList = entity["trackList"] as? kotlinx.serialization.json.JsonArray ?: return@runCatching null
+                    fun cleanTitle(s: String): String =
+                        s.lowercase()
+                            .replace(Regex("""\([^)]*\)|\[[^\]]*]"""), " ")
+                            .replace(Regex("""\s*-\s*(?:\d{4}\s+)?remaster(?:ed)?.*$"""), " ")
+                            .replace(Regex("""\s+"""), " ")
+                            .trim()
                     val queries = trackList.mapNotNull { item ->
                         val obj = item as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
                         val t = (obj["title"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
                         val sub = (obj["subtitle"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
                         val durSec = (obj["duration"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull()?.div(1000)?.toInt()
-                        Triple("$t $sub".trim(), sub.lowercase(), durSec)
+                        listOf("$t $sub".trim(), cleanTitle(t), sub.lowercase(), durSec?.toString() ?: "")
                     }
+                    val unwantedWords = listOf(
+                        "live", "cover", "slowed", "reverb", "karaoke", "instrumental",
+                        "remix", "mix", "edit", "tribute", "radio edit", "radio", "dub",
+                        "made famous", "style of", "originally performed", "english ver", "english version",
+                        "trap", "sped up", "nightcore", "hardtekk", "vocal", "orchestra", "kidz bop",
+                    )
+                    val semaphore = kotlinx.coroutines.sync.Semaphore(4)
                     val matchedTracks = coroutineScope {
-                        queries.map { (q, artistLower, targetDur) ->
+                        queries.map { parts ->
+                            val q = parts[0]
+                            val spTitleClean = parts[1]
+                            val spRawLower = q.lowercase()
+                            val artistLower = parts[2]
+                            val targetDur = parts[3].toIntOrNull()
                             async(Dispatchers.IO) {
-                                runCatching {
-                                    val candidates = youTube.search(q, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                                semaphore.acquire()
+                                try {
+                                    runCatching {
+                                    val firstArtist = artistLower.split(",").first().trim()
+                                    val cleanQuery = if (firstArtist.isNotBlank()) "$spTitleClean $firstArtist".trim() else q
+                                    val candidates = youTube.search(cleanQuery, YouTube.SearchFilter.FILTER_SONG).getOrNull()
                                         ?.items?.filterIsInstance<SongItem>().orEmpty()
-                                    val best = candidates.maxByOrNull { item ->
+                                    val artistMatched = if (firstArtist.isNotBlank()) {
+                                        candidates.filter { item ->
+                                            item.artists.joinToString(" ") { it.name }.lowercase().contains(firstArtist)
+                                        }
+                                    } else {
+                                        candidates
+                                    }
+                                    var bestScore = Int.MIN_VALUE
+                                    var bestItem: SongItem? = null
+                                    for (item in artistMatched) {
                                         var score = 0
+                                        val ytTitleClean = cleanTitle(item.title)
+                                        if (spTitleClean.isNotBlank() && ytTitleClean.isNotBlank()) {
+                                            if (ytTitleClean == spTitleClean) score += 25
+                                            else if (ytTitleClean.contains(spTitleClean) || spTitleClean.contains(ytTitleClean)) score += 15
+                                            else continue
+                                        }
+                                        val ytTitleLower = item.title.lowercase()
+                                        val itemArtists = item.artists.joinToString(" ") { it.name }.lowercase()
+                                        if (unwantedWords.any { w -> (w in ytTitleLower || w in itemArtists) && w !in spRawLower }) {
+                                            continue
+                                        }
+                                        val ytBrackets = Regex("""\(([^)]+)\)|\[([^\]]+)]""").findAll(ytTitleLower)
+                                            .mapNotNull { m -> (m.groupValues[1].ifBlank { m.groupValues[2] }).trim().takeIf { it.isNotBlank() } }
+                                            .toList()
+                                        if (ytBrackets.any { it !in spRawLower && !it.startsWith("feat") && !it.startsWith("ft.") }) {
+                                            score -= 25
+                                        }
                                         val itemDur = item.duration
                                         if (targetDur != null && itemDur != null) {
                                             val diff = kotlin.math.abs(itemDur - targetDur)
                                             if (diff <= 5) score += 10
                                             else if (diff <= 15) score += 5
                                         }
-                                        val itemArtists = item.artists.joinToString(" ") { it.name }.lowercase()
-                                        if (artistLower.isNotBlank() && itemArtists.contains(artistLower.split(",").first().trim())) {
-                                            score += 5
+                                        val firstArtist = artistLower.split(",").first().trim()
+                                        if (firstArtist.isNotBlank()) {
+                                            if (itemArtists.contains(firstArtist)) score += 15 else score -= 35
                                         }
-                                        score
-                                    } ?: candidates.firstOrNull()
-                                    best?.toTrack()
+                                        if (score > bestScore) {
+                                            bestScore = score
+                                            bestItem = item
+                                        }
+                                    }
+                                    if (bestScore < 10 && spTitleClean.isNotBlank() && spTitleClean != q.lowercase()) {
+                                        val retryCandidates = youTube.search(spTitleClean, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                                            ?.items?.filterIsInstance<SongItem>().orEmpty()
+                                        val retryFiltered = if (firstArtist.isNotBlank()) {
+                                            retryCandidates.filter { item ->
+                                                item.artists.joinToString(" ") { it.name }.lowercase().contains(firstArtist)
+                                            }
+                                        } else {
+                                            retryCandidates
+                                        }
+                                        for (item in retryFiltered) {
+                                            var score = 0
+                                            val ytTitleClean = cleanTitle(item.title)
+                                            if (spTitleClean.isNotBlank() && ytTitleClean.isNotBlank()) {
+                                                if (ytTitleClean == spTitleClean) score += 25
+                                                else if (ytTitleClean.contains(spTitleClean) || spTitleClean.contains(ytTitleClean)) score += 15
+                                                else continue
+                                            }
+                                            val ytTitleLower = item.title.lowercase()
+                                            val itemArtists = item.artists.joinToString(" ") { it.name }.lowercase()
+                                            if (unwantedWords.any { w -> (w in ytTitleLower || w in itemArtists) && w !in spRawLower }) {
+                                                continue
+                                            }
+                                            val itemDur = item.duration
+                                            if (targetDur != null && itemDur != null) {
+                                                val diff = kotlin.math.abs(itemDur - targetDur)
+                                                if (diff <= 5) score += 10
+                                                else if (diff <= 15) score += 5
+                                            }
+                                            val firstArtistRetry = artistLower.split(",").first().trim()
+                                            if (firstArtistRetry.isNotBlank()) {
+                                                if (itemArtists.contains(firstArtistRetry)) score += 15 else score -= 35
+                                            }
+                                            if (score > bestScore) {
+                                                bestScore = score
+                                                bestItem = item
+                                            }
+                                        }
+                                    }
+                                    bestItem?.toTrack()
                                 }.getOrNull()
+                                } finally {
+                                    semaphore.release()
+                                }
                             }
                         }.awaitAll().filterNotNull()
                     }

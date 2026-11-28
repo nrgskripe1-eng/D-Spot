@@ -89,7 +89,13 @@ import dspot.composeapp.generated.resources.rich_presence_info
 import dspot.composeapp.generated.resources.scrobbling_info
 import dspot.composeapp.generated.resources.send_back_listening_data_to_google
 import dspot.composeapp.generated.resources.sign_in
+import dspot.composeapp.generated.resources.animated_artwork_info
+import dspot.composeapp.generated.resources.canvas_info
+import dspot.composeapp.generated.resources.enable_animated_artwork
+import dspot.composeapp.generated.resources.enable_canvas
+import dspot.composeapp.generated.resources.enable_spotify_lyrics
 import dspot.composeapp.generated.resources.spotify
+import dspot.composeapp.generated.resources.spotify_lyrícs_info
 import dspot.composeapp.generated.resources.upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in
 import dspot.composeapp.generated.resources.youtube_account
 import kotlinx.coroutines.flow.map
@@ -117,6 +123,9 @@ fun AccountHubScreen(
     val lastfmScrobbleEnabled by settingsViewModel.lastfmScrobbleEnabled.collectAsStateWithLifecycle()
     val localTrackingEnabled by settingsViewModel.localTrackingEnabled.collectAsStateWithLifecycle(initialValue = false)
     val sendData by remember { settingsViewModel.sendBackToGoogle.map { it == DataStoreManager.TRUE } }.collectAsStateWithLifecycle(initialValue = false)
+    val spotifyLyrics by settingsViewModel.spotifyLyrics.collectAsStateWithLifecycle()
+    val spotifyCanvas by settingsViewModel.spotifyCanvas.collectAsStateWithLifecycle()
+    val amAnimatedArtwork by settingsViewModel.amAnimatedArtwork.collectAsStateWithLifecycle()
 
     var showYouTubeAccountDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -434,6 +443,23 @@ fun AccountHubScreen(
                                 navController.navigate(SpotifyLoginDestination)
                             }
                         },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_spotify_lyrics),
+                        subtitle = stringResource(Res.string.spotify_lyrícs_info),
+                        switch = (spotifyLyrics to { settingsViewModel.setSpotifyLyrics(it) }),
+                        isEnable = spotifyLoggedIn,
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_canvas),
+                        subtitle = stringResource(Res.string.canvas_info),
+                        switch = (spotifyCanvas to { settingsViewModel.setSpotifyCanvas(it) }),
+                        isEnable = spotifyLoggedIn,
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_animated_artwork),
+                        subtitle = stringResource(Res.string.animated_artwork_info),
+                        switch = (amAnimatedArtwork to { settingsViewModel.setAMAnimatedArtwork(it) }),
                     )
                 }
             }
