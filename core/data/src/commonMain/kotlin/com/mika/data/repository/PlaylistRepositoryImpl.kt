@@ -486,8 +486,21 @@ internal class PlaylistRepositoryImpl(
                         ?: "Spotify"
                     val ownerUri = ((entity["owner"] as? kotlinx.serialization.json.JsonObject)
                         ?.get("uri") as? kotlinx.serialization.json.JsonPrimitive)?.content
-                    val ownerId = ownerUri?.substringAfterLast(":")?.takeIf { it.isNotBlank() }
+                    var ownerId = ownerUri?.substringAfterLast(":")?.takeIf { it.isNotBlank() }
                         ?.let { "sp_user_$it" } ?: ""
+                    if (ownerId.isEmpty() && spType == "playlist") {
+                        ownerId = runCatching {
+                            val pageClient = HttpClient()
+                            try {
+                                val pageHtml = pageClient.get("https://open.spotify.com/playlist/$spId").bodyAsText()
+                                val uid = Regex("""(?:spotify:user:|/user/)([a-zA-Z0-9._-]+)""")
+                                    .find(pageHtml)?.groupValues?.getOrNull(1)
+                                uid?.takeIf { it.isNotBlank() }?.let { "sp_user_$it" } ?: ""
+                            } finally {
+                                pageClient.close()
+                            }
+                        }.getOrDefault("")
+                    }
                     val coverUrl = ((entity["coverArt"] as? kotlinx.serialization.json.JsonObject)
                         ?.get("sources") as? kotlinx.serialization.json.JsonArray)
                         ?.firstOrNull()?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("url") }
