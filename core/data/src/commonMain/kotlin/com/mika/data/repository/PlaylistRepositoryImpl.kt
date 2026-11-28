@@ -481,6 +481,13 @@ internal class PlaylistRepositoryImpl(
                     val title = (entity["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content
                         ?: (entity["title"] as? kotlinx.serialization.json.JsonPrimitive)?.content
                         ?: "Spotify $spType"
+                    val ownerName = (entity["subtitle"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "Spotify"
+                    val ownerUri = ((entity["owner"] as? kotlinx.serialization.json.JsonObject)
+                        ?.get("uri") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    val ownerId = ownerUri?.substringAfterLast(":")?.takeIf { it.isNotBlank() }
+                        ?.let { "sp_user_$it" } ?: ""
                     val coverUrl = ((entity["coverArt"] as? kotlinx.serialization.json.JsonObject)
                         ?.get("sources") as? kotlinx.serialization.json.JsonArray)
                         ?.firstOrNull()?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("url") }
@@ -519,7 +526,7 @@ internal class PlaylistRepositoryImpl(
                         }.awaitAll().filterNotNull()
                     }
                     PlaylistBrowse(
-                        author = Author(id = "", name = "Spotify"),
+                        author = Author(id = ownerId, name = ownerName),
                         description = "${matchedTracks.size} tracks",
                         duration = "",
                         durationSeconds = matchedTracks.sumOf { it.durationSeconds ?: 0 },
