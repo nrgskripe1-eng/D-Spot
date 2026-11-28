@@ -17,6 +17,16 @@ private const val APP_SCHEME = "dspot"
  */
 fun String.toAppDeepLinkOrNull(): Uri? {
     val trimmed = trim()
+    if (trimmed.startsWith("spotify:", ignoreCase = true)) {
+        val parts = trimmed.split(":")
+        val type = parts.getOrNull(1)?.lowercase()
+        val id = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
+        return if (type in setOf("track", "album", "playlist", "artist", "user") && id != null) {
+            Uri.parse("$APP_SCHEME://spotify?type=$type&id=$id")
+        } else {
+            null
+        }
+    }
     if (!trimmed.startsWith("http://", ignoreCase = true) &&
         !trimmed.startsWith("https://", ignoreCase = true)
     ) {
@@ -51,7 +61,7 @@ fun String.toAppDeepLinkOrNull(): Uri? {
                 if (segments.firstOrNull()?.startsWith("intl-") == true) segments.drop(1) else segments
             val type = normalizedSegments.getOrNull(0)
             val id = normalizedSegments.getOrNull(1)?.takeIf { it.isNotBlank() }
-            if (type in setOf("track", "album", "playlist", "user") && id != null) {
+            if (type in setOf("track", "album", "playlist", "artist", "user") && id != null) {
                 Uri.parse("$APP_SCHEME://spotify?type=$type&id=$id")
             } else {
                 null

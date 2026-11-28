@@ -1096,6 +1096,7 @@ fun SearchScreen(
                             val deepLink = query.toAppDeepLinkOrNull()
                             if (deepLink != null) {
                                 focusManager.clearFocus()
+                                searchText = ""
                                 sharedViewModel.setIntent(GenericIntent(data = deepLink))
                             } else if (query.isNotEmpty()) {
                                 isSearchSubmitted = true

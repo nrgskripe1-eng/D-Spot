@@ -89,6 +89,8 @@ import com.mika.dspot.ui.navigation.destination.account.AccountDestination
 import com.mika.dspot.ui.navigation.destination.home.ListenTogetherDestination
 import com.mika.dspot.ui.navigation.destination.home.RecentlySongsDestination
 import com.mika.dspot.ui.navigation.destination.home.SettingsDestination
+import com.mika.dspot.extension.toAppDeepLinkOrNull
+import com.mika.domain.data.model.intent.GenericIntent
 import com.mika.dspot.ui.navigation.destination.search.SearchDestination
 import com.mika.dspot.viewModel.SearchViewModel
 import org.koin.compose.koinInject
@@ -251,14 +253,23 @@ fun DesktopTopNavigationBar(
                             navController.navigate(SearchDestination)
                         }
                         debounceJob?.cancel()
-                        debounceJob = searchScope.launch {
-                            kotlinx.coroutines.delay(350)
-                            searchViewModel.searchAll(newQuery)
+                        if (newQuery.toAppDeepLinkOrNull() == null) {
+                            debounceJob = searchScope.launch {
+                                kotlinx.coroutines.delay(350)
+                                searchViewModel.searchAll(newQuery)
+                            }
                         }
                     }
                 },
                 onSearch = { query ->
-                    if (query.isNotBlank()) {
+                    val deepLink = query.toAppDeepLinkOrNull()
+                    if (deepLink != null) {
+                        debounceJob?.cancel()
+                        focusManager.clearFocus()
+                        searchQuery = ""
+                        searchViewModel.setActiveSearchQuery("")
+                        org.koin.mp.KoinPlatform.getKoin().get<com.mika.dspot.viewModel.SharedViewModel>().setIntent(GenericIntent(data = deepLink))
+                    } else if (query.isNotBlank()) {
                         focusManager.clearFocus()
                         searchQuery = query
                         searchViewModel.setActiveSearchQuery(query)

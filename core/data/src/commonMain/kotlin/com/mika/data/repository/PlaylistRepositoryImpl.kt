@@ -37,8 +37,14 @@ import com.mika.kotlinytmusicscraper.parser.getPlaylistContinuation
 import com.mika.kotlinytmusicscraper.parser.getPlaylistRadioEndpoint
 import com.mika.kotlinytmusicscraper.parser.getPlaylistShuffleEndpoint
 import com.mika.logger.Logger
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -450,6 +456,86 @@ internal class PlaylistRepositoryImpl(
                     emit(Resource.Success<Pair<PlaylistBrowse, String?>>(Pair(scPlaylist, null)))
                 } else {
                     emit(Resource.Error<Pair<PlaylistBrowse, String?>>("Failed to load playlist"))
+                }
+                return@flow
+            }
+            if (playlistId.startsWith("sp_pl_") || playlistId.startsWith("sp_al_")) {
+                val spType = if (playlistId.startsWith("sp_pl_")) "playlist" else "album"
+                val spId = playlistId.removePrefix("sp_pl_").removePrefix("sp_al_")
+                val browse = runCatching {
+                    val client = HttpClient()
+                    val html = try {
+                        client.get("https://open.spotify.com/embed/$spType/$spId").bodyAsText()
+                    } finally {
+                        client.close()
+                    }
+                    val nextDataJson = Regex("""<script id="__NEXT_DATA__" type="application/json">(.*?)</script>""")
+                        .find(html)?.groupValues?.getOrNull(1) ?: return@runCatching null
+                    val root = kotlinx.serialization.json.Json.parseToJsonElement(nextDataJson) as? kotlinx.serialization.json.JsonObject
+                    val entity = ((((root?.get("props") as? kotlinx.serialization.json.JsonObject)
+                        ?.get("pageProps") as? kotlinx.serialization.json.JsonObject)
+                        ?.get("state") as? kotlinx.serialization.json.JsonObject)
+                        ?.get("data") as? kotlinx.serialization.json.JsonObject)
+                        ?.get("entity") as? kotlinx.serialization.json.JsonObject
+                        ?: return@runCatching null
+                    val title = (entity["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                        ?: (entity["title"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                        ?: "Spotify $spType"
+                    val coverUrl = ((entity["coverArt"] as? kotlinx.serialization.json.JsonObject)
+                        ?.get("sources") as? kotlinx.serialization.json.JsonArray)
+                        ?.firstOrNull()?.let { (it as? kotlinx.serialization.json.JsonObject)?.get("url") }
+                        ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+                    val trackList = entity["trackList"] as? kotlinx.serialization.json.JsonArray ?: return@runCatching null
+                    val queries = trackList.mapNotNull { item ->
+                        val obj = item as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                        val t = (obj["title"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                        val sub = (obj["subtitle"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
+                        val durSec = (obj["duration"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull()?.div(1000)?.toInt()
+                        Triple("$t $sub".trim(), sub.lowercase(), durSec)
+                    }
+                    val matchedTracks = coroutineScope {
+                        queries.map { (q, artistLower, targetDur) ->
+                            async(Dispatchers.IO) {
+                                runCatching {
+                                    val candidates = youTube.search(q, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                                        ?.items?.filterIsInstance<SongItem>().orEmpty()
+                                    val best = candidates.maxByOrNull { item ->
+                                        var score = 0
+                                        val itemDur = item.duration
+                                        if (targetDur != null && itemDur != null) {
+                                            val diff = kotlin.math.abs(itemDur - targetDur)
+                                            if (diff <= 5) score += 10
+                                            else if (diff <= 15) score += 5
+                                        }
+                                        val itemArtists = item.artists.joinToString(" ") { it.name }.lowercase()
+                                        if (artistLower.isNotBlank() && itemArtists.contains(artistLower.split(",").first().trim())) {
+                                            score += 5
+                                        }
+                                        score
+                                    } ?: candidates.firstOrNull()
+                                    best?.toTrack()
+                                }.getOrNull()
+                            }
+                        }.awaitAll().filterNotNull()
+                    }
+                    PlaylistBrowse(
+                        author = Author(id = "", name = "Spotify"),
+                        description = "${matchedTracks.size} tracks",
+                        duration = "",
+                        durationSeconds = matchedTracks.sumOf { it.durationSeconds ?: 0 },
+                        id = playlistId,
+                        privacy = "PUBLIC",
+                        thumbnails = coverUrl?.let { listOf(Thumbnail(height = 640, url = it, width = 640)) } ?: emptyList(),
+                        title = title,
+                        trackCount = matchedTracks.size,
+                        tracks = matchedTracks,
+                        year = "",
+                    )
+                }.getOrNull()
+                if (browse != null) {
+                    emit(Resource.Success<Pair<PlaylistBrowse, String?>>(Pair(browse, null)))
+                } else {
+                    emit(Resource.Error<Pair<PlaylistBrowse, String?>>("Could not load Spotify $spType"))
                 }
                 return@flow
             }

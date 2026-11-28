@@ -5,6 +5,11 @@ import com.mika.data.extension.getFullDataFromDB
 import com.mika.data.parser.parseArtistData
 import com.mika.data.soundcloud.SC_ID_PREFIX
 import com.mika.data.soundcloud.SoundCloudClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import com.mika.domain.data.entities.ArtistEntity
 import com.mika.domain.data.entities.ArtistMotionEntity
 import com.mika.domain.data.model.browse.artist.ArtistBrowse
@@ -160,6 +165,69 @@ internal class ArtistRepositoryImpl(
                     emit(Resource.Success<ArtistBrowse>(scArtist))
                 } else {
                     emit(Resource.Error<ArtistBrowse>("Failed to load artist"))
+                }
+                return@flow
+            }
+            if (channelId.startsWith("sp_user_")) {
+                val userId = channelId.removePrefix("sp_user_")
+                val spArtist = runCatching {
+                    val client = io.ktor.client.HttpClient()
+                    try {
+                        val html = client.get("https://open.spotify.com/user/$userId").bodyAsText()
+                        val name = Regex("""<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']""")
+                            .find(html)?.groupValues?.getOrNull(1) ?: userId
+                        val avatar = Regex("""<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']""")
+                            .find(html)?.groupValues?.getOrNull(1)
+                        val playlistIds = Regex("""/playlist/([a-zA-Z0-9]{22})""")
+                            .findAll(html).map { it.groupValues[1] }.distinct().take(15).toList()
+                        val featuredPlaylists = coroutineScope {
+                            playlistIds.map { plId ->
+                                async(Dispatchers.IO) {
+                                    val oembed = runCatching {
+                                        val resp = client.get("https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/$plId").bodyAsText()
+                                        kotlinx.serialization.json.Json.parseToJsonElement(resp) as? kotlinx.serialization.json.JsonObject
+                                    }.getOrNull()
+                                    val plTitle = (oembed?.get("title") as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "Spotify Playlist"
+                                    val plCover = (oembed?.get("thumbnail_url") as? kotlinx.serialization.json.JsonPrimitive)?.content ?: avatar
+                                    com.mika.domain.data.model.browse.artist.ResultPlaylist(
+                                        author = name,
+                                        id = "sp_pl_$plId",
+                                        thumbnails = plCover?.let {
+                                            listOf(com.mika.domain.data.model.searchResult.songs.Thumbnail(height = 300, url = it, width = 300))
+                                        } ?: emptyList(),
+                                        title = plTitle,
+                                    )
+                                }
+                            }.let { kotlinx.coroutines.awaitAll(*it.toTypedArray()) }
+                        }
+                        ArtistBrowse(
+                            albums = null,
+                            channelId = channelId,
+                            description = "Spotify User Profile",
+                            featuredOn = featuredPlaylists,
+                            name = name,
+                            radioId = null,
+                            related = null,
+                            shuffleId = null,
+                            singles = null,
+                            songs = null,
+                            subscribed = false,
+                            subscribers = null,
+                            thumbnails = avatar?.let {
+                                listOf(com.mika.domain.data.model.searchResult.songs.Thumbnail(height = 640, url = it, width = 640))
+                            } ?: emptyList(),
+                            video = null,
+                            videoList = null,
+                            views = null,
+                        )
+                    } finally {
+                        client.close()
+                    }
+                }.getOrNull()
+                if (spArtist != null) {
+                    emit(Resource.Success<ArtistBrowse>(spArtist))
+                } else {
+                    emit(Resource.Error<ArtistBrowse>("Failed to load Spotify profile"))
                 }
                 return@flow
             }

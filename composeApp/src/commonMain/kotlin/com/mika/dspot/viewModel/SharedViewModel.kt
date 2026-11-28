@@ -623,6 +623,9 @@ class SharedViewModel(
     fun resolveSpotifyLink(
         type: String,
         id: String,
+        onNavigateArtist: (String) -> Unit,
+        onNavigateAlbum: (String) -> Unit,
+        onNavigatePlaylist: (String) -> Unit,
         onNavigateSearch: (String) -> Unit,
     ) {
         viewModelScope.launch {
@@ -630,11 +633,21 @@ class SharedViewModel(
             val title = runCatching {
                 val client = io.ktor.client.HttpClient()
                 try {
-                    val respText = client.get("https://open.spotify.com/oembed") {
-                        parameter("url", spotifyUrl)
-                    }.bodyAsText()
-                    val jsonObj = kotlinx.serialization.json.Json.parseToJsonElement(respText) as? kotlinx.serialization.json.JsonObject
-                    (jsonObj?.get("title") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    if (type == "user") {
+                        val html = client.get(spotifyUrl).bodyAsText()
+                        Regex("""<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']""")
+                            .find(html)?.groupValues?.getOrNull(1)
+                            ?: Regex("""<title>([^<]+)</title>""")
+                                .find(html)?.groupValues?.getOrNull(1)
+                                ?.removeSuffix(" | Spotify")
+                                ?.trim()
+                    } else {
+                        val respText = client.get("https://open.spotify.com/oembed") {
+                            parameter("url", spotifyUrl)
+                        }.bodyAsText()
+                        val jsonObj = kotlinx.serialization.json.Json.parseToJsonElement(respText) as? kotlinx.serialization.json.JsonObject
+                        (jsonObj?.get("title") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    }
                 } finally {
                     client.close()
                 }
@@ -645,23 +658,83 @@ class SharedViewModel(
                 return@launch
             }
 
-            if (type == "track") {
-                val searchRepo = org.koin.mp.KoinPlatform.getKoin().get<com.mika.domain.repository.SearchRepository>()
-                var matchedId: String? = null
-                searchRepo.getSearchDataSong(title).collect { res ->
-                    if (res is Resource.Success<*>) {
-                        @Suppress("UNCHECKED_CAST")
-                        val list = res.data as? List<com.mika.domain.data.model.searchResult.songs.SongsResult>
-                        matchedId = list?.firstOrNull()?.videoId
+            val searchRepo = org.koin.mp.KoinPlatform.getKoin().get<com.mika.domain.repository.SearchRepository>()
+            when (type) {
+                "track" -> {
+                    var matchedId: String? = null
+                    searchRepo.getSearchDataSong(title).collect { res ->
+                        if (res is Resource.Success<*>) {
+                            @Suppress("UNCHECKED_CAST")
+                            val list = res.data as? List<com.mika.domain.data.model.searchResult.songs.SongsResult>
+                            matchedId = list?.firstOrNull()?.videoId
+                        }
+                    }
+                    if (matchedId != null) loadSharedMediaItem(matchedId!!) else onNavigateSearch(title)
+                }
+                "artist" -> {
+                    var channelId: String? = null
+                    searchRepo.getSearchDataArtist(title).collect { res ->
+                        if (res is Resource.Success<*>) {
+                            @Suppress("UNCHECKED_CAST")
+                            val list = res.data as? List<com.mika.domain.data.model.searchResult.artists.ArtistsResult>
+                            channelId = list?.firstOrNull()?.browseId
+                        }
+                    }
+                    if (channelId != null) onNavigateArtist(channelId!!) else onNavigateSearch(title)
+                }
+                "album", "playlist" -> {
+                    val trackQueries = runCatching {
+                        val client = io.ktor.client.HttpClient()
+                        try {
+                            val html = client.get("https://open.spotify.com/embed/$type/$id").bodyAsText()
+                            val nextDataJson = Regex("""<script id="__NEXT_DATA__" type="application/json">(.*?)</script>""")
+                                .find(html)?.groupValues?.getOrNull(1)
+                            if (nextDataJson != null) {
+                                val root = kotlinx.serialization.json.Json.parseToJsonElement(nextDataJson) as? kotlinx.serialization.json.JsonObject
+                                val entity = (((root?.get("props") as? kotlinx.serialization.json.JsonObject)
+                                    ?.get("pageProps") as? kotlinx.serialization.json.JsonObject)
+                                    ?.get("state") as? kotlinx.serialization.json.JsonObject)
+                                    ?.get("data") as? kotlinx.serialization.json.JsonObject
+                                val trackList = (entity?.get("entity") as? kotlinx.serialization.json.JsonObject)
+                                    ?.get("trackList") as? kotlinx.serialization.json.JsonArray
+                                trackList?.mapNotNull { item ->
+                                    val obj = item as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                                    val t = (obj["title"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                                    val sub = (obj["subtitle"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: ""
+                                    "$t $sub".trim()
+                                } ?: emptyList()
+                            } else {
+                                emptyList()
+                            }
+                        } finally {
+                            client.close()
+                        }
+                    }.getOrDefault(emptyList())
+
+                    if (trackQueries.isNotEmpty()) {
+                        makeToast("Playing $title (${trackQueries.size} tracks)")
+                        var firstId: String? = null
+                        searchRepo.getSearchDataSong(trackQueries.first()).collect { res ->
+                            if (res is Resource.Success<*>) {
+                                @Suppress("UNCHECKED_CAST")
+                                val list = res.data as? List<com.mika.domain.data.model.searchResult.songs.SongsResult>
+                                firstId = list?.firstOrNull()?.videoId
+                            }
+                        }
+                        if (firstId != null) {
+                            loadSharedMediaItem(firstId!!)
+                        } else {
+                            onNavigateSearch(title)
+                        }
+                    } else {
+                        onNavigateSearch(title)
                     }
                 }
-                if (matchedId != null) {
-                    loadSharedMediaItem(matchedId!!)
-                } else {
+                "user" -> {
+                    makeToast("Spotify profile: $title")
                     onNavigateSearch(title)
                 }
-            } else {
-                onNavigateSearch(title)
+                else -> onNavigateSearch(title)
             }
         }
     }

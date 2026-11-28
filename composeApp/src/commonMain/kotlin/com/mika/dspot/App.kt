@@ -314,13 +314,27 @@ fun App(
                         val type = data.getQueryParameter("type")
                         val id = data.getQueryParameter("id")
                         if (!type.isNullOrBlank() && !id.isNullOrBlank()) {
-                            viewModel.resolveSpotifyLink(
-                                type = type,
-                                id = id,
-                                onNavigateSearch = { query ->
-                                    navController.navigate(SearchDestination)
-                                },
-                            )
+                            when (type) {
+                                "playlist" -> navController.navigate(PlaylistDestination(playlistId = "sp_pl_$id"))
+                                "album" -> navController.navigate(PlaylistDestination(playlistId = "sp_al_$id"))
+                                "user" -> navController.navigate(ArtistDestination(channelId = "sp_user_$id"))
+                                else -> viewModel.resolveSpotifyLink(
+                                    type = type,
+                                    id = id,
+                                    onNavigateArtist = { channelId ->
+                                        navController.navigate(ArtistDestination(channelId = channelId))
+                                    },
+                                    onNavigateAlbum = { browseId ->
+                                        navController.navigate(AlbumDestination(browseId = browseId))
+                                    },
+                                    onNavigatePlaylist = { playlistId ->
+                                        navController.navigate(PlaylistDestination(playlistId = playlistId))
+                                    },
+                                    onNavigateSearch = { _ ->
+                                        navController.navigate(SearchDestination)
+                                    },
+                                )
+                            }
                         }
                     }
 
