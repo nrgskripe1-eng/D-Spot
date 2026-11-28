@@ -269,6 +269,11 @@ class SoundCloudClient {
                 ?: transcodings.firstOrNull()
                 ?: return null
 
+        com.mika.domain.data.player.LiveStreamRegistry.recordHlsOnly(
+            prefixedTrackId,
+            chosen.format?.protocol == "hls",
+        )
+
         val streamResp = getWithClientId<SoundCloudStreamResponse>(chosen.url)
         return streamResp?.url
     }

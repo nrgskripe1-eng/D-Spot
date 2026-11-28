@@ -1,4 +1,4 @@
-﻿package com.mika.domain.data.player
+package com.mika.domain.data.player
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,4 +30,13 @@ object LiveStreamRegistry {
         videoId: String,
         isLive: Boolean,
     ) = _liveVideoIds.update { if (isLive) it + videoId else it - videoId }
+
+    private val _hlsOnlyIds = MutableStateFlow<Set<String>>(emptySet())
+
+    fun isHlsOnly(videoId: String): Boolean = videoId in _hlsOnlyIds.value
+
+    fun recordHlsOnly(
+        videoId: String,
+        isHls: Boolean,
+    ) = _hlsOnlyIds.update { if (isHls) it + videoId else it - videoId }
 }

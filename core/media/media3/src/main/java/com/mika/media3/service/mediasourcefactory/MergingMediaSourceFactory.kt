@@ -1,4 +1,4 @@
-﻿package com.mika.media3.service.mediasourcefactory
+package com.mika.media3.service.mediasourcefactory
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -45,7 +45,7 @@ internal class MergingMediaSourceFactory(
     override fun getSupportedTypes(): IntArray = defaultMediaSourceFactory.supportedTypes
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
-        if (LiveStreamRegistry.isLive(mediaItem.mediaId)) {
+        if (LiveStreamRegistry.isLive(mediaItem.mediaId) || LiveStreamRegistry.isHlsOnly(mediaItem.mediaId)) {
             // One HLS playlist carrying audio and video together: no merge, and none of the
             // progressive resolver's caching or chunking.
             Logger.w("Merging Media Source", "${mediaItem.mediaId} is live; building an HLS source")
